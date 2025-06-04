@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自律エージェント・シミュレーション with AI</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #control-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            max-width: 250px;
+        }
+        
+        #info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 280px;
+            max-height: 70vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        #info-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #info-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        #info-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        .panel-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4CAF50;
+            text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 6px;
+            margin: 6px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: white;
+            font-size: 12px;
+        }
+        
+        button {
+            padding: 6px 12px;
+            margin: 6px 0;
+            cursor: pointer;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .agent-card {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .agent-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .agent-name {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .agent-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-active {
+            background: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        .agent-info-row {
+            margin: 3px 0;
+            font-size: 12px;
+            color: #b0b0b0;
+        }
+        
+        .agent-thought {
+            font-style: italic;
+            color: #80cbc4;
+            margin-top: 6px;
+            padding: 6px;
+            background: rgba(128, 203, 196, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #80cbc4;
+            font-size: 12px;
+        }
+        
+        .agent-memory {
+            margin-top: 6px;
+            font-size: 11px;
+        }
+        
+        .memory-item {
+            padding: 3px 6px;
+            margin: 2px 0;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 3px;
+            color: #888;
+        }
+        
+        .relationship-info {
+            margin-top: 6px;
+            font-size: 11px;
+        }
+        
+        .relationship-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 4px 0;
+        }
+        
+        .relationship-bar {
+            width: 100px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .relationship-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ff6b6b, #ffd93d, #6bcf7f);
+            transition: width 0.3s ease;
+        }
+        
+        #log-panel {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 12px;
+            border-radius: 8px;
+            max-width: 350px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .log-entry {
+            margin: 6px 0;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            font-size: 11px;
+            border-left: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .log-thought {
+            border-left-color: #80cbc4;
+            color: #80cbc4;
+        }
+        
+        .log-interaction {
+            border-left-color: #FFC107;
+            color: #FFC107;
+        }
+        
+        .log-movement {
+            border-left-color: #2196F3;
+            color: #2196F3;
+        }
+        
+        .time-display {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 20, 0.95);
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            color: #4CAF50;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .warning {
+            color: #ff9800;
+            font-size: 11px;
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(255, 152, 0, 0.1);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+        
+        /* ローディングインジケーター */
+        .thinking-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 1.5s infinite;
+            margin-left: 8px;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .log-entry {
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            font-size: 13px;
+            border-left: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .log-thought {
+            border-left-color: #80cbc4;
+            color: #80cbc4;
+        }
+        
+        .log-interaction {
+            border-left-color: #FFC107;
+            color: #FFC107;
+        }
+        
+        .log-movement {
+            border-left-color: #2196F3;
+            color: #2196F3;
+        }
+        
+        .log-relationship {
+            border-left-color: #E91E63;
+            color: #E91E63;
+        }
+        
+        .log-details-toggle {
+            margin-top: 5px;
+            cursor: pointer;
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .log-details-toggle:hover {
+            color: #fff;
+        }
+        
+        .log-details {
+            margin-top: 6px;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        
+        .log-detail-section {
+            margin-bottom: 6px;
+        }
+        
+        .log-detail-section h4 {
+            margin: 0 0 4px 0;
+            color: #4CAF50;
+            font-size: 11px;
+        }
+        
+        .agent-name {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .relationship-change {
+            color: #E91E63;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="time-display" id="time-display">
+        午前 8:00
+    </div>
+    
+    <div id="control-panel">
+        <h3 class="panel-title">🔧 制御パネル</h3>
+        <input type="password" id="apiKey" placeholder="OpenAI APIキーを入力">
+        <button onclick="startSimulation()">シミュレーション開始</button>
+        <button onclick="pauseSimulation()" id="pauseBtn" disabled>一時停止</button>
+        <button onclick="setTimeSpeed()">時間速度: <span id="speed">1x</span></button>
+        <div class="warning">
+            ⚠️ APIキーはローカルストレージに保存されません。<br>
+            実際の実装では、バックエンドサーバー経由でAPIを呼び出してください。
+        </div>
+    </div>
+    
+    <div id="info-panel">
+        <h3 class="panel-title">👥 エージェント情報</h3>
+        <div id="agents-list"></div>
+    </div>
+    
+    <div id="log-panel">
+        <h3 class="panel-title">📝 活動ログ</h3>
+        <div id="activity-log"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // グローバル変数
+        let scene, camera, renderer;
+        let agents = [];
+        let locations = [];
+        let apiKey = '';
+        let simulationRunning = false;
+        let simulationPaused = false;
+        let timeSpeed = 1;
+        let currentTime = 8 * 60; // 8:00 AM in minutes
+        const clock = new THREE.Clock();
+        
+        // エージェントの詳細な性格設定
+        const agentPersonalities = [
+            {
+                name: "田中太郎",
+                age: 35,
+                personality: {
+                    description: "親切で社交的な会社員。コーヒーが好きで、朝はカフェで一日を始める。",
+                    traits: {
+                        sociability: 0.9,      // 社交性（0-1）
+                        energy: 0.7,           // 活動的さ
+                        routine: 0.8,          // ルーチン重視度
+                        curiosity: 0.6,        // 好奇心
+                        empathy: 0.9          // 共感性
+                    }
+                },
+                color: 0x4CAF50,
+                dailyRoutine: {
+                    morning: ["カフェ", "町の広場"],
+                    afternoon: ["図書館", "公園"],
+                    evening: ["カフェ", "町の広場"],
+                    night: ["自宅"]
+                },
+                home: {
+                    name: "田中太郎の家",
+                    x: -15,
+                    z: -15,
+                    color: 0x4CAF50
+                }
+            },
+            {
+                name: "山田花子",
+                age: 28,
+                personality: {
+                    description: "創造的なアーティスト。公園で絵を描くのが好き。独自の世界観を持つ。",
+                    traits: {
+                        sociability: 0.5,
+                        energy: 0.6,
+                        routine: 0.3,
+                        curiosity: 0.9,
+                        empathy: 0.8
+                    }
+                },
+                color: 0xFF6B6B,
+                dailyRoutine: {
+                    morning: ["公園"],
+                    afternoon: ["公園", "カフェ"],
+                    evening: ["図書館", "町の広場"],
+                    night: ["自宅"]
+                },
+                home: {
+                    name: "山田花子の家",
+                    x: 15,
+                    z: -15,
+                    color: 0xFF6B6B
+                }
+            },
+            {
+                name: "佐藤次郎",
+                age: 22,
+                personality: {
+                    description: "内向的な大学生。図書館で勉強することが多い。新しい知識を求めている。",
+                    traits: {
+                        sociability: 0.3,
+                        energy: 0.5,
+                        routine: 0.7,
+                        curiosity: 0.8,
+                        empathy: 0.6
+                    }
+                },
+                color: 0x4ECDC4,
+                dailyRoutine: {
+                    morning: ["図書館"],
+                    afternoon: ["図書館", "カフェ"],
+                    evening: ["町の広場", "図書館"],
+                    night: ["自宅"]
+                },
+                home: {
+                    name: "佐藤次郎の家",
+                    x: -15,
+                    z: 15,
+                    color: 0x4ECDC4
+                }
+            },
+            {
+                name: "鈴木美香",
+                age: 26,
+                personality: {
+                    description: "活発でスポーツ好き。朝のランニングが日課。人との交流を楽しむ。",
+                    traits: {
+                        sociability: 0.8,
+                        energy: 0.95,
+                        routine: 0.9,
+                        curiosity: 0.7,
+                        empathy: 0.7
+                    }
+                },
+                color: 0xFFE66D,
+                dailyRoutine: {
+                    morning: ["スポーツジム", "公園"],
+                    afternoon: ["カフェ", "町の広場"],
+                    evening: ["スポーツジム", "公園"],
+                    night: ["自宅"]
+                },
+                home: {
+                    name: "鈴木美香の家",
+                    x: 15,
+                    z: 15,
+                    color: 0xFFE66D
+                }
+            },
+            {
+                name: "高橋健一",
+                age: 65,
+                personality: {
+                    description: "のんびりした性格の年配者。カフェでくつろぎ、若い人との会話を楽しむ。",
+                    traits: {
+                        sociability: 0.7,
+                        energy: 0.3,
+                        routine: 0.9,
+                        curiosity: 0.5,
+                        empathy: 0.95
+                    }
+                },
+                color: 0xA8E6CF,
+                dailyRoutine: {
+                    morning: ["カフェ", "町の広場"],
+                    afternoon: ["公園", "カフェ"],
+                    evening: ["町の広場", "カフェ"],
+                    night: ["自宅"]
+                },
+                home: {
+                    name: "高橋健一の家",
+                    x: 0,
+                    z: -20,
+                    color: 0xA8E6CF
+                }
+            }
+        ];
+        
+        // 場所の詳細設定
+        const locationData = [
+            {
+                name: "カフェ",
+                x: -10,
+                z: -10,
+                color: 0x8B4513,
+                activities: ["コーヒーを飲む", "会話する", "読書する", "仕事をする"],
+                atmosphere: "落ち着いた雰囲気で、コーヒーの香りが漂う"
+            },
+            {
+                name: "公園",
+                x: 10,
+                z: -10,
+                color: 0x228B22,
+                activities: ["散歩する", "絵を描く", "ベンチで休む", "運動する"],
+                atmosphere: "緑豊かで開放的な空間"
+            },
+            {
+                name: "図書館",
+                x: -10,
+                z: 10,
+                color: 0x4682B4,
+                activities: ["勉強する", "本を読む", "調べ物をする", "静かに過ごす"],
+                atmosphere: "静寂に包まれた知識の宝庫"
+            },
+            {
+                name: "スポーツジム",
+                x: 10,
+                z: 10,
+                color: 0xFF6347,
+                activities: ["運動する", "筋トレする", "ヨガをする", "他の人と運動の話をする"],
+                atmosphere: "活気があり、エネルギッシュな場所"
+            },
+            {
+                name: "町の広場",
+                x: 0,
+                z: 0,
+                color: 0xDAA520,
+                activities: ["人々を観察する", "待ち合わせする", "イベントに参加する", "休憩する"],
+                atmosphere: "町の中心で、様々な人が行き交う"
+            }
+        ];
+        
+        // エージェントクラス（拡張版）
+        class Agent {
+            constructor(data, index) {
+                this.name = data.name;
+                this.age = data.age;
+                this.personality = data.personality;
+                this.dailyRoutine = data.dailyRoutine;
+                this.currentLocation = locations[index % locations.length];
+                this.targetLocation = this.currentLocation;
+                
+                // 記憶システム
+                this.shortTermMemory = [];  // 短期記憶（最近の出来事）
+                this.longTermMemory = [];   // 長期記憶（重要な出来事）
+                this.relationships = new Map(); // 他のエージェントとの関係性
+                
+                // 現在の状態
+                this.currentThought = "一日を始めています...";
+                this.currentActivity = null;
+                this.mood = "普通";
+                this.energy = 1.0;
+                this.isThinking = false;
+                
+                // タイミング制御
+                this.lastActionTime = Date.now();
+                this.lastThoughtTime = Date.now();
+                this.thinkingDuration = 5000 + Math.random() * 10000; // 5-15秒
+                
+                // 3Dモデル
+                this.createModel(data.color);
+                
+                // 移動関連
+                this.speed = 0.03 + (this.personality.traits.energy * 0.02);
+                this.movementTarget = null;
+                
+                // 他のエージェントとの関係を初期化
+                this.initializeRelationships();
+            }
+            
+            createModel(color) {
+                const group = new THREE.Group();
+                
+                // 体（円柱）
+                const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
+                const bodyMaterial = new THREE.MeshLambertMaterial({ color: color });
+                const bodyMesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                bodyMesh.position.y = 0.5;
+                bodyMesh.castShadow = true;
+                group.add(bodyMesh);
+                
+                // 頭（球体）
+                const headGeometry = new THREE.SphereGeometry(0.25, 8, 8);
+                const headMaterial = new THREE.MeshLambertMaterial({ color: color });
+                const headMesh = new THREE.Mesh(headGeometry, headMaterial);
+                headMesh.position.y = 1.25;
+                headMesh.castShadow = true;
+                group.add(headMesh);
+                
+                // 思考中インジケーター（頭の上の小さな球）
+                const thinkingGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+                const thinkingMaterial = new THREE.MeshLambertMaterial({
+                    color: 0xFFFFFF,
+                    emissive: 0xFFFFFF,
+                    emissiveIntensity: 0.5
+                });
+                this.thinkingIndicator = new THREE.Mesh(thinkingGeometry, thinkingMaterial);
+                this.thinkingIndicator.position.y = 1.8;
+                this.thinkingIndicator.visible = false;
+                group.add(this.thinkingIndicator);
+                
+                this.mesh = group;
+                this.mesh.position.copy(this.currentLocation.position);
+                this.mesh.position.y = 0;
+                scene.add(this.mesh);
+            }
+            
+            initializeRelationships() {
+                // 他のエージェントとの初期関係値を設定
+                agentPersonalities.forEach(other => {
+                    if (other.name !== this.name) {
+                        this.relationships.set(other.name, {
+                            familiarity: Math.random() * 0.3, // 0-0.3の初期値
+                            affinity: 0.5, // 中立的な関係から開始
+                            lastInteraction: null,
+                            interactionCount: 0
+                        });
+                    }
+                });
+            }
+            
+            async update(deltaTime) {
+                // エネルギーの更新（時間とともに減少）
+                this.energy = Math.max(0.1, this.energy - (deltaTime * 0.0001));
+                
+                // 夜間は自宅でエネルギーを回復
+                if (this.getTimeOfDay() === "night" && this.currentLocation.name === this.home.name) {
+                    this.energy = Math.min(1.0, this.energy + (deltaTime * 0.0002));
+                }
+                
+                // 移動処理
+                if (this.movementTarget) {
+                    const direction = new THREE.Vector3()
+                        .subVectors(this.movementTarget, this.mesh.position)
+                        .normalize();
+                    
+                    const distance = this.mesh.position.distanceTo(this.movementTarget);
+                    
+                    if (distance > 0.5) {
+                        const currentSpeed = this.speed * this.energy;
+                        this.mesh.position.add(direction.multiplyScalar(currentSpeed));
+                        this.mesh.position.y = 0;
+                    } else if (this.targetLocation) {
+                        // 目的地に到着
+                        this.currentLocation = this.targetLocation;
+                        this.movementTarget = null;
+                        this.onArrival();
+                    }
+                }
+                
+                // 思考中インジケーターのアニメーション
+                if (this.isThinking && this.thinkingIndicator) {
+                    this.thinkingIndicator.visible = true;
+                    this.thinkingIndicator.position.y = 1.8 + Math.sin(Date.now() * 0.003) * 0.1;
+                    this.thinkingIndicator.rotation.y += deltaTime * 2;
+                } else {
+                    this.thinkingIndicator.visible = false;
+                }
+                
+                // 定期的な思考プロセス
+                if (Date.now() - this.lastThoughtTime > this.thinkingDuration && !this.isThinking) {
+                    this.think();
+                }
+            }
+            
+            async think() {
+                if (!apiKey || !simulationRunning || simulationPaused) return;
+                
+                this.isThinking = true;
+                const timeOfDay = this.getTimeOfDay();
+                const nearbyAgents = this.getNearbyAgents();
+                
+                try {
+                    // 思考プロンプトの構築
+                    const prompt = this.buildThoughtPrompt(timeOfDay, nearbyAgents);
+                    
+                    // デモ用の思考シミュレーション（実際のAPI呼び出しの代わり）
+                    const decision = await this.simulateThought(prompt, timeOfDay, nearbyAgents);
+                    
+                    // 決定に基づいて行動
+                    this.executeDecision(decision);
+                    
+                    logAgentAction(this, 'think', `
+                        <div class="log-detail-section">
+                            <h4>思考の詳細</h4>
+                            <p>時間帯: ${timeOfDay}</p>
+                            <p>場所: ${this.currentLocation.name}</p>
+                            <p>近くのエージェント: ${nearbyAgents.map(a => a.name).join(', ') || 'なし'}</p>
+                            <p>思考内容: ${this.currentThought}</p>
+                        </div>
+                    `);
+                    
+                } catch (error) {
+                    console.error(`${this.name}の思考プロセスエラー:`, error);
+                } finally {
+                    this.isThinking = false;
+                    this.lastThoughtTime = Date.now();
+                    this.thinkingDuration = 10000 + Math.random() * 20000; // 10-30秒
+                }
+            }
+            
+            buildThoughtPrompt(timeOfDay, nearbyAgents) {
+                const recentMemories = this.shortTermMemory.slice(-5).map(m => m.event).join(', ');
+                const currentMood = this.calculateMood();
+                
+                return `
+                私は${this.name}、${this.age}歳。${this.personality.description}
+                
+                現在の状況:
+                - 時間帯: ${timeOfDay}（夜間は22:00-6:00）
+                - 現在地: ${this.currentLocation.name}（${this.currentLocation.atmosphere}）
+                - 体力: ${Math.round(this.energy * 100)}%
+                - 気分: ${currentMood}
+                - 最近の出来事: ${recentMemories || 'なし'}
+                
+                ${nearbyAgents.length > 0 ? `近くにいる人: ${nearbyAgents.map(a => a.name).join(', ')}` : ''}
+                
+                私の性格特性:
+                - 社交性: ${this.personality.traits.sociability}
+                - 活動的さ: ${this.personality.traits.energy}
+                - ルーチン重視: ${this.personality.traits.routine}
+                - 好奇心: ${this.personality.traits.curiosity}
+                
+                重要な行動ルール:
+                1. 夜間（22:00-6:00）は必ず自宅に帰る必要があります
+                2. 夜間は自宅以外の場所に長く留まらないでください
+                3. 夜間は体力を回復するために自宅で休むことが重要です
+                
+                この状況で、次に何をしたいですか？どのように感じていますか？
+                特に夜間の場合は、自宅に帰ることを優先してください。
+                `;
+            }
+            
+            async simulateThought(prompt, timeOfDay, nearbyAgents) {
+                try {
+                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: "gpt-3.5-turbo",
+                            messages: [
+                                {
+                                    role: "system",
+                                    content: "あなたは自律的なエージェントの意思決定システムです。与えられた状況に基づいて、自然な行動と思考を生成してください。特に夜間（22:00-6:00）は必ず自宅に帰ることを優先してください。"
+                                },
+                                {
+                                    role: "user",
+                                    content: prompt
+                                }
+                            ],
+                            temperature: 0.7,
+                            max_tokens: 150
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error?.message || 'API呼び出しに失敗しました');
+                    }
+
+                    const aiResponse = data.choices[0].message.content;
+                    
+                    // AIの応答を解析して決定を生成
+                    const decision = {
+                        action: null,
+                        thought: aiResponse,
+                        targetLocation: null,
+                        targetAgent: null
+                    };
+
+                    // 夜間の場合は必ず自宅に帰る
+                    if (timeOfDay === "night" && this.currentLocation.name !== this.home.name) {
+                        const homeLocation = locations.find(l => l.name === this.home.name);
+                        if (homeLocation) {
+                            decision.action = "move";
+                            decision.targetLocation = homeLocation;
+                            decision.thought = "夜になったので、自宅に帰ります。";
+                            return decision;
+                        }
+                    }
+
+                    // 時間帯に基づくルーチンの確認
+                    const routineLocation = this.getRoutineLocation(timeOfDay);
+                    const shouldFollowRoutine = Math.random() < this.personality.traits.routine;
+
+                    // 社交的な行動の決定
+                    if (nearbyAgents.length > 0 && Math.random() < this.personality.traits.sociability) {
+                        const targetAgent = nearbyAgents[Math.floor(Math.random() * nearbyAgents.length)];
+                        const relationship = this.relationships.get(targetAgent.name);
+                        
+                        if (relationship && relationship.affinity > 0.3) {
+                            decision.action = "interact";
+                            decision.targetAgent = targetAgent;
+                        }
+                    }
+
+                    // 移動の決定
+                    if (!decision.action) {
+                        if (shouldFollowRoutine && routineLocation && routineLocation !== this.currentLocation.name) {
+                            const targetLoc = locations.find(l => l.name === routineLocation);
+                            if (targetLoc) {
+                                decision.action = "move";
+                                decision.targetLocation = targetLoc;
+                            }
+                        } else if (Math.random() < this.personality.traits.curiosity) {
+                            const randomLocation = locations[Math.floor(Math.random() * locations.length)];
+                            if (randomLocation !== this.currentLocation) {
+                                decision.action = "move";
+                                decision.targetLocation = randomLocation;
+                            }
+                        }
+                    }
+
+                    // 現在地での活動
+                    if (!decision.action && this.currentLocation.activities.length > 0) {
+                        const activity = this.currentLocation.activities[
+                            Math.floor(Math.random() * this.currentLocation.activities.length)
+                        ];
+                        decision.action = "activity";
+                        this.currentActivity = activity;
+                    }
+
+                    return decision;
+
+                } catch (error) {
+                    console.error('OpenAI API呼び出しエラー:', error);
+                    // エラー時のフォールバック処理
+                    return {
+                        action: null,
+                        thought: "考え中...",
+                        targetLocation: null,
+                        targetAgent: null
+                    };
+                }
+            }
+            
+            executeDecision(decision) {
+                this.currentThought = decision.thought;
+                
+                // 思考をログに追加
+                addLog(decision.thought, 'thought');
+                
+                // 記憶に追加
+                this.addMemory(decision.thought, "thought");
+                
+                switch (decision.action) {
+                    case "move":
+                        if (decision.targetLocation) {
+                            this.moveToLocation(decision.targetLocation);
+                        }
+                        break;
+                    
+                    case "interact":
+                        if (decision.targetAgent) {
+                            this.interactWith(decision.targetAgent);
+                        }
+                        break;
+                    
+                    case "activity":
+                        this.performActivity();
+                        break;
+                }
+            }
+            
+            moveToLocation(location) {
+                this.targetLocation = location;
+                this.movementTarget = new THREE.Vector3(
+                    location.position.x + (Math.random() - 0.5) * 2,
+                    0,
+                    location.position.z + (Math.random() - 0.5) * 2
+                );
+                
+                addLog(`🚶 ${this.name}が${location.name}へ移動開始`, 'move', `
+                    <div class="log-detail-section">
+                        <h4>移動の詳細</h4>
+                        <p>出発地: ${this.currentLocation.name}</p>
+                        <p>目的地: ${location.name}</p>
+                        <p>移動速度: ${this.speed.toFixed(2)}</p>
+                    </div>
+                `);
+            }
+            
+            onArrival() {
+                addLog(`📍 ${this.name}が${this.currentLocation.name}に到着`, 'arrival');
+                
+                // 到着時の活動を決定
+                if (this.currentLocation.activities.length > 0) {
+                    const activity = this.currentLocation.activities[
+                        Math.floor(Math.random() * this.currentLocation.activities.length)
+                    ];
+                    this.currentActivity = activity;
+                    this.currentThought = `${activity}ことにしよう`;
+                }
+            }
+            
+            interactWith(otherAgent) {
+                const relationship = this.relationships.get(otherAgent.name);
+                if (!relationship) return;
+                
+                // 相互作用の種類を決定
+                const interactionTypes = this.getInteractionTypes(relationship);
+                const interaction = interactionTypes[Math.floor(Math.random() * interactionTypes.length)];
+                
+                // 相互作用を実行
+                this.performInteraction(otherAgent, interaction);
+                
+                // 関係性の更新
+                const oldAffinity = relationship.affinity;
+                relationship.familiarity = Math.min(1, relationship.familiarity + 0.1);
+                relationship.affinity = Math.min(1, Math.max(0, relationship.affinity + (Math.random() - 0.3) * 0.2));
+                
+                if (Math.abs(relationship.affinity - oldAffinity) > 0.1) {
+                    logRelationshipChange(this, otherAgent, 'interaction');
+                }
+                
+                relationship.lastInteraction = new Date();
+                relationship.interactionCount++;
+                
+                // 相手側の関係性も更新
+                const otherRelationship = otherAgent.relationships.get(this.name);
+                if (otherRelationship) {
+                    otherRelationship.familiarity = relationship.familiarity;
+                    otherRelationship.affinity = relationship.affinity;
+                    otherRelationship.lastInteraction = relationship.lastInteraction;
+                    otherRelationship.interactionCount++;
+                }
+            }
+            
+            getInteractionTypes(relationship) {
+                const types = [];
+                
+                if (relationship.familiarity < 0.3) {
+                    types.push("挨拶", "自己紹介", "天気の話");
+                } else if (relationship.familiarity < 0.7) {
+                    types.push("雑談", "近況報告", "共通の話題");
+                } else {
+                    types.push("深い会話", "相談", "一緒に活動");
+                }
+                
+                if (relationship.affinity > 0.7) {
+                    types.push("冗談", "思い出話");
+                } else if (relationship.affinity < 0.3) {
+                    types.push("短い会話", "形式的な挨拶");
+                }
+                
+                return types;
+            }
+            
+            async performInteraction(otherAgent, interactionType) {
+                try {
+                    const prompt = `
+                    あなたは${this.name}という${this.age}歳の${this.personality.description}です。
+                    現在${this.currentLocation.name}にいて、${otherAgent.name}さんと${interactionType}をしています。
+                    
+                    あなたの性格特性:
+                    - 社交性: ${this.personality.traits.sociability}
+                    - 活動的さ: ${this.personality.traits.energy}
+                    - ルーチン重視: ${this.personality.traits.routine}
+                    - 好奇心: ${this.personality.traits.curiosity}
+                    - 共感性: ${this.personality.traits.empathy}
+                    
+                    相手との関係:
+                    - 親密度: ${this.relationships.get(otherAgent.name).familiarity}
+                    - 好感度: ${this.relationships.get(otherAgent.name).affinity}
+                    
+                    この状況で、自然な会話を生成してください。1-2文程度の短い会話にしてください。
+                    `;
+
+                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: "gpt-3.5-turbo",
+                            messages: [
+                                {
+                                    role: "system",
+                                    content: "あなたは自律的なエージェントの会話システムです。与えられた状況に基づいて、自然な会話を生成してください。"
+                                },
+                                {
+                                    role: "user",
+                                    content: prompt
+                                }
+                            ],
+                            temperature: 0.7,
+                            max_tokens: 100
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error?.message || 'API呼び出しに失敗しました');
+                    }
+
+                    const message = data.choices[0].message.content;
+                    
+                    this.currentThought = message;
+                    addLog(`💬 ${this.name} → ${otherAgent.name}: "${message}"`, 'interaction');
+                    
+                    this.addMemory(`${otherAgent.name}と${interactionType}をした`, "interaction");
+                    
+                    // 相手の反応
+                    setTimeout(async () => {
+                        if (otherAgent && !otherAgent.isThinking) {
+                            const responsePrompt = `
+                            あなたは${otherAgent.name}という${otherAgent.age}歳の${otherAgent.personality.description}です。
+                            ${this.name}さんから「${message}」と言われました。
+                            
+                            あなたの性格特性:
+                            - 社交性: ${otherAgent.personality.traits.sociability}
+                            - 活動的さ: ${otherAgent.personality.traits.energy}
+                            - ルーチン重視: ${otherAgent.personality.traits.routine}
+                            - 好奇心: ${otherAgent.personality.traits.curiosity}
+                            - 共感性: ${otherAgent.personality.traits.empathy}
+                            
+                            相手との関係:
+                            - 親密度: ${otherAgent.relationships.get(this.name).familiarity}
+                            - 好感度: ${otherAgent.relationships.get(this.name).affinity}
+                            
+                            この状況で、自然な返答を生成してください。1-2文程度の短い返答にしてください。
+                            `;
+
+                            try {
+                                const responseResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${apiKey}`
+                                    },
+                                    body: JSON.stringify({
+                                        model: "gpt-3.5-turbo",
+                                        messages: [
+                                            {
+                                                role: "system",
+                                                content: "あなたは自律的なエージェントの会話システムです。与えられた状況に基づいて、自然な返答を生成してください。"
+                                            },
+                                            {
+                                                role: "user",
+                                                content: responsePrompt
+                                            }
+                                        ],
+                                        temperature: 0.7,
+                                        max_tokens: 100
+                                    })
+                                });
+
+                                const responseData = await responseResponse.json();
+                                if (!responseResponse.ok) {
+                                    throw new Error(responseData.error?.message || 'API呼び出しに失敗しました');
+                                }
+
+                                const responseMessage = responseData.choices[0].message.content;
+                                otherAgent.currentThought = responseMessage;
+                                addLog(`💬 ${otherAgent.name} → ${this.name}: "${responseMessage}"`, 'interaction');
+                            } catch (error) {
+                                console.error('OpenAI API呼び出しエラー:', error);
+                                const fallbackResponses = [
+                                    `${this.name}さん、私も同じように思います！`,
+                                    "なるほど、そうですね。",
+                                    "それは興味深い話ですね。",
+                                    `${this.name}さんとお話しできて嬉しいです。`
+                                ];
+                                const fallbackResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+                                otherAgent.currentThought = fallbackResponse;
+                                addLog(`💬 ${otherAgent.name} → ${this.name}: "${fallbackResponse}"`, 'interaction');
+                            }
+                        }
+                    }, 2000);
+                } catch (error) {
+                    console.error('OpenAI API呼び出しエラー:', error);
+                    const fallbackMessages = {
+                        "挨拶": [
+                            `${otherAgent.name}さん、こんにちは！`,
+                            `やあ、${otherAgent.name}さん。元気？`,
+                            `${otherAgent.name}さん、お久しぶり！`
+                        ],
+                        "自己紹介": [
+                            `初めまして、${this.name}と申します。`,
+                            `${this.personality.description.split('。')[0]}です。`,
+                            `よろしくお願いします！`
+                        ],
+                        "天気の話": [
+                            "今日はいい天気ですね。",
+                            "最近、過ごしやすい気候ですね。",
+                            "こんな日は外にいると気持ちいいですね。"
+                        ]
+                    };
+                    
+                    const messageList = fallbackMessages[interactionType] || ["..."];
+                    const message = messageList[Math.floor(Math.random() * messageList.length)];
+                    
+                    this.currentThought = message;
+                    addLog(`💬 ${this.name} → ${otherAgent.name}: "${message}"`, 'interaction');
+                }
+            }
+            
+            async performActivity() {
+                if (this.currentActivity) {
+                    try {
+                        const prompt = `
+                        あなたは${this.name}という${this.age}歳の${this.personality.description}です。
+                        現在${this.currentLocation.name}で${this.currentActivity}しています。
+                        
+                        あなたの性格特性:
+                        - 社交性: ${this.personality.traits.sociability}
+                        - 活動的さ: ${this.personality.traits.energy}
+                        - ルーチン重視: ${this.personality.traits.routine}
+                        - 好奇心: ${this.personality.traits.curiosity}
+                        - 共感性: ${this.personality.traits.empathy}
+                        
+                        この状況で、あなたが感じていることや考えていることを自然な形で表現してください。
+                        1-2文程度の短い思考にしてください。
+                        `;
+
+                        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${apiKey}`
+                            },
+                            body: JSON.stringify({
+                                model: "gpt-3.5-turbo",
+                                messages: [
+                                    {
+                                        role: "system",
+                                        content: "あなたは自律的なエージェントの思考システムです。与えられた状況に基づいて、自然な思考を生成してください。"
+                                    },
+                                    {
+                                        role: "user",
+                                        content: prompt
+                                    }
+                                ],
+                                temperature: 0.7,
+                                max_tokens: 100
+                            })
+                        });
+
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.error?.message || 'API呼び出しに失敗しました');
+                        }
+
+                        const thought = data.choices[0].message.content;
+                        this.currentThought = thought;
+                        addLog(`🎯 ${this.name}は${this.currentLocation.name}で${this.currentActivity}いる: "${thought}"`, 'activity', `
+                            <div class="log-detail-section">
+                                <h4>活動の詳細</h4>
+                                <p>場所: ${this.currentLocation.name}</p>
+                                <p>活動: ${this.currentActivity}</p>
+                                <p>思考: ${this.currentThought}</p>
+                            </div>
+                        `);
+                        this.addMemory(`${this.currentLocation.name}で${this.currentActivity}`, "activity");
+                    } catch (error) {
+                        console.error('OpenAI API呼び出しエラー:', error);
+                        this.currentThought = `${this.currentActivity}いる`;
+                        addLog(`🎯 ${this.name}は${this.currentLocation.name}で${this.currentActivity}いる`, 'activity');
+                        this.addMemory(`${this.currentLocation.name}で${this.currentActivity}`, "activity");
+                    }
+                }
+            }
+            
+            addMemory(event, type) {
+                const memory = {
+                    time: new Date(),
+                    event: event,
+                    type: type,
+                    location: this.currentLocation.name,
+                    mood: this.mood
+                };
+                
+                this.shortTermMemory.push(memory);
+                
+                // 短期記憶の制限（最新20件）
+                if (this.shortTermMemory.length > 20) {
+                    const oldMemory = this.shortTermMemory.shift();
+                    // 重要な記憶は長期記憶へ
+                    if (oldMemory.type === "interaction" || Math.random() < 0.3) {
+                        this.longTermMemory.push(oldMemory);
+                    }
+                }
+                
+                // 長期記憶の制限（最大50件）
+                if (this.longTermMemory.length > 50) {
+                    this.longTermMemory.shift();
+                }
+            }
+            
+            getNearbyAgents() {
+                return agents.filter(agent => 
+                    agent !== this && 
+                    agent.currentLocation === this.currentLocation &&
+                    this.mesh.position.distanceTo(agent.mesh.position) < 5
+                );
+            }
+            
+            getTimeOfDay() {
+                const hour = Math.floor(currentTime / 60);
+                if (hour < 6 || hour >= 22) return "night";
+                if (hour < 12) return "morning";
+                if (hour < 18) return "afternoon";
+                return "evening";
+            }
+            
+            getRoutineLocation(timeOfDay) {
+                const routine = this.dailyRoutine[timeOfDay];
+                if (routine && routine.length > 0) {
+                    // 夜間は必ず自宅に帰る
+                    if (timeOfDay === "night") {
+                        return this.home.name;
+                    }
+                    return routine[Math.floor(Math.random() * routine.length)];
+                }
+                return null;
+            }
+            
+            calculateMood() {
+                if (this.energy < 0.3) return "疲れている";
+                if (this.energy > 0.8) return "元気";
+                
+                const recentInteractions = this.shortTermMemory.filter(m => 
+                    m.type === "interaction" && 
+                    (new Date() - m.time) < 300000 // 5分以内
+                ).length;
+                
+                if (recentInteractions > 2) return "社交的";
+                if (recentInteractions === 0 && this.personality.traits.sociability > 0.7) return "寂しい";
+                
+                return "普通";
+            }
+        }
+        
+        // Three.jsの初期化
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            //scene.fog = new THREE.Fog(0x87CEEB, 30, 60);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 35, 35);
+            camera.lookAt(0, 0, 0);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // ライティング
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(20, 30, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -30;
+            directionalLight.shadow.camera.right = 30;
+            directionalLight.shadow.camera.top = 30;
+            directionalLight.shadow.camera.bottom = -30;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            // 地面
+            const groundGeometry = new THREE.PlaneGeometry(50, 50);
+            const groundMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x90EE90,
+                emissive: 0x90EE90,
+                emissiveIntensity: 0.1
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+                        
+            // 場所の作成
+            createLocations();
+            
+            // マウスコントロール
+            setupMouseControls();
+            
+            // アニメーションループ
+            animate();
+        }
+        
+        // 場所の作成
+        function createLocations() {
+            locationData.forEach(loc => {
+                const locationGroup = new THREE.Group();
+                
+                // 建物の基本構造
+                const buildingGeometry = new THREE.BoxGeometry(6, 4, 6);
+                const buildingMaterial = new THREE.MeshLambertMaterial({ 
+                    color: loc.color,
+                    emissive: loc.color,
+                    emissiveIntensity: 0.1,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+                building.position.set(0, 2, 0);
+                building.castShadow = true;
+                building.receiveShadow = true;
+                locationGroup.add(building);
+
+                // 屋根
+                const roofGeometry = new THREE.ConeGeometry(4.5, 2, 4);
+                const roofMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x8B4513,
+                    emissive: 0x8B4513,
+                    emissiveIntensity: 0.1,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+                roof.position.set(0, 5, 0);
+                roof.rotation.y = Math.PI / 4;
+                roof.castShadow = true;
+                locationGroup.add(roof);
+
+                // 場所特有の装飾
+                switch(loc.name) {
+                    case "カフェ":
+                        // テーブルと椅子
+                        for(let i = 0; i < 4; i++) {
+                            const tableGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 8);
+                            const tableMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                            const table = new THREE.Mesh(tableGeometry, tableMaterial);
+                            table.position.set(
+                                Math.cos(i * Math.PI/2) * 2,
+                                0.05,
+                                Math.sin(i * Math.PI/2) * 2
+                            );
+                            locationGroup.add(table);
+
+                            // 椅子
+                            const chairGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+                            const chairMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                            const chair = new THREE.Mesh(chairGeometry, chairMaterial);
+                            chair.position.set(
+                                Math.cos(i * Math.PI/2) * 2.5,
+                                0.2,
+                                Math.sin(i * Math.PI/2) * 2.5
+                            );
+                            locationGroup.add(chair);
+                        }
+                        break;
+
+                    case "公園":
+                        // 木
+                        for(let i = 0; i < 3; i++) {
+                            const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 1.5, 8);
+                            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                            trunk.position.set(
+                                Math.cos(i * Math.PI/1.5) * 2,
+                                0.75,
+                                Math.sin(i * Math.PI/1.5) * 2
+                            );
+                            locationGroup.add(trunk);
+
+                            const leavesGeometry = new THREE.SphereGeometry(1, 8, 8);
+                            const leavesMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+                            const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+                            leaves.position.set(
+                                Math.cos(i * Math.PI/1.5) * 2,
+                                2,
+                                Math.sin(i * Math.PI/1.5) * 2
+                            );
+                            locationGroup.add(leaves);
+                        }
+
+                        // ベンチ
+                        const benchGeometry = new THREE.BoxGeometry(2, 0.2, 0.5);
+                        const benchMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                        const bench = new THREE.Mesh(benchGeometry, benchMaterial);
+                        bench.position.set(0, 0.1, 2);
+                        locationGroup.add(bench);
+                        break;
+
+                    case "図書館":
+                        // 本棚
+                        for(let i = 0; i < 2; i++) {
+                            const bookshelfGeometry = new THREE.BoxGeometry(0.3, 3, 2);
+                            const bookshelfMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                            const bookshelf = new THREE.Mesh(bookshelfGeometry, bookshelfMaterial);
+                            bookshelf.position.set(
+                                i === 0 ? -2 : 2,
+                                1.5,
+                                0
+                            );
+                            locationGroup.add(bookshelf);
+                        }
+                        break;
+
+                    case "スポーツジム":
+                        // トレーニングマシン
+                        const machineGeometry = new THREE.BoxGeometry(1, 1, 2);
+                        const machineMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
+                        const machine = new THREE.Mesh(machineGeometry, machineMaterial);
+                        machine.position.set(0, 0.5, 0);
+                        locationGroup.add(machine);
+
+                        // ウェイト
+                        const weightGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.4, 8);
+                        const weightMaterial = new THREE.MeshLambertMaterial({ color: 0x000000 });
+                        for(let i = 0; i < 4; i++) {
+                            const weight = new THREE.Mesh(weightGeometry, weightMaterial);
+                            weight.position.set(
+                                Math.cos(i * Math.PI/2) * 1.5,
+                                0.2,
+                                Math.sin(i * Math.PI/2) * 1.5
+                            );
+                            locationGroup.add(weight);
+                        }
+                        break;
+
+                    case "町の広場":
+                        // 噴水
+                        const fountainBaseGeometry = new THREE.CylinderGeometry(1, 1.2, 0.3, 16);
+                        const fountainBaseMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
+                        const fountainBase = new THREE.Mesh(fountainBaseGeometry, fountainBaseMaterial);
+                        fountainBase.position.set(0, 0.15, 0);
+                        locationGroup.add(fountainBase);
+
+                        const fountainCenterGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
+                        const fountainCenterMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
+                        const fountainCenter = new THREE.Mesh(fountainCenterGeometry, fountainCenterMaterial);
+                        fountainCenter.position.set(0, 0.8, 0);
+                        locationGroup.add(fountainCenter);
+
+                        // ベンチ
+                        for(let i = 0; i < 4; i++) {
+                            const benchGeometry = new THREE.BoxGeometry(2, 0.2, 0.5);
+                            const benchMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                            const bench = new THREE.Mesh(benchGeometry, benchMaterial);
+                            bench.position.set(
+                                Math.cos(i * Math.PI/2) * 3,
+                                0.1,
+                                Math.sin(i * Math.PI/2) * 3
+                            );
+                            bench.rotation.y = i * Math.PI/2;
+                            locationGroup.add(bench);
+                        }
+                        break;
+                }
+
+                // 看板
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 64;
+                const context = canvas.getContext('2d');
+                context.fillStyle = 'white';
+                context.fillRect(0, 0, 256, 64);
+                context.fillStyle = 'black';
+                context.font = 'bold 32px Arial';
+                context.textAlign = 'center';
+                context.fillText(loc.name, 128, 40);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const signMaterial = new THREE.MeshBasicMaterial({ map: texture });
+                const signGeometry = new THREE.PlaneGeometry(3, 0.75);
+                const signMesh = new THREE.Mesh(signGeometry, signMaterial);
+                signMesh.position.set(0, 4.5, 3.1);
+                locationGroup.add(signMesh);
+
+                // 場所の位置を設定
+                locationGroup.position.set(loc.x, 0, loc.z);
+                scene.add(locationGroup);
+                
+                locations.push({
+                    name: loc.name,
+                    position: new THREE.Vector3(loc.x, 0, loc.z),
+                    mesh: locationGroup,
+                    activities: loc.activities,
+                    atmosphere: loc.atmosphere
+                });
+            });
+
+            // エージェントの自宅を作成
+            agentPersonalities.forEach(agent => {
+                const homeGroup = new THREE.Group();
+                
+                // 家の基本構造
+                const houseGeometry = new THREE.BoxGeometry(4, 3, 4);
+                const houseMaterial = new THREE.MeshLambertMaterial({ 
+                    color: agent.home.color,
+                    emissive: agent.home.color,
+                    emissiveIntensity: 0.1,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const house = new THREE.Mesh(houseGeometry, houseMaterial);
+                house.position.set(0, 1.5, 0);
+                house.castShadow = true;
+                house.receiveShadow = true;
+                homeGroup.add(house);
+
+                // 屋根
+                const roofGeometry = new THREE.ConeGeometry(3, 2, 4);
+                const roofMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x8B4513,
+                    emissive: 0x8B4513,
+                    emissiveIntensity: 0.1,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+                roof.position.set(0, 4, 0);
+                roof.rotation.y = Math.PI / 4;
+                roof.castShadow = true;
+                homeGroup.add(roof);
+
+                // 看板
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 64;
+                const context = canvas.getContext('2d');
+                context.fillStyle = 'white';
+                context.fillRect(0, 0, 256, 64);
+                context.fillStyle = 'black';
+                context.font = 'bold 24px Arial';
+                context.textAlign = 'center';
+                context.fillText(agent.home.name, 128, 40);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const signMaterial = new THREE.MeshBasicMaterial({ map: texture });
+                const signGeometry = new THREE.PlaneGeometry(2, 0.5);
+                const signMesh = new THREE.Mesh(signGeometry, signMaterial);
+                signMesh.position.set(0, 3.5, 2.1);
+                homeGroup.add(signMesh);
+
+                // 家の位置を設定
+                homeGroup.position.set(agent.home.x, 0, agent.home.z);
+                scene.add(homeGroup);
+                
+                locations.push({
+                    name: agent.home.name,
+                    position: new THREE.Vector3(agent.home.x, 0, agent.home.z),
+                    mesh: homeGroup,
+                    activities: ["休憩する", "眠る", "読書する"],
+                    atmosphere: "静かで落ち着いた雰囲気の家",
+                    isHome: true,
+                    owner: agent.name
+                });
+            });
+        }
+        
+        // マウスコントロール
+        function setupMouseControls() {
+            let mouseX = 0, mouseY = 0;
+            let isMouseDown = false;
+            
+            document.addEventListener('mousemove', (event) => {
+                if (isMouseDown) {
+                    const deltaX = event.clientX - mouseX;
+                    const deltaY = event.clientY - mouseY;
+                    
+                    // マウスの移動方向と逆方向にカメラを移動
+                    camera.position.x -= deltaX * 0.1;
+                    camera.position.z -= deltaY * 0.1;
+                    camera.lookAt(0, 0, 0);
+                }
+                mouseX = event.clientX;
+                mouseY = event.clientY;
+            });
+            
+            document.addEventListener('mousedown', () => {
+                isMouseDown = true;
+            });
+            
+            document.addEventListener('mouseup', () => {
+                isMouseDown = false;
+            });
+            
+            document.addEventListener('wheel', (event) => {
+                const scale = event.deltaY > 0 ? 1.1 : 0.9;
+                camera.position.multiplyScalar(scale);
+                camera.position.y = Math.max(10, Math.min(50, camera.position.y));
+                camera.lookAt(0, 0, 0);
+            });
+        }
+        
+        // エージェントの作成
+        function createAgents() {
+            agentPersonalities.forEach((data, index) => {
+                const agent = new Agent(data, index);
+                agents.push(agent);
+            });
+            updateAgentInfo();
+        }
+        
+        // 時間システム
+        function updateTime() {
+            if (!simulationRunning || simulationPaused) return;
+            
+            currentTime += timeSpeed;
+            if (currentTime >= 24 * 60) {
+                currentTime = 0;
+            }
+            
+            const hours = Math.floor(currentTime / 60);
+            const minutes = Math.floor(currentTime % 60);
+            const timeString = `${hours < 12 ? '午前' : '午後'} ${hours === 0 ? 12 : hours > 12 ? hours - 12 : hours}:${minutes.toString().padStart(2, '0')}`;
+            document.getElementById('time-display').textContent = timeString;
+            
+            // 時間帯による環境の変化
+            updateEnvironment(hours);
+        }
+        
+        function updateEnvironment(hour) {
+            // 空の色を時間帯に応じて変更
+            let skyColor;
+            if (hour < 6 || hour > 20) {
+                skyColor = new THREE.Color(0x1a1a2e); // 夜
+            } else if (hour < 8 || hour > 18) {
+                skyColor = new THREE.Color(0xffa500); // 朝夕
+            } else {
+                skyColor = new THREE.Color(0x87CEEB); // 昼
+            }
+            
+            scene.background = skyColor;
+            //scene.fog.color = skyColor;
+        }
+        
+        // UI更新
+        function updateAgentInfo() {
+            const agentsList = document.getElementById('agents-list');
+            agentsList.innerHTML = '';
+            
+            agents.forEach(agent => {
+                const agentCard = document.createElement('div');
+                agentCard.className = 'agent-card';
+                
+                // 基本情報
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'agent-name';
+                nameDiv.innerHTML = `
+                    <span class="agent-status status-active"></span>
+                    ${agent.name} (${agent.age}歳)
+                    ${agent.isThinking ? '<span class="thinking-indicator"></span>' : ''}
+                `;
+                agentCard.appendChild(nameDiv);
+                
+                // 現在の情報
+                const infoDiv = document.createElement('div');
+                infoDiv.innerHTML = `
+                    <div class="agent-info-row">📍 場所: ${agent.currentLocation.name}</div>
+                    <div class="agent-info-row">⚡ 体力: ${Math.round(agent.energy * 100)}%</div>
+                    <div class="agent-info-row">😊 気分: ${agent.mood}</div>
+                `;
+                agentCard.appendChild(infoDiv);
+                
+                // 現在の思考
+                if (agent.currentThought) {
+                    const thoughtDiv = document.createElement('div');
+                    thoughtDiv.className = 'agent-thought';
+                    thoughtDiv.textContent = agent.currentThought;
+                    agentCard.appendChild(thoughtDiv);
+                }
+                
+                // 最近の記憶
+                if (agent.shortTermMemory.length > 0) {
+                    const memoryDiv = document.createElement('div');
+                    memoryDiv.className = 'agent-memory';
+                    memoryDiv.innerHTML = '<strong>最近の記憶:</strong>';
+                    
+                    const recentMemories = agent.shortTermMemory.slice(-3);
+                    recentMemories.forEach(memory => {
+                        const memoryItem = document.createElement('div');
+                        memoryItem.className = 'memory-item';
+                        memoryItem.textContent = `• ${memory.event}`;
+                        memoryDiv.appendChild(memoryItem);
+                    });
+                    
+                    agentCard.appendChild(memoryDiv);
+                }
+                
+                // 関係性情報
+                const relationshipsDiv = document.createElement('div');
+                relationshipsDiv.className = 'relationship-info';
+                relationshipsDiv.innerHTML = '<strong>関係性:</strong>';
+                
+                let hasRelationships = false;
+                agent.relationships.forEach((rel, name) => {
+                    if (rel.interactionCount > 0) {
+                        hasRelationships = true;
+                        const relItem = document.createElement('div');
+                        relItem.className = 'relationship-item';
+                        relItem.innerHTML = `
+                            <span>${name}:</span>
+                            <div class="relationship-bar">
+                                <div class="relationship-fill" style="width: ${rel.affinity * 100}%"></div>
+                            </div>
+                        `;
+                        relationshipsDiv.appendChild(relItem);
+                    }
+                });
+                
+                if (hasRelationships) {
+                    agentCard.appendChild(relationshipsDiv);
+                }
+                
+                agentsList.appendChild(agentCard);
+            });
+        }
+        
+        // ログシステム
+        function addLog(message, type = 'info', details = null) {
+            const logPanel = document.getElementById('activity-log');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            
+            const time = new Date();
+            const timeString = time.toLocaleTimeString('ja-JP', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            let logContent = `<strong>${timeString}</strong> ${message}`;
+            
+            // 詳細情報がある場合は折りたたみ可能なセクションとして表示
+            if (details) {
+                const detailsId = `details-${Date.now()}`;
+                logContent += `
+                    <div class="log-details-toggle" onclick="toggleDetails('${detailsId}')">
+                        <span class="toggle-icon">▼</span> 詳細を見る
+                    </div>
+                    <div id="${detailsId}" class="log-details" style="display: none;">
+                        ${details}
+                    </div>
+                `;
+            }
+            
+            logEntry.innerHTML = logContent;
+            logPanel.insertBefore(logEntry, logPanel.firstChild);
+            
+            // 最大50件のログを保持
+            while (logPanel.children.length > 50) {
+                logPanel.removeChild(logPanel.lastChild);
+            }
+        }
+        
+        // ログの詳細表示切り替え
+        function toggleDetails(detailsId) {
+            const details = document.getElementById(detailsId);
+            const toggle = details.previousElementSibling;
+            const icon = toggle.querySelector('.toggle-icon');
+            
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                icon.textContent = '▲';
+                toggle.querySelector('span:not(.toggle-icon)').textContent = ' 詳細を隠す';
+            } else {
+                details.style.display = 'none';
+                icon.textContent = '▼';
+                toggle.querySelector('span:not(.toggle-icon)').textContent = ' 詳細を見る';
+            }
+        }
+        
+        // エージェントの行動ログを記録
+        function logAgentAction(agent, action, details = null) {
+            const actionTypes = {
+                'move': '🚶 移動',
+                'interact': '💬 会話',
+                'activity': '🎯 活動',
+                'think': '💭 思考'
+            };
+
+            const actionType = actionTypes[action] || action;
+            const message = `<span class="agent-name">${agent.name}</span>: ${actionType}`;
+            
+            if (!details) {
+                details = `
+                    <div class="log-detail-section">
+                        <h4>現在の状態</h4>
+                        <p>場所: ${agent.currentLocation.name}</p>
+                        <p>体力: ${Math.round(agent.energy * 100)}%</p>
+                        <p>気分: ${agent.calculateMood()}</p>
+                    </div>
+                `;
+            }
+            
+            addLog(message, action, details);
+        }
+
+        // エージェントの関係性ログを記録
+        function logRelationshipChange(agent1, agent2, changeType, details = null) {
+            const relationship = agent1.relationships.get(agent2.name);
+            const message = `
+                <span class="agent-name">${agent1.name}</span> と 
+                <span class="agent-name">${agent2.name}</span> の関係性が変化
+            `;
+            
+            if (!details) {
+                details = `
+                    <div class="log-detail-section">
+                        <h4>関係性の詳細</h4>
+                        <p>親密度: ${Math.round(relationship.familiarity * 100)}%</p>
+                        <p>好感度: ${Math.round(relationship.affinity * 100)}%</p>
+                        <p>交流回数: ${relationship.interactionCount}回</p>
+                        <p>最後の交流: ${relationship.lastInteraction ? relationship.lastInteraction.toLocaleString() : 'なし'}</p>
+                    </div>
+                `;
+            }
+            
+            addLog(message, 'relationship', details);
+        }
+        
+        // シミュレーション制御
+        function startSimulation() {
+            apiKey = document.getElementById('apiKey').value;
+            if (!apiKey) {
+                alert('OpenAI APIキーを入力してください');
+                return;
+            }
+            
+            simulationRunning = true;
+            document.getElementById('pauseBtn').disabled = false;
+            
+            // エージェントの作成
+            createAgents();
+            
+            addLog('<span style="color: #4CAF50;">🎬 シミュレーション開始</span>');
+        }
+        
+        function pauseSimulation() {
+            simulationPaused = !simulationPaused;
+            document.getElementById('pauseBtn').textContent = simulationPaused ? '再開' : '一時停止';
+            
+            if (simulationPaused) {
+                addLog('<span style="color: #FFC107;">⏸️ シミュレーション一時停止</span>');
+            } else {
+                addLog('<span style="color: #4CAF50;">▶️ シミュレーション再開</span>');
+            }
+        }
+        
+        function setTimeSpeed() {
+            const speeds = [1, 2, 5, 10];
+            const currentIndex = speeds.indexOf(timeSpeed);
+            const nextIndex = (currentIndex + 1) % speeds.length;
+            timeSpeed = speeds[nextIndex];
+            document.getElementById('speed').textContent = `${timeSpeed}x`;
+        }
+        
+        // アニメーションループ
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const deltaTime = clock.getDelta();
+            
+            // 時間の更新
+            updateTime();
+            
+            // エージェントの更新
+            if (agents.length > 0) {
+                agents.forEach(agent => {
+                    agent.update(deltaTime);
+                });
+                
+                // UI更新（1秒ごと）
+                if (Math.floor(clock.getElapsedTime()) % 1 === 0) {
+                    updateAgentInfo();
+                }
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // ウィンドウリサイズ対応
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // 初期化
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自律エージェント・シミュレーション with AI</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        
+        #cesiumContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #control-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+            z-index: 1000;
+        }
+        
+        #info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 280px;
+            max-height: 70vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        #info-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #info-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        #info-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        .panel-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4CAF50;
+            text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        .input-group {
+            margin-bottom: 10px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .input-group input[type="text"], .input-group input[type="password"], .input-group input[type="number"] {
+            width: 100%;
+            padding: 6px;
+            margin: 6px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: white;
+            font-size: 12px;
+        }
+        
+        button {
+            padding: 6px 12px;
+            margin: 6px 0;
+            cursor: pointer;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .agent-card {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .agent-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .agent-name {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .agent-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-active {
+            background: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        .agent-info-row {
+            margin: 3px 0;
+            font-size: 12px;
+            color: #b0b0b0;
+        }
+        
+        .agent-thought {
+            font-style: italic;
+            color: #80cbc4;
+            margin-top: 6px;
+            padding: 6px;
+            background: rgba(128, 203, 196, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #80cbc4;
+            font-size: 12px;
+        }
+        
+        .agent-memory {
+            margin-top: 6px;
+            font-size: 11px;
+        }
+        
+        .memory-item {
+            padding: 3px 6px;
+            margin: 2px 0;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 3px;
+            color: #888;
+        }
+        
+        .relationship-info {
+            margin-top: 6px;
+            font-size: 11px;
+        }
+        
+        .relationship-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 4px 0;
+        }
+        
+        .relationship-bar {
+            width: 100px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .relationship-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ff6b6b, #ffd93d, #6bcf7f);
+            transition: width 0.3s ease;
+        }
+        
+        #log-panel {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 12px;
+            border-radius: 8px;
+            max-width: 350px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .log-entry {
+            margin: 6px 0;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            font-size: 11px;
+            border-left: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .log-thought {
+            border-left-color: #80cbc4;
+            color: #80cbc4;
+        }
+        
+        .log-interaction {
+            border-left-color: #FFC107;
+            color: #FFC107;
+        }
+        
+        .log-movement {
+            border-left-color: #2196F3;
+            color: #2196F3;
+        }
+        
+        .time-display {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 20, 0.95);
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            color: #4CAF50;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .warning {
+            color: #ff9800;
+            font-size: 11px;
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(255, 152, 0, 0.1);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+        
+        /* ローディングインジケーター */
+        .thinking-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 1.5s infinite;
+            margin-left: 8px;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .log-entry {
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            font-size: 13px;
+            border-left: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .log-thought {
+            border-left-color: #80cbc4;
+            color: #80cbc4;
+        }
+        
+        .log-interaction {
+            border-left-color: #FFC107;
+            color: #FFC107;
+        }
+        
+        .log-movement {
+            border-left-color: #2196F3;
+            color: #2196F3;
+        }
+        
+        .log-relationship {
+            border-left-color: #E91E63;
+            color: #E91E63;
+        }
+        
+        .log-details-toggle {
+            margin-top: 5px;
+            cursor: pointer;
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .log-details-toggle:hover {
+            color: #fff;
+        }
+        
+        .log-details {
+            margin-top: 6px;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        
+        .log-detail-section {
+            margin-bottom: 6px;
+        }
+        
+        .log-detail-section h4 {
+            margin: 0 0 4px 0;
+            color: #4CAF50;
+            font-size: 11px;
+        }
+        
+        .agent-name {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .relationship-change {
+            color: #E91E63;
+        }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    
+    <div class="time-display" id="time-display">
+        午前 8:00
+    </div>
+    
+    <div id="control-panel">
+        <h3 class="panel-title">🔧 制御パネル</h3>
+        <div class="input-group">
+            <label for="apiKey">OpenAI APIキー:</label>
+            <input type="password" id="apiKey" placeholder="OpenAI APIキーを入力">
+        </div>
+        <div class="input-group">
+            <label for="cesiumKey">Cesium アクセストークン:</label>
+            <input type="password" id="cesiumKey" placeholder="Cesium アクセストークンを入力">
+        </div>
+        <div class="input-group">
+            <label for="locationInput">場所の指定:</label>
+            <input type="text" id="locationInput" placeholder="例: 東京 渋谷区">
+            <button onclick="searchLocation()">検索</button>
+        </div>
+        <div class="input-group">
+            <label for="radiusInput">シミュレーション範囲 (m):</label>
+            <input type="number" id="radiusInput" value="500" min="100" max="2000">
+        </div>
+        <button onclick="startSimulation()">シミュレーション開始</button>
+        <button onclick="pauseSimulation()" id="pauseBtn" disabled>一時停止</button>
+        <button onclick="setTimeSpeed()">時間速度: <span id="speed">1x</span></button>
+        <div class="warning">
+            ⚠️ APIキーはローカルストレージに保存されません。<br>
+            実際の実装では、バックエンドサーバー経由でAPIを呼び出してください。
+        </div>
+    </div>
+    
+    <div id="info-panel">
+        <h3 class="panel-title">👥 エージェント情報</h3>
+        <div id="agents-list"></div>
+    </div>
+    
+    <div id="log-panel">
+        <h3 class="panel-title">📝 活動ログ</h3>
+        <div id="activity-log"></div>
+    </div>
+
+    <script>
+        let viewer;
+        let buildingTileset;
+        let simulationArea;
+        let agents = [];
+        let apiKey = '';
+        let cesiumKey = '';
+        let simulationRunning = false;
+        let simulationPaused = false;
+        let timeSpeed = 1;
+        let currentTime = 8 * 60; // 8:00 AM in minutes
+
+        // CesiumJSの初期化
+        async function initCesium() {
+            cesiumKey = document.getElementById('cesiumKey').value;
+            if (!cesiumKey) {
+                alert('Cesium アクセストークンを入力してください');
+                return false;
+            }
+
+            try {
+                Cesium.Ion.defaultAccessToken = cesiumKey;
+                
+                // 地形プロバイダーを非同期で作成
+                const terrainProvider = await Cesium.createWorldTerrainAsync();
+                
+                viewer = new Cesium.Viewer('cesiumContainer', {
+                    terrainProvider: terrainProvider,
+                    animation: false,
+                    baseLayerPicker: false,
+                    fullscreenButton: false,
+                    geocoder: false,
+                    homeButton: false,
+                    infoBox: false,
+                    sceneModePicker: false,
+                    selectionIndicator: false,
+                    timeline: false,
+                    navigationHelpButton: false,
+                    navigationInstructionsInitiallyVisible: false
+                });
+
+                // デフォルトの位置（東京）
+                viewer.camera.setView({
+                    destination: Cesium.Cartesian3.fromDegrees(139.7670, 35.6814, 1000),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0),
+                        pitch: Cesium.Math.toRadians(-45),
+                        roll: 0.0
+                    }
+                });
+
+                return true;
+            } catch (error) {
+                console.error('CesiumJSの初期化エラー:', error);
+                alert('CesiumJSの初期化中にエラーが発生しました');
+                return false;
+            }
+        }
+
+        // 場所の検索を非同期関数に変更
+        async function searchLocation() {
+            // まずCesiumJSのビューアーを初期化
+            if (!viewer) {
+                if (!(await initCesium())) {
+                    return;
+                }
+            }
+
+            const locationInput = document.getElementById('locationInput').value;
+            if (!locationInput) {
+                alert('場所を入力してください');
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationInput)}`);
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    const location = data[0];
+                    const longitude = parseFloat(location.lon);
+                    const latitude = parseFloat(location.lat);
+                    
+                    // カメラを移動
+                    viewer.camera.setView({
+                        destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, 1000),
+                        orientation: {
+                            heading: Cesium.Math.toRadians(0),
+                            pitch: Cesium.Math.toRadians(-45),
+                            roll: 0.0
+                        }
+                    });
+
+                    // シミュレーション範囲を設定
+                    const radius = parseInt(document.getElementById('radiusInput').value);
+                    setSimulationArea(longitude, latitude, radius);
+                    
+                    // 建物データを読み込む
+                    await loadBuildings(longitude, latitude, radius);
+                } else {
+                    alert('場所が見つかりませんでした');
+                }
+            } catch (error) {
+                console.error('場所の検索エラー:', error);
+                alert('場所の検索中にエラーが発生しました');
+            }
+        }
+
+        // シミュレーション開始
+        async function startSimulation() {
+            apiKey = document.getElementById('apiKey').value;
+            if (!apiKey) {
+                alert('OpenAI APIキーを入力してください');
+                return;
+            }
+
+            // まずCesiumJSのビューアーを初期化
+            if (!viewer) {
+                if (!(await initCesium())) {
+                    return;
+                }
+            }
+
+            // 場所が指定されていない場合はデフォルトの位置（東京）を使用
+            const locationInput = document.getElementById('locationInput').value;
+            if (!locationInput) {
+                const defaultLongitude = 139.7670;
+                const defaultLatitude = 35.6814;
+                const radius = parseInt(document.getElementById('radiusInput').value);
+                
+                setSimulationArea(defaultLongitude, defaultLatitude, radius);
+                await loadBuildings(defaultLongitude, defaultLatitude, radius);
+            }
+
+            simulationRunning = true;
+            document.getElementById('pauseBtn').disabled = false;
+            
+            // エージェントの作成
+            createAgents();
+            
+            addLog('<span style="color: #4CAF50;">🎬 シミュレーション開始</span>');
+        }
+
+        // 建物データの読み込みを非同期関数に変更
+        async function loadBuildings(longitude, latitude, radius) {
+            return new Promise((resolve, reject) => {
+                // 既存の建物データを削除
+                if (buildingTileset) {
+                    viewer.scene.primitives.remove(buildingTileset);
+                }
+
+                // 新しい建物データを読み込む
+                buildingTileset = viewer.scene.primitives.add(
+                    new Cesium.Cesium3DTileset({
+                        url: Cesium.IonResource.fromAssetId(96188), // OpenStreetMap Buildings
+                        maximumScreenSpaceError: 16, // LODの詳細度
+                        maximumMemoryUsage: 512 // メモリ使用量の制限
+                    })
+                );
+
+                // 建物データの読み込み完了を待つ
+                buildingTileset.readyPromise
+                    .then(() => {
+                        // 建物データをシミュレーション範囲に制限
+                        const boundingSphere = new Cesium.BoundingSphere(
+                            Cesium.Cartesian3.fromDegrees(longitude, latitude),
+                            radius
+                        );
+                        buildingTileset.boundingSphere = boundingSphere;
+                        resolve();
+                    })
+                    .catch(reject);
+            });
+        }
+
+        // シミュレーション範囲の設定
+        function setSimulationArea(longitude, latitude, radius) {
+            // 既存の範囲を削除
+            if (simulationArea) {
+                viewer.entities.remove(simulationArea);
+            }
+
+            // 新しい範囲を追加
+            simulationArea = viewer.entities.add({
+                position: Cesium.Cartesian3.fromDegrees(longitude, latitude),
+                ellipse: {
+                    semiMinorAxis: radius,
+                    semiMajorAxis: radius,
+                    material: new Cesium.ColorMaterialProperty(
+                        Cesium.Color.BLUE.withAlpha(0.2)
+                    ),
+                    outline: true,
+                    outlineColor: Cesium.Color.BLUE
+                }
+            });
+        }
+
+        // エージェントクラスの実装
+        class Agent {
+            constructor(data, index) {
+                this.name = data.name;
+                this.age = data.age;
+                this.personality = data.personality;
+                this.dailyRoutine = data.dailyRoutine;
+                this.relationships = {};
+                this.memories = [];
+                this.energy = 100;
+                this.currentLocation = data.home;
+                this.targetLocation = null;
+                this.isMoving = false;
+                this.thoughts = [];
+                this.lastInteraction = null;
+                this.lastThoughtTime = 0;
+                
+                // 位置情報を地理座標系で管理
+                this.currentPosition = Cesium.Cartesian3.fromDegrees(
+                    data.home.longitude,
+                    data.home.latitude,
+                    0
+                );
+                
+                // エージェントの3Dモデルを作成
+                this.createModel();
+                
+                // その他の初期化処理
+                this.initializeRelationships();
+            }
+            
+            createModel() {
+                if (!viewer) return;
+                
+                // エージェントの3Dモデルを作成
+                const entity = viewer.entities.add({
+                    position: this.currentPosition,
+                    ellipsoid: {
+                        radii: new Cesium.Cartesian3(1.0, 1.0, 1.0),
+                        material: Cesium.Color.fromCssColorString(this.personality.color),
+                        outline: true,
+                        outlineColor: Cesium.Color.BLACK
+                    },
+                    label: {
+                        text: this.name,
+                        font: '14px sans-serif',
+                        fillColor: Cesium.Color.WHITE,
+                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        outlineWidth: 2,
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                        pixelOffset: new Cesium.Cartesian2(0, -10)
+                    }
+                });
+                
+                this.entity = entity;
+            }
+            
+            moveToLocation(location) {
+                if (!viewer || !this.entity) return;
+                
+                this.targetLocation = location;
+                this.isMoving = true;
+                
+                // 目的地の座標を設定
+                const destination = Cesium.Cartesian3.fromDegrees(
+                    location.longitude,
+                    location.latitude,
+                    0
+                );
+                
+                // 移動アニメーション
+                const startPosition = this.currentPosition;
+                const endPosition = destination;
+                const duration = 2000; // 2秒
+                const startTime = Date.now();
+                
+                const animate = () => {
+                    if (!viewer || !this.entity) return;
+                    
+                    const elapsed = Date.now() - startTime;
+                    const fraction = Math.min(elapsed / duration, 1.0);
+                    
+                    // 線形補間で位置を更新
+                    const newPosition = Cesium.Cartesian3.lerp(
+                        startPosition,
+                        endPosition,
+                        fraction,
+                        new Cesium.Cartesian3()
+                    );
+                    
+                    this.entity.position = newPosition;
+                    this.currentPosition = newPosition;
+                    
+                    if (fraction < 1.0) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        this.onArrival(location);
+                    }
+                };
+                
+                animate();
+            }
+            
+            onArrival(location) {
+                this.currentLocation = location;
+                this.isMoving = false;
+                this.targetLocation = null;
+                this.energy = Math.max(0, this.energy - 10);
+                
+                addLog(`<span class="log-movement">🚶 ${this.name}が${location.name}に到着しました</span>`);
+                this.updateInfoPanel();
+            }
+            
+            initializeRelationships() {
+                agents.forEach(otherAgent => {
+                    if (otherAgent !== this) {
+                        this.relationships[otherAgent.name] = {
+                            value: Math.random() * 100,
+                            history: []
+                        };
+                    }
+                });
+            }
+            
+            updateInfoPanel() {
+                const agentCard = document.getElementById(`agent-${this.name}`);
+                if (!agentCard) return;
+                
+                // エージェントの情報を更新
+                agentCard.querySelector('.agent-info-row:nth-child(2)').textContent = 
+                    `場所: ${this.currentLocation.name}`;
+                agentCard.querySelector('.agent-info-row:nth-child(3)').textContent = 
+                    `エネルギー: ${this.energy}%`;
+                
+                // 最新の思考を表示
+                const thoughtElement = agentCard.querySelector('.agent-thought');
+                if (this.thoughts.length > 0) {
+                    thoughtElement.textContent = this.thoughts[this.thoughts.length - 1];
+                    thoughtElement.style.display = 'block';
+                } else {
+                    thoughtElement.style.display = 'none';
+                }
+                
+                // 関係性バーを更新
+                const relationshipContainer = agentCard.querySelector('.relationship-info');
+                relationshipContainer.innerHTML = '';
+                
+                Object.entries(this.relationships).forEach(([name, relationship]) => {
+                    const relationshipItem = document.createElement('div');
+                    relationshipItem.className = 'relationship-item';
+                    relationshipItem.innerHTML = `
+                        <span>${name}</span>
+                        <div class="relationship-bar">
+                            <div class="relationship-fill" style="width: ${relationship.value}%"></div>
+                        </div>
+                    `;
+                    relationshipContainer.appendChild(relationshipItem);
+                });
+            }
+            
+            async think() {
+                if (Date.now() - this.lastThoughtTime < 5000) return; // 5秒間隔で思考
+                
+                const prompt = this.buildThoughtPrompt();
+                const thought = await simulateThought(prompt);
+                
+                // 思考の解析
+                const thoughtLines = thought.split('\n');
+                const thoughtContent = thoughtLines.find(line => line.startsWith('思考:'))?.substring(3).trim();
+                const actionLine = thoughtLines.find(line => line.startsWith('行動:'))?.substring(3).trim();
+                const reasonLine = thoughtLines.find(line => line.startsWith('理由:'))?.substring(3).trim();
+                
+                if (thoughtContent) {
+                    this.thoughts.push(thoughtContent);
+                    if (this.thoughts.length > 5) this.thoughts.shift();
+                }
+                
+                if (actionLine) {
+                    const [action, target] = actionLine.split(' ');
+                    this.executeAction(action, target, reasonLine);
+                }
+                
+                this.lastThoughtTime = Date.now();
+                this.updateInfoPanel();
+                
+                addLog(`<span class="log-thought">💭 ${this.name}: ${thoughtContent}</span>`);
+            }
+            
+            buildThoughtPrompt() {
+                const timeOfDay = this.getTimeOfDay();
+                const nearbyAgents = this.findNearbyAgents();
+                const timeOfDayCategory = this.getTimeOfDayCategory();
+                
+                return `
+                    あなたは${this.name}という${this.age}歳の${this.personality.traits.join('、')}な性格の人物です。
+                    現在の時刻は${timeOfDay}（${timeOfDayCategory}）です。
+                    現在の場所は${this.currentLocation.name}です。
+                    現在のエネルギーは${this.energy}%です。
+                    
+                    近くにいる人物: ${nearbyAgents.map(a => a.name).join('、')}
+                    
+                    あなたの日課:
+                    ${this.dailyRoutine.map(r => `- ${r.time}: ${r.activity}`).join('\n')}
+                    
+                    現在の状況を考慮して、次に何をするか考えてください。
+                    以下の形式で回答してください：
+                    
+                    思考: [あなたの考え]
+                    行動: [move/interact/rest] [場所名/人物名]
+                    理由: [行動を選んだ理由]
+                `;
+            }
+            
+            getTimeOfDay() {
+                const hour = Math.floor(currentTime / 60);
+                const minute = currentTime % 60;
+                return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            }
+            
+            getTimeOfDayCategory() {
+                const hour = Math.floor(currentTime / 60);
+                if (hour >= 5 && hour < 12) return "朝";
+                if (hour >= 12 && hour < 17) return "昼";
+                if (hour >= 17 && hour < 21) return "夕方";
+                if (hour >= 21 || hour < 5) return "夜";
+            }
+            
+            findNearbyAgents() {
+                return agents.filter(agent => {
+                    if (agent === this) return false;
+                    if (agent.currentLocation !== this.currentLocation) return false;
+                    return true;
+                });
+            }
+
+            executeAction(action, target, reason) {
+                switch (action) {
+                    case 'move':
+                        const location = this.findLocation(target);
+                        if (location) {
+                            this.moveToLocation(location);
+                            addLog(`<span class="log-movement">🚶 ${this.name}が${target}へ移動します（理由: ${reason}）</span>`);
+                        }
+                        break;
+                    case 'interact':
+                        const agent = this.findAgent(target);
+                        if (agent) {
+                            this.interactWithAgent(agent);
+                            addLog(`<span class="log-interaction">👥 ${this.name}が${target}と交流します（理由: ${reason}）</span>`);
+                        }
+                        break;
+                    case 'rest':
+                        this.rest();
+                        addLog(`<span class="log-movement">💤 ${this.name}が休憩します（理由: ${reason}）</span>`);
+                        break;
+                }
+            }
+
+            findLocation(locationName) {
+                // 場所の検索ロジックを実装
+                return { name: locationName, longitude: 139.7670, latitude: 35.6814 };
+            }
+
+            findAgent(agentName) {
+                return agents.find(agent => agent.name === agentName);
+            }
+
+            interactWithAgent(otherAgent) {
+                if (!otherAgent) return;
+                
+                // 関係性の更新
+                const relationship = this.relationships[otherAgent.name];
+                if (relationship) {
+                    const change = (Math.random() - 0.5) * 10;
+                    relationship.value = Math.max(0, Math.min(100, relationship.value + change));
+                    relationship.history.push({
+                        time: currentTime,
+                        change: change
+                    });
+                }
+                
+                // エネルギーの消費
+                this.energy = Math.max(0, this.energy - 5);
+            }
+
+            rest() {
+                this.energy = Math.min(100, this.energy + 20);
+            }
+        }
+
+        // エージェントの作成
+        function createAgents() {
+            agents = [];
+            
+            // エージェントのデータ
+            const agentData = [
+                {
+                    name: "田中太郎",
+                    age: 28,
+                    personality: {
+                        traits: ["社交的", "好奇心旺盛"],
+                        color: "#4CAF50"
+                    },
+                    dailyRoutine: [
+                        { time: "8:00", activity: "自宅で朝食" },
+                        { time: "9:00", activity: "会社へ出勤" },
+                        { time: "18:00", activity: "会社から帰宅" },
+                        { time: "20:00", activity: "自宅で夕食" }
+                    ],
+                    home: { name: "自宅", longitude: 139.7670, latitude: 35.6814 }
+                },
+                {
+                    name: "佐藤花子",
+                    age: 25,
+                    personality: {
+                        traits: ["几帳面", "内向的"],
+                        color: "#E91E63"
+                    },
+                    dailyRoutine: [
+                        { time: "7:00", activity: "自宅で朝食" },
+                        { time: "8:00", activity: "会社へ出勤" },
+                        { time: "17:00", activity: "会社から帰宅" },
+                        { time: "19:00", activity: "自宅で夕食" }
+                    ],
+                    home: { name: "自宅", longitude: 139.7672, latitude: 35.6816 }
+                },
+                {
+                    name: "鈴木一郎",
+                    age: 35,
+                    personality: {
+                        traits: ["リーダーシップ", "責任感が強い"],
+                        color: "#2196F3"
+                    },
+                    dailyRoutine: [
+                        { time: "6:30", activity: "自宅で朝食" },
+                        { time: "7:30", activity: "会社へ出勤" },
+                        { time: "19:00", activity: "会社から帰宅" },
+                        { time: "20:00", activity: "自宅で夕食" }
+                    ],
+                    home: { name: "自宅", longitude: 139.7674, latitude: 35.6818 }
+                },
+                {
+                    name: "高橋美咲",
+                    age: 22,
+                    personality: {
+                        traits: ["明るい", "フレンドリー"],
+                        color: "#FFC107"
+                    },
+                    dailyRoutine: [
+                        { time: "8:30", activity: "自宅で朝食" },
+                        { time: "9:30", activity: "大学へ通学" },
+                        { time: "17:00", activity: "アルバイト" },
+                        { time: "21:00", activity: "自宅に帰宅" }
+                    ],
+                    home: { name: "自宅", longitude: 139.7676, latitude: 35.6820 }
+                },
+                {
+                    name: "伊藤健太",
+                    age: 42,
+                    personality: {
+                        traits: ["几帳面", "几帳面"],
+                        color: "#9C27B0"
+                    },
+                    dailyRoutine: [
+                        { time: "7:00", activity: "自宅で朝食" },
+                        { time: "8:00", activity: "会社へ出勤" },
+                        { time: "18:00", activity: "ジムで運動" },
+                        { time: "20:00", activity: "自宅で夕食" }
+                    ],
+                    home: { name: "自宅", longitude: 139.7678, latitude: 35.6822 }
+                },
+                {
+                    name: "渡辺さくら",
+                    age: 19,
+                    personality: {
+                        traits: ["活発", "冒険好き"],
+                        color: "#FF5722"
+                    },
+                    dailyRoutine: [
+                        { time: "9:00", activity: "自宅で朝食" },
+                        { time: "10:00", activity: "大学へ通学" },
+                        { time: "16:00", activity: "部活動" },
+                        { time: "19:00", activity: "自宅に帰宅" }
+                    ],
+                    home: { name: "自宅", longitude: 139.7680, latitude: 35.6824 }
+                },
+                {
+                    name: "山田隆",
+                    age: 31,
+                    personality: {
+                        traits: ["冷静", "分析的"],
+                        color: "#607D8B"
+                    },
+                    dailyRoutine: [
+                        { time: "7:30", activity: "自宅で朝食" },
+                        { time: "8:30", activity: "会社へ出勤" },
+                        { time: "18:30", activity: "会社から帰宅" },
+                        { time: "19:30", activity: "自宅で夕食" }
+                    ],
+                    home: { name: "自宅", longitude: 139.7682, latitude: 35.6826 }
+                },
+                {
+                    name: "中村優子",
+                    age: 27,
+                    personality: {
+                        traits: ["創造的", "芸術的"],
+                        color: "#00BCD4"
+                    },
+                    dailyRoutine: [
+                        { time: "8:00", activity: "自宅で朝食" },
+                        { time: "9:00", activity: "アトリエで制作" },
+                        { time: "18:00", activity: "カフェで休憩" },
+                        { time: "20:00", activity: "自宅に帰宅" }
+                    ],
+                    home: { name: "自宅", longitude: 139.7684, latitude: 35.6828 }
+                },
+                {
+                    name: "小林大輔",
+                    age: 45,
+                    personality: {
+                        traits: ["穏やか", "思慮深い"],
+                        color: "#795548"
+                    },
+                    dailyRoutine: [
+                        { time: "6:00", activity: "自宅で朝食" },
+                        { time: "7:00", activity: "散歩" },
+                        { time: "9:00", activity: "会社へ出勤" },
+                        { time: "18:00", activity: "自宅に帰宅" }
+                    ],
+                    home: { name: "自宅", longitude: 139.7686, latitude: 35.6830 }
+                },
+                {
+                    name: "加藤真理",
+                    age: 33,
+                    personality: {
+                        traits: ["情熱的", "決断力がある"],
+                        color: "#F44336"
+                    },
+                    dailyRoutine: [
+                        { time: "7:00", activity: "自宅で朝食" },
+                        { time: "8:00", activity: "会社へ出勤" },
+                        { time: "19:00", activity: "会社から帰宅" },
+                        { time: "20:00", activity: "自宅で夕食" }
+                    ],
+                    home: { name: "自宅", longitude: 139.7688, latitude: 35.6832 }
+                }
+            ];
+            
+            // エージェントの作成と情報パネルの更新
+            agentData.forEach((data, index) => {
+                const agent = new Agent(data, index);
+                agents.push(agent);
+                
+                // エージェントカードの作成
+                const agentCard = document.createElement('div');
+                agentCard.className = 'agent-card';
+                agentCard.id = `agent-${data.name}`;
+                agentCard.innerHTML = `
+                    <div class="agent-name">
+                        <span class="agent-status status-active"></span>
+                        ${data.name}
+                    </div>
+                    <div class="agent-info-row">年齢: ${data.age}歳</div>
+                    <div class="agent-info-row">場所: ${data.home.name}</div>
+                    <div class="agent-info-row">エネルギー: 100%</div>
+                    <div class="agent-thought" style="display: none;"></div>
+                    <div class="relationship-info"></div>
+                `;
+                
+                document.getElementById('agents-list').appendChild(agentCard);
+            });
+        }
+
+        // 思考のシミュレーション
+        async function simulateThought(prompt) {
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-3.5-turbo",
+                        messages: [
+                            {
+                                role: "system",
+                                content: "あなたは自律的なAIエージェントです。与えられた状況に基づいて、自然な行動を選択してください。"
+                            },
+                            {
+                                role: "user",
+                                content: prompt
+                            }
+                        ],
+                        temperature: 0.7
+                    })
+                });
+                
+                const data = await response.json();
+                return data.choices[0].message.content;
+            } catch (error) {
+                console.error('思考のシミュレーションエラー:', error);
+                return "エラーが発生しました。";
+            }
+        }
+
+        // ログの追加
+        function addLog(message) {
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = message;
+            
+            const logContainer = document.getElementById('activity-log');
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // 時間の更新
+        function updateTime() {
+            if (simulationPaused) return;
+            
+            currentTime += timeSpeed;
+            if (currentTime >= 24 * 60) currentTime = 0;
+            
+            const hour = Math.floor(currentTime / 60);
+            const minute = currentTime % 60;
+            const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            
+            document.getElementById('time-display').textContent = timeString;
+            
+            // エージェントの思考を更新
+            agents.forEach(agent => agent.think());
+        }
+
+        // シミュレーションの一時停止
+        function pauseSimulation() {
+            simulationPaused = !simulationPaused;
+            document.getElementById('pauseBtn').textContent = simulationPaused ? '再開' : '一時停止';
+        }
+
+        // 時間速度の設定
+        function setTimeSpeed() {
+            timeSpeed = timeSpeed === 1 ? 5 : 1;
+            document.getElementById('speed').textContent = `${timeSpeed}x`;
+        }
+
+        // 定期的な更新
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>

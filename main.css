@@ -1,0 +1,363 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #0a0a0a;
+    color: #e0e0e0;
+    overflow: hidden;
+}
+
+#canvas-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+
+#control-panel, #info-panel, #log-panel {
+    position: absolute;
+    background: rgba(20, 20, 20, 0.95);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    cursor: move;
+    user-select: none;
+    transition: all 0.3s ease;
+}
+
+#control-panel {
+    top: 10px;
+    right: 10px;
+    max-width: 250px;
+}
+
+#info-panel {
+    top: 10px;
+    left: 10px;
+    max-width: 280px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+#log-panel {
+    bottom: 10px;
+    right: 10px;
+    max-width: 350px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    cursor: move;
+}
+
+.panel-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #4CAF50;
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    margin: 0;
+}
+
+.panel-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.panel-button {
+    background: none;
+    border: none;
+    color: #4CAF50;
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.panel-button:hover {
+    background: rgba(76, 175, 80, 0.2);
+}
+
+.panel-content {
+    transition: all 0.3s ease;
+}
+
+.panel-minimized .panel-content {
+    display: none;
+}
+
+.panel-minimized {
+    padding: 8px;
+}
+
+input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 6px;
+    margin: 6px 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: white;
+    font-size: 12px;
+}
+
+button {
+    padding: 6px 12px;
+    margin: 6px 0;
+    cursor: pointer;
+    background: linear-gradient(45deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+button:disabled {
+    background: #666;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.agent-card {
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.agent-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.agent-name {
+    font-weight: bold;
+    font-size: 13px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.agent-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-active {
+    background: #4CAF50;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.agent-info-row {
+    margin: 3px 0;
+    font-size: 12px;
+    color: #b0b0b0;
+}
+
+.agent-thought {
+    font-style: italic;
+    color: #80cbc4;
+    margin-top: 6px;
+    padding: 6px;
+    background: rgba(128, 203, 196, 0.1);
+    border-radius: 4px;
+    border-left: 3px solid #80cbc4;
+    font-size: 12px;
+}
+
+.agent-memory {
+    margin-top: 6px;
+    font-size: 11px;
+}
+
+.memory-item {
+    padding: 3px 6px;
+    margin: 2px 0;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 3px;
+    color: #888;
+}
+
+.relationship-info {
+    margin-top: 6px;
+    font-size: 11px;
+}
+
+.relationship-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 4px 0;
+}
+
+.relationship-bar {
+    width: 100px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.relationship-fill {
+    height: 100%;
+    background: linear-gradient(to right, #ff6b6b, #ffd93d, #6bcf7f);
+    transition: width 0.3s ease;
+}
+
+.log-entry {
+    margin: 6px 0;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    font-size: 11px;
+    border-left: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.log-entry:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.log-thought {
+    border-left-color: #80cbc4;
+    color: #80cbc4;
+}
+
+.log-interaction {
+    border-left-color: #FFC107;
+    color: #FFC107;
+}
+
+.log-movement {
+    border-left-color: #2196F3;
+    color: #2196F3;
+}
+
+.time-display {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 20, 20, 0.95);
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 13px;
+    color: #4CAF50;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.warning {
+    color: #ff9800;
+    font-size: 11px;
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(255, 152, 0, 0.1);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+/* ローディングインジケーター */
+.thinking-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4CAF50;
+    animation: pulse 1.5s infinite;
+    margin-left: 8px;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.log-entry {
+    margin: 8px 0;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    font-size: 13px;
+    border-left: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.log-entry:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.log-thought {
+    border-left-color: #80cbc4;
+    color: #80cbc4;
+}
+
+.log-interaction {
+    border-left-color: #FFC107;
+    color: #FFC107;
+}
+
+.log-movement {
+    border-left-color: #2196F3;
+    color: #2196F3;
+}
+
+.log-relationship {
+    border-left-color: #E91E63;
+    color: #E91E63;
+}
+
+.log-details-toggle {
+    margin-top: 5px;
+    cursor: pointer;
+    color: #888;
+    font-size: 12px;
+}
+
+.log-details-toggle:hover {
+    color: #fff;
+}
+
+.log-details {
+    margin-top: 6px;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.log-detail-section {
+    margin-bottom: 6px;
+}
+
+.log-detail-section h4 {
+    margin: 0 0 4px 0;
+    color: #4CAF50;
+    font-size: 11px;
+}
+
+.agent-name {
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+.relationship-change {
+    color: #E91E63;
+}

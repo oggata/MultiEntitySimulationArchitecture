@@ -14,25 +14,28 @@
     </div>
     
     <div id="control-panel">
-        <h3 class="panel-title">🔧 制御パネル</h3>
         <input type="password" id="apiKey" placeholder="OpenAI APIキーを入力">
         <button onclick="startSimulation()">シミュレーション開始</button>
         <button onclick="pauseSimulation()" id="pauseBtn" disabled>一時停止</button>
         <button onclick="setTimeSpeed()">時間速度: <span id="speed">1x</span></button>
         <button onclick="generateNewAgent()" id="generateAgentBtn">新しいエージェントを生成</button>
         <div class="warning">
-            ⚠️ APIキーはローカルストレージに保存されません。<br>
-            実際の実装では、バックエンドサーバー経由でAPIを呼び出してください。
+            ⚠️ APIキーは保存されません。
         </div>
     </div>
     
     <div id="info-panel">
-        <h3 class="panel-title">👥 エージェント情報</h3>
-        <div id="agents-list"></div>
+        <div id="agents-list">
+            <h3>エージェント情報</h3>
+            <div id="agentList"></div>
+        </div>
+        <div class="camera-controls">
+            <h3>カメラ制御</h3>
+            <button id="resetCamera">全体表示に戻す</button>
+        </div>
     </div>
     
     <div id="log-panel">
-        <h3 class="panel-title">📝 活動ログ</h3>
         <div id="activity-log"></div>
     </div>
 

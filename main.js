@@ -149,16 +149,33 @@ function updateTime() {
 function updateEnvironment(hour) {
     // 空の色を時間帯に応じて変更
     let skyColor;
+    let ambientIntensity;
+    let directionalIntensity;
+    
     if (hour < 6 || hour > 20) {
         skyColor = new THREE.Color(0x1a1a2e); // 夜
+        ambientIntensity = 0.2;
+        directionalIntensity = 0.3;
     } else if (hour < 8 || hour > 18) {
         skyColor = new THREE.Color(0xffa500); // 朝夕
+        ambientIntensity = 0.4;
+        directionalIntensity = 0.5;
     } else {
         skyColor = new THREE.Color(0x87CEEB); // 昼
+        ambientIntensity = 0.6;
+        directionalIntensity = 0.8;
     }
     
     scene.background = skyColor;
-    //scene.fog.color = skyColor;
+    
+    // ライトの強度を更新
+    scene.children.forEach(child => {
+        if (child instanceof THREE.AmbientLight) {
+            child.intensity = ambientIntensity;
+        } else if (child instanceof THREE.DirectionalLight) {
+            child.intensity = directionalIntensity;
+        }
+    });
 }
 
 // UI更新

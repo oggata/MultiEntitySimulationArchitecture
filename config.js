@@ -173,10 +173,42 @@ const locationData = [
     },
     {
         name: "町の広場",
-        x: -6,
-        z: -19,
-        color: 0xDAA520,
-        activities: ["人々を観察する", "待ち合わせする", "イベントに参加する", "休憩する"],
-        atmosphere: "町の中心で、様々な人が行き交う"
+        x: 6,
+        z: 6,
+        color: 0x90EE90,
+        activities: ["散歩する", "休憩する", "会話する"],
+        atmosphere: "開放的な空間で、人々が集まる場所"
+    },
+    {
+        name: "学校",
+        x: 17,
+        z: 17,
+        color: 0x87CEEB,
+        activities: ["勉強する", "運動する", "友達と話す"],
+        atmosphere: "活気のある教育施設"
+    },
+    {
+        name: "病院",
+        x: 7,
+        z: 17,
+        color: 0xFFFFFF,
+        activities: ["診察を受ける", "待合室で待つ", "健康相談する"],
+        atmosphere: "清潔で落ち着いた医療施設"
+    },
+    {
+        name: "スーパーマーケット",
+        x: 17,
+        z: -17,
+        color: 0xFFD700,
+        activities: ["買い物する", "食材を選ぶ", "レジで会計する"],
+        atmosphere: "明るく活気のある買い物空間"
+    },
+    {
+        name: "ファミレス",
+        x: -5,
+        z: 5,
+        color: 0xFF69B4,
+        activities: ["食事する", "会話する", "休憩する"],
+        atmosphere: "温かみのある飲食店"
     }
 ];

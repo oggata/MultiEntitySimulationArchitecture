@@ -1,4 +1,3 @@
-
 // 場所の作成
 function createLocations() {
     locationData.forEach(loc => {
@@ -12,7 +11,7 @@ if(loc.name == "公園"){
 }else{
 
         // 建物の基本構造
-        const buildingGeometry = new THREE.BoxGeometry(6, 4, 6);
+        const buildingGeometry = new THREE.BoxGeometry(4, 4, 4);
         const buildingMaterial = new THREE.MeshLambertMaterial({ 
             color: loc.color,
             emissive: loc.color,
@@ -26,20 +25,7 @@ if(loc.name == "公園"){
         building.receiveShadow = true;
         locationGroup.add(building);
 
-        // 屋根
-        const roofGeometry = new THREE.ConeGeometry(4.5, 2, 4);
-        const roofMaterial = new THREE.MeshLambertMaterial({ 
-            color: 0x8B4513,
-            emissive: 0x8B4513,
-            emissiveIntensity: 0.1,
-            transparent: true,
-            opacity: 0.3
-        });
-        const roof = new THREE.Mesh(roofGeometry, roofMaterial);
-        roof.position.set(0, 5, 0);
-        roof.rotation.y = Math.PI / 4;
-        roof.castShadow = true;
-        locationGroup.add(roof);
+
 }
 
         // 場所特有の装飾
@@ -51,9 +37,9 @@ if(loc.name == "公園"){
                     const tableMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
                     const table = new THREE.Mesh(tableGeometry, tableMaterial);
                     table.position.set(
-                        Math.cos(i * Math.PI/2) * 2,
+                        Math.cos(i * Math.PI/2) * 1.2,
                         0.05,
-                        Math.sin(i * Math.PI/2) * 2
+                        Math.sin(i * Math.PI/2) * 1.2
                     );
                     locationGroup.add(table);
 
@@ -62,9 +48,9 @@ if(loc.name == "公園"){
                     const chairMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
                     const chair = new THREE.Mesh(chairGeometry, chairMaterial);
                     chair.position.set(
-                        Math.cos(i * Math.PI/2) * 2.5,
+                        Math.cos(i * Math.PI/2) * 1,
                         0.2,
-                        Math.sin(i * Math.PI/2) * 2.5
+                        Math.sin(i * Math.PI/2) * 1
                     );
                     locationGroup.add(chair);
                 }
@@ -167,6 +153,95 @@ if(loc.name == "公園"){
                     locationGroup.add(bench);
                 }
                 break;
+
+            case "学校":
+                // 校舎の装飾
+                const schoolFlagGeometry = new THREE.BoxGeometry(0.1, 2, 0.1);
+                const schoolFlagMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
+                const schoolFlag = new THREE.Mesh(schoolFlagGeometry, schoolFlagMaterial);
+                schoolFlag.position.set(2, 3, 2);
+                locationGroup.add(schoolFlag);
+
+                // 校庭の装飾
+                const playgroundGeometry = new THREE.CircleGeometry(2, 32);
+                const playgroundMaterial = new THREE.MeshLambertMaterial({ color: 0x90EE90 });
+                const playground = new THREE.Mesh(playgroundGeometry, playgroundMaterial);
+                playground.rotation.x = -Math.PI / 2;
+                playground.position.set(0, 0.01, 0);
+                locationGroup.add(playground);
+                break;
+
+            case "病院":
+                // 救急車の駐車スペース
+                const ambulanceSpaceGeometry = new THREE.BoxGeometry(2, 0.1, 1);
+                const ambulanceSpaceMaterial = new THREE.MeshLambertMaterial({ color: 0xFF0000 });
+                const ambulanceSpace = new THREE.Mesh(ambulanceSpaceGeometry, ambulanceSpaceMaterial);
+                ambulanceSpace.position.set(2, 0.05, 0);
+                locationGroup.add(ambulanceSpace);
+
+                // ヘリポート
+                const helipadGeometry = new THREE.CircleGeometry(1, 32);
+                const helipadMaterial = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+                const helipad = new THREE.Mesh(helipadGeometry, helipadMaterial);
+                helipad.rotation.x = -Math.PI / 2;
+                helipad.position.set(0, 4.1, 0);
+                locationGroup.add(helipad);
+                break;
+
+            case "スーパーマーケット":
+                // ショッピングカート
+                for(let i = 0; i < 3; i++) {
+                    const cartGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.8);
+                    const cartMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
+                    const cart = new THREE.Mesh(cartGeometry, cartMaterial);
+                    cart.position.set(
+                        Math.cos(i * Math.PI/1.5) * 2,
+                        0.25,
+                        Math.sin(i * Math.PI/1.5) * 2
+                    );
+                    locationGroup.add(cart);
+                }
+
+                // 駐車場
+                const parkingGeometry = new THREE.BoxGeometry(4, 0.1, 2);
+                const parkingMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+                const parking = new THREE.Mesh(parkingGeometry, parkingMaterial);
+                parking.position.set(0, 0.05, 3);
+                locationGroup.add(parking);
+                break;
+
+            case "ファミレス":
+                // テーブルと椅子
+                for(let i = 0; i < 6; i++) {
+                    const tableGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 8);
+                    const tableMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                    const table = new THREE.Mesh(tableGeometry, tableMaterial);
+                    table.position.set(
+                        Math.cos(i * Math.PI/3) * 1.2,
+                        0.05,
+                        Math.sin(i * Math.PI/3) * 1.2
+                    );
+                    locationGroup.add(table);
+
+                    // 椅子
+                    const chairGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+                    const chairMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                    const chair = new THREE.Mesh(chairGeometry, chairMaterial);
+                    chair.position.set(
+                        Math.cos(i * Math.PI/3) * 1.5,
+                        0.25,
+                        Math.sin(i * Math.PI/3) *1.5
+                    );
+                    locationGroup.add(chair);
+                }
+
+                // カウンター
+                const counterGeometry = new THREE.BoxGeometry(3, 0.8, 0.5);
+                const counterMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                const counter = new THREE.Mesh(counterGeometry, counterMaterial);
+                counter.position.set(0, 0.4, -2);
+                locationGroup.add(counter);
+                break;
         }
 
         // 看板
@@ -206,7 +281,7 @@ if(loc.name == "公園"){
         const homeGroup = new THREE.Group();
         
         // 家の基本構造
-        const houseGeometry = new THREE.BoxGeometry(4, 3, 4);
+        const houseGeometry = new THREE.BoxGeometry(2, 2, 2);
         const houseMaterial = new THREE.MeshLambertMaterial({ 
             color: agent.home.color,
             emissive: agent.home.color,
@@ -215,13 +290,13 @@ if(loc.name == "公園"){
             opacity: 0.3
         });
         const house = new THREE.Mesh(houseGeometry, houseMaterial);
-        house.position.set(0, 1.5, 0);
+        house.position.set(0, 1, 0);
         house.castShadow = true;
         house.receiveShadow = true;
         homeGroup.add(house);
 
         // 屋根
-        const roofGeometry = new THREE.ConeGeometry(3, 2, 4);
+        const roofGeometry = new THREE.ConeGeometry(2, 2, 4);
         const roofMaterial = new THREE.MeshLambertMaterial({ 
             color: 0x8B4513,
             emissive: 0x8B4513,
@@ -230,7 +305,7 @@ if(loc.name == "公園"){
             opacity: 0.3
         });
         const roof = new THREE.Mesh(roofGeometry, roofMaterial);
-        roof.position.set(0, 4, 0);
+        roof.position.set(0, 3, 0);
         roof.rotation.y = Math.PI / 4;
         roof.castShadow = true;
         homeGroup.add(roof);

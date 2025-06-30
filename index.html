@@ -13,12 +13,34 @@
         午前 8:00
     </div>
     
+    <div class="camera-target-display" id="cameraTargetDisplay" style="display: none;">
+        <span id="cameraTargetName"></span>
+    </div>
+    
     <div id="control-panel">
         <input type="password" id="apiKey" placeholder="OpenAI APIキーを入力">
+        <div class="input-group">
+            <label><input type="radio" name="apiProvider" value="openai" checked> OpenAI</label>
+            <label><input type="radio" name="apiProvider" value="gemini"> Gemini</label>
+        </div>
         <button onclick="startSimulation()">シミュレーション開始</button>
         <button onclick="pauseSimulation()" id="pauseBtn" disabled>一時停止</button>
         <button onclick="setTimeSpeed()">時間速度: <span id="speed">1x</span></button>
         <button onclick="generateNewAgent()" id="generateAgentBtn">新しいエージェントを生成</button>
+        <div class="camera-controls">
+            <h3>カメラ制御</h3>
+            <div class="camera-status">
+                <span id="cameraModeDisplay">全体表示</span>
+            </div>
+            <button id="personViewBtn">人物視点切り替え</button>
+            <button id="facilityViewBtn">施設視点切り替え</button>
+            <button id="resetCamera">全体表示</button>
+        </div>
+        <div class="road-visualization">
+            <h3>道路表示</h3>
+            <button id="toggleRoadNetwork">道路ネットワーク表示</button>
+            <button id="clearRoadVisualization">道路表示クリア</button>
+        </div>
         <div class="warning">
             ⚠️ APIキーは保存されません。
         </div>
@@ -29,19 +51,18 @@
             <h3>エージェント情報</h3>
             <div id="agentList"></div>
         </div>
-        <div class="camera-controls">
-            <h3>カメラ制御</h3>
-            <button id="resetCamera">全体表示に戻す</button>
-        </div>
     </div>
     
     <div id="log-panel">
         <div id="activity-log"></div>
     </div>
 
+    <button id="showPanelsBtn" style="position:fixed; left:10px; bottom:10px; z-index:9999; display:none; font-size:13px;">パネル再表示</button>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
      
      <script src="./config.js"></script>
+     <script src="./character.js"></script>
      <script src="./agent.js"></script>
      <script src="./log.js"></script>
      <script src="./panel.js"></script>

@@ -2,9 +2,10 @@ body {
     margin: 0;
     padding: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #0a0a0a;
-    color: #e0e0e0;
+    background-color: #101018;
+    color: #fff;
     overflow: hidden;
+    font-size: 13px;
 }
 
 #canvas-container {
@@ -15,14 +16,14 @@ body {
 
 #control-panel, #info-panel, #log-panel {
     position: absolute;
-    background: rgba(20, 20, 20, 0.95);
+    background: rgba(0, 0, 0, 0.7);
     padding: 15px;
     border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
+    box-shadow: none;
     cursor: move;
     user-select: none;
     transition: all 0.3s ease;
+    border: 1px solid #fff;
 }
 
 #control-panel {
@@ -56,10 +57,10 @@ body {
 }
 
 .panel-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: bold;
-    color: #4CAF50;
-    text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    color: #fff;
+    text-shadow: none;
     margin: 0;
 }
 
@@ -97,60 +98,61 @@ body {
 
 input[type="text"], input[type="password"] {
     width: 100%;
-    padding: 6px;
-    margin: 6px 0;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 4px 8px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #fff;
     border-radius: 4px;
-    color: white;
+    color: #fff;
     font-size: 12px;
+    text-shadow: none;
 }
 
 button {
-    padding: 6px 12px;
-    margin: 6px 0;
-    cursor: pointer;
-    background: linear-gradient(45deg, #4CAF50, #45a049);
-    color: white;
-    border: none;
-    border-radius: 4px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    border: 1px solid #fff;
+    box-shadow: none;
+    text-shadow: none;
     font-size: 12px;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    padding: 4px 10px;
 }
 
 button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    background: rgba(255,255,255,0.1);
+    color: #fff;
 }
 
 button:disabled {
-    background: #666;
-    cursor: not-allowed;
-    transform: none;
+    background: #222;
+    color: #888;
+    border: 1px solid #444;
 }
 
 .agent-card {
     margin: 10px 0;
     padding: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #fff;
     border-radius: 6px;
     transition: all 0.3s ease;
+    box-shadow: none;
+    font-size: 12px;
 }
 
 .agent-card:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255,255,255,0.05);
+    border-color: #fff;
 }
 
 .agent-name {
     font-weight: bold;
-    font-size: 13px;
+    font-size: 12px;
     margin-bottom: 6px;
     display: flex;
     align-items: center;
     gap: 6px;
+    color: #fff;
+    text-shadow: none;
 }
 
 .agent-status {
@@ -158,6 +160,8 @@ button:disabled {
     height: 8px;
     border-radius: 50%;
     display: inline-block;
+    background: #fff;
+    box-shadow: none;
 }
 
 .status-active {
@@ -173,13 +177,14 @@ button:disabled {
 
 .agent-thought {
     font-style: italic;
-    color: #80cbc4;
+    color: #fff;
     margin-top: 6px;
     padding: 6px;
-    background: rgba(128, 203, 196, 0.1);
+    background: rgba(255,255,255,0.05);
     border-radius: 4px;
-    border-left: 3px solid #80cbc4;
-    font-size: 12px;
+    border-left: 2px solid #fff;
+    font-size: 11px;
+    text-shadow: none;
 }
 
 .agent-memory {
@@ -190,9 +195,10 @@ button:disabled {
 .memory-item {
     padding: 3px 6px;
     margin: 2px 0;
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255,255,255,0.03);
     border-radius: 3px;
-    color: #888;
+    color: #fff;
+    font-size: 11px;
 }
 
 .relationship-info {
@@ -255,22 +261,23 @@ button:disabled {
     top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(20, 20, 20, 0.95);
-    padding: 6px 12px;
-    border-radius: 15px;
+    background: rgba(0,0,0,0.7);
+    padding: 8px 16px;
+    border-radius: 8px;
     font-size: 13px;
-    color: #4CAF50;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    color: #fff;
+    font-weight: bold;
+    box-shadow: none;
 }
 
 .warning {
-    color: #ff9800;
+    color: #fff;
     font-size: 11px;
     margin-top: 8px;
-    padding: 8px;
-    background: rgba(255, 152, 0, 0.1);
+    padding: 4px 8px;
+    background: rgba(0,0,0,0.5);
     border-radius: 4px;
-    border: 1px solid rgba(255, 152, 0, 0.3);
+    border: 1px solid #fff;
 }
 
 /* ローディングインジケーター */
@@ -360,4 +367,78 @@ button:disabled {
 
 .relationship-change {
     color: #E91E63;
+}
+
+.camera-controls button, #resetCamera {
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    border: 1px solid #fff;
+    box-shadow: none;
+    font-size: 12px;
+}
+
+.camera-status {
+    margin-bottom: 10px;
+    padding: 4px 8px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #fff;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.camera-status span {
+    font-size: 11px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.road-visualization {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+
+.road-visualization h3 {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    color: #fff;
+}
+
+.road-visualization button {
+    margin: 2px;
+    padding: 4px 8px;
+    font-size: 11px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    border: 1px solid #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+.road-visualization button:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.camera-target-display {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #fff;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.2);
+    z-index: 1000;
+}
+
+.camera-target-display span {
+    font-size: 12px;
+    font-weight: bold;
 }

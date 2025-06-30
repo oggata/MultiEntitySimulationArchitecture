@@ -1,6 +1,8 @@
 // パネルのドラッグ機能を実装
 function setupPanelDrag() {
     const panels = ['control-panel', 'info-panel', 'log-panel'];
+    const showPanelsBtn = document.getElementById('showPanelsBtn');
+    let closedPanels = new Set();
     
     panels.forEach(panelId => {
         const panel = document.getElementById(panelId);
@@ -24,6 +26,8 @@ function setupPanelDrag() {
         const closeBtn = panel.querySelector('.close-btn');
         closeBtn.addEventListener('click', () => {
             panel.style.display = 'none';
+            closedPanels.add(panelId);
+            if (showPanelsBtn) showPanelsBtn.style.display = 'block';
         });
 
         // ドラッグ開始
@@ -71,6 +75,18 @@ function setupPanelDrag() {
             el.style.transform = `translate(${xPos}px, ${yPos}px)`;
         }
     });
+
+    // パネル再表示ボタンの処理
+    if (showPanelsBtn) {
+        showPanelsBtn.addEventListener('click', () => {
+            panels.forEach(panelId => {
+                const panel = document.getElementById(panelId);
+                panel.style.display = 'block';
+            });
+            closedPanels.clear();
+            showPanelsBtn.style.display = 'none';
+        });
+    }
 }
 
 // パネルのHTMLを更新

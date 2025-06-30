@@ -84,6 +84,9 @@ function init() {
     
     // 建物の描画
     cityLayout.drawBuildings();
+    
+    // 施設の描画
+    cityLayout.drawFacilities();
 
     // パネルのHTMLを更新
     updatePanelHTML();

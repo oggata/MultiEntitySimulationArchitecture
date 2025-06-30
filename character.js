@@ -12,7 +12,7 @@ class Character {
 		this.animationTime=0;
 		this.isMoving=false;
 		this.isRunning=false;
-		this.animationSpeed=9.0;
+		this.animationSpeed=30.0;
 		this.walkAmplitude = 0.4;
 		this.armSwingAmplitude = 1.8;
 
@@ -464,7 +464,7 @@ class Character {
 	setRunning(isRunning) {
 		this.isRunning = isRunning;
 		this.isMoving = isRunning;
-		this.animationSpeed = isRunning ? 2.0 : 1.0;
+		this.animationSpeed = isRunning ? 18.0 : 18.0; // 常に2倍の速度を維持
 	}
 
 	startAttack() {

@@ -88,14 +88,47 @@ class Agent {
     moveToLocation(location) {
         this.targetLocation = location;
         
-        // 現在位置から目標位置への経路を計算
-        const path = cityLayout.findPath(
-            { x: this.mesh.position.x, z: this.mesh.position.z },
-            { x: location.position.x, z: location.position.z }
-        );
+        // 移動開始時に思考を一時停止
+        this.lastThoughtTime = Date.now();
+        
+        // 建物や施設への移動かどうかを判定
+        const isBuildingOrFacility = location.name !== this.home.name;
+        
+        let path;
+        if (isBuildingOrFacility) {
+            // 建物や施設への移動の場合、対応する建物オブジェクトを探す
+            const building = this.findBuildingForLocation(location);
+            if (building) {
+                // 建物への経路を計算（入り口経由）
+                path = cityLayout.findPathToBuilding(
+                    { x: this.mesh.position.x, z: this.mesh.position.z },
+                    building
+                );
+            } else {
+                // 建物が見つからない場合は直接移動
+                path = [
+                    { x: this.mesh.position.x, z: this.mesh.position.z },
+                    { x: location.position.x, z: location.position.z }
+                ];
+            }
+        } else {
+            // 自宅への移動は通常の経路探索
+            path = cityLayout.findPath(
+                { x: this.mesh.position.x, z: this.mesh.position.z },
+                { x: location.position.x, z: location.position.z }
+            );
+            
+            // 経路が見つからない場合は直接移動
+            if (!path || path.length === 0) {
+                path = [
+                    { x: this.mesh.position.x, z: this.mesh.position.z },
+                    { x: location.position.x, z: location.position.z }
+                ];
+            }
+        }
 
         if (path && path.length > 0) {
-            // 最初の道路上の点を目標地点として設定
+            // 最初の点を目標地点として設定
             this.movementTarget = new THREE.Vector3(
                 path[0].x,
                 0,
@@ -113,52 +146,26 @@ class Agent {
             // 経路を視覚化（このエージェントの経路のみ）
             cityLayout.visualizePath(path, 0x00ff00);
             
-            addLog(`🚶 ${this.name}が${location.name}へ移動開始（経路探索完了）`, 'move', `
+            addLog(`🚶 ${this.name}が${location.name}へ移動開始`, 'move', `
                 <div class="log-detail-section">
                     <h4>移動の詳細</h4>
                     <p>出発地: ${this.currentLocation.name}</p>
                     <p>目的地: ${location.name}</p>
                     <p>移動速度: ${this.speed.toFixed(2)}</p>
                     <p>経路ポイント数: ${this.currentPath.length}</p>
-                    <p>経路探索アルゴリズム: A*</p>
-                    <p>経路視覚化: 有効</p>
+                    <p>建物内移動: ${isBuildingOrFacility ? '有効' : '無効'}</p>
                 </div>
             `);
         } else {
-            // 経路が見つからない場合は最も近い道路上の点を探してそこから開始
-            const nearestRoadPoint = cityLayout.findNearestRoadPoint(
-                this.mesh.position.x,
-                this.mesh.position.z
+            // 経路が見つからない場合は直接移動
+            this.movementTarget = new THREE.Vector3(
+                location.position.x,
+                0,
+                location.position.z
             );
+            this.currentPath = null;
             
-            if (nearestRoadPoint) {
-                this.movementTarget = new THREE.Vector3(
-                    nearestRoadPoint.x,
-                    0,
-                    nearestRoadPoint.z
-                );
-                // 再度経路を計算
-                const newPath = cityLayout.findPath(
-                    { x: nearestRoadPoint.x, z: nearestRoadPoint.z },
-                    { x: location.position.x, z: location.position.z }
-                );
-                if (newPath) {
-                    this.currentPath = newPath;
-                    this.currentPathIndex = 0;
-                    // 経路を視覚化
-                    cityLayout.visualizePath(newPath, 0xff8800);
-                }
-            } else {
-                // 道路が見つからない場合は直接移動
-                this.movementTarget = new THREE.Vector3(
-                    location.position.x,
-                    0,
-                    location.position.z
-                );
-                this.currentPath = null;
-            }
-            
-            addLog(`⚠️ ${this.name}が${location.name}へ移動開始（経路探索失敗、直接移動）`, 'move', `
+            addLog(`⚠️ ${this.name}が${location.name}へ直接移動開始`, 'move', `
                 <div class="log-detail-section">
                     <h4>移動の詳細</h4>
                     <p>出発地: ${this.currentLocation.name}</p>
@@ -168,6 +175,35 @@ class Agent {
                 </div>
             `);
         }
+    }
+    
+    // 場所に対応する建物オブジェクトを探す
+    findBuildingForLocation(location) {
+        // 建物リストから対応する建物を探す
+        for (const building of cityLayout.buildings) {
+            const distance = Math.sqrt(
+                Math.pow(location.position.x - building.x, 2) + 
+                Math.pow(location.position.z - building.z, 2)
+            );
+            // 建物のサイズの半分以内なら同じ建物とみなす
+            if (distance <= building.size / 2) {
+                return building;
+            }
+        }
+        
+        // 施設リストからも探す
+        for (const facility of cityLayout.facilities) {
+            const distance = Math.sqrt(
+                Math.pow(location.position.x - facility.x, 2) + 
+                Math.pow(location.position.z - facility.z, 2)
+            );
+            // 施設のサイズの半分以内なら同じ施設とみなす
+            if (distance <= facility.size / 2) {
+                return facility;
+            }
+        }
+        
+        return null;
     }
 
     update(deltaTime) {
@@ -190,9 +226,9 @@ class Agent {
             if (distance > 0.5) {
                 const currentSpeed = this.speed * this.energy;
                 
-                // 道路に沿って移動するように調整
-                const roadAdjustedPosition = this.adjustPositionToRoad(this.mesh.position, direction, currentSpeed);
-                this.mesh.position.copy(roadAdjustedPosition);
+                // シンプルな移動処理：常に直接移動
+                const newPosition = this.mesh.position.clone().add(direction.multiplyScalar(currentSpeed));
+                this.mesh.position.copy(newPosition);
                 this.mesh.position.y = 0;
 
                 // 移動方向に応じてエージェントの向きを更新
@@ -222,13 +258,19 @@ class Agent {
                 // 経路表示をクリア
                 cityLayout.clearPathVisualization();
                 
+                // 移動完了時に思考タイマーをリセット
+                this.lastThoughtTime = Date.now() - this.thinkingDuration + 1000; // 1秒後に思考開始
+                
                 this.onArrival();
             }
         }
         
         // 思考処理
         if (!this.isThinking && Date.now() - this.lastThoughtTime > this.thinkingDuration) {
-            this.think();
+            // 移動中は思考を停止
+            if (this.movementTarget === null) {
+                this.think();
+            }
         }
         
         // キャラクターのアニメーション更新
@@ -253,37 +295,6 @@ class Agent {
                 }
             }
         }
-    }
-    
-    // 道路に沿って位置を調整する関数
-    adjustPositionToRoad(currentPosition, direction, speed) {
-        const newPosition = currentPosition.clone().add(direction.multiplyScalar(speed));
-        
-        // 最も近い道路上の点を見つける
-        const nearestRoadPoint = cityLayout.findNearestRoadPoint(newPosition.x, newPosition.z);
-        
-        if (nearestRoadPoint) {
-            const distanceToRoad = Math.sqrt(
-                Math.pow(newPosition.x - nearestRoadPoint.x, 2) + 
-                Math.pow(newPosition.z - nearestRoadPoint.z, 2)
-            );
-            
-            // 道路から離れすぎている場合は道路に近づける
-            const maxDistanceFromRoad = 2.0; // 道路から最大2単位まで離れられる
-            if (distanceToRoad > maxDistanceFromRoad) {
-                const roadDirection = new THREE.Vector3(
-                    nearestRoadPoint.x - newPosition.x,
-                    0,
-                    nearestRoadPoint.z - newPosition.z
-                ).normalize();
-                
-                // 道路に向かって少し移動
-                const correctionDistance = (distanceToRoad - maxDistanceFromRoad) * 0.1;
-                newPosition.add(roadDirection.multiplyScalar(correctionDistance));
-            }
-        }
-        
-        return newPosition;
     }
     
     async think() {

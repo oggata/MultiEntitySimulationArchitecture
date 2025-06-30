@@ -644,7 +644,7 @@ class CityLayout {
             const roadDirZ = road.end.z - road.start.z;
             const roadLength = Math.sqrt(roadDirX * roadDirX + roadDirZ * roadDirZ);
             
-            // 道路に垂直な方向を計算（建物の入り口方向）
+            // 道路に垂直な方向を計算（建物の配置方向）
             const perpDirX = -roadDirZ / roadLength;
             const perpDirZ = roadDirX / roadLength;
             
@@ -716,15 +716,15 @@ class CityLayout {
                     if (this.isValidBuildingPosition(buildingX, buildingZ)) {
                         // 他の建物との重複をチェック
                         if (!this.isBuildingOverlapping(buildingX, buildingZ, buildingSize)) {
-                            // 建物の向きを道路に向ける
-                            const buildingRotation = Math.atan2(side.x, side.z);
+                            // 建物の向きを道路の方向に向ける（入り口が道路を向くように）
+                            const buildingRotation = Math.atan2(roadDirX, roadDirZ);
                             
                             this.buildings.push({
                                 x: buildingX,
                                 z: buildingZ,
                                 type: buildingType,
                                 size: buildingSize,
-                                rotation: buildingRotation, // 建物の向き
+                                rotation: buildingRotation, // 建物の向き（道路方向）
                                 roadIndex: roadIndex, // どの道路に接しているか
                                 side: sideIndex, // 道路のどちら側か
                                 distanceToRoad: distanceToRoad // 道路からの距離
@@ -861,6 +861,18 @@ class CityLayout {
             entrance.rotation.x = -Math.PI / 2;
             mesh.add(entrance);
             
+            // 入り口位置のマーカーを表示（デバッグ用）
+            const entrancePos = this.getBuildingEntrance(building);
+            const markerGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+            const markerMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xff00ff, 
+                transparent: true, 
+                opacity: 0.7 
+            });
+            const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+            marker.position.set(entrancePos.x, 0.3, entrancePos.z);
+            scene.add(marker);
+            
             // デバッグ用：建物から道路への接続線を表示（道路距離が大きい場合）
             if (building.distanceToRoad > this.roadWidth + building.size/2 + this.minBuildingDistance * 0.8) {
                 const road = this.roads[building.roadIndex];
@@ -943,9 +955,11 @@ class CityLayout {
                                 x: facilityX,
                                 z: facilityZ,
                                 type: 'facility',
-                                size: this.buildingSize * 1.5 // 施設は建物より大きい
+                                size: this.buildingSize * 1.5, // 施設は建物より大きい
+                                rotation: Math.atan2(roadDirX, roadDirZ), // 施設の向き（道路方向）
+                                roadIndex: roadIndex // どの道路に接しているか
                             });
-                            console.log(`  施設配置成功: ${facilityType} (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)})`);
+                            console.log(`  施設配置成功: ${facilityType} (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)}) 向き: ${(Math.atan2(roadDirX, roadDirZ) * 180 / Math.PI).toFixed(1)}°`);
                         } else {
                             console.log(`  施設重複のため除外: (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)})`);
                         }
@@ -972,6 +986,52 @@ class CityLayout {
             }
         }
         return false;
+    }
+
+    // 施設の描画
+    drawFacilities() {
+        this.facilities.forEach(facility => {
+            const geometry = new THREE.BoxGeometry(facility.size, facility.size, facility.size);
+            const edges = new THREE.EdgesGeometry(geometry);
+            const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+            const mesh = new THREE.LineSegments(edges, material);
+            mesh.position.set(facility.x, facility.size/2, facility.z);
+            
+            // 施設の向きを設定（入り口が道路に向くように）
+            if (facility.rotation !== undefined) {
+                mesh.rotation.y = facility.rotation;
+            }
+            
+            scene.add(mesh);
+            
+            // 施設名の表示
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+            context.fillStyle = 'white';
+            context.font = '24px Arial';
+            context.fillText(facility.name, 10, 40);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.set(facility.x, facility.size + 1, facility.z);
+            sprite.scale.set(2, 0.5, 1);
+            scene.add(sprite);
+            
+            // 施設の入り口位置のマーカーを表示（デバッグ用）
+            const entrancePos = this.getBuildingEntrance(facility);
+            const markerGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+            const markerMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffff00, 
+                transparent: true, 
+                opacity: 0.7 
+            });
+            const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+            marker.position.set(entrancePos.x, 0.3, entrancePos.z);
+            scene.add(marker);
+        });
     }
 
     // 道路経路の視覚化
@@ -1095,6 +1155,52 @@ class CityLayout {
             }
             this.roadCenterLines = [];
         }
+    }
+
+    // 建物の入り口位置を計算
+    getBuildingEntrance(building) {
+        // 建物の前面（道路に向いている面）の中心を入り口とする
+        const entranceOffset = building.size * 0.8; // 建物の前面から少し手前
+        
+        // 建物の向きに基づいて入り口位置を計算
+        const entranceX = building.x + Math.sin(building.rotation) * entranceOffset;
+        const entranceZ = building.z + Math.cos(building.rotation) * entranceOffset;
+        
+        return { x: entranceX, z: entranceZ };
+    }
+    
+    // 建物内の中心位置を計算
+    getBuildingCenter(building) {
+        return { x: building.x, z: building.z };
+    }
+    
+    // 建物への経路を計算（入り口経由）
+    findPathToBuilding(start, building) {
+        // 建物の入り口位置を取得
+        const entrance = this.getBuildingEntrance(building);
+        
+        // 現在位置から入り口までの経路を計算
+        const pathToEntrance = this.findPath(start, entrance);
+        
+        if (pathToEntrance && pathToEntrance.length > 0) {
+            // 入り口から建物内の中心までの経路を追加
+            const buildingCenter = this.getBuildingCenter(building);
+            
+            // 入り口から建物内への直接経路を追加
+            pathToEntrance.push(entrance); // 入り口位置を追加
+            pathToEntrance.push(buildingCenter); // 建物内の中心を追加
+            
+            return pathToEntrance;
+        }
+        
+        // 経路が見つからない場合は直線経路を作成
+        const directPath = [
+            start,
+            entrance,
+            this.getBuildingCenter(building)
+        ];
+        
+        return directPath;
     }
 }
 

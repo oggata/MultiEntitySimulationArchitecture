@@ -3,10 +3,7 @@
 A 3D autonomous agent simulation that creates a virtual city where AI-powered residents live their daily lives with realistic behaviors, interactions, and decision-making processes.
 
 
-https://www.youtube.com/watch?v=5NguBippS0c
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/5NguBippS0c?si=4GJLr0QVIUs5HgyW" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
+[![](https://img.youtube.com/vi/5NguBippS0c/0.jpg)](https://www.youtube.com/watch?v=5NguBippS0c)
 
 ## Overview
 

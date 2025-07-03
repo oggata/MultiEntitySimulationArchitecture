@@ -2,6 +2,12 @@
 
 A 3D autonomous agent simulation that creates a virtual city where AI-powered residents live their daily lives with realistic behaviors, interactions, and decision-making processes.
 
+
+https://www.youtube.com/watch?v=5NguBippS0c
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/5NguBippS0c?si=4GJLr0QVIUs5HgyW" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+
 ## Overview
 
 This application simulates a small city populated with autonomous agents (residents) who have unique personalities, daily routines, and the ability to make decisions using AI language models. The simulation runs in a 3D environment built with Three.js, featuring a procedurally generated city layout with roads, buildings, and facilities.

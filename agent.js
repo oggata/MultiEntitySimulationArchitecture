@@ -21,6 +21,11 @@ class Agent {
         this.energy = 1.0;
         this.isThinking = false;
         
+        // 相互作用関連の設定
+        this.lastInteractionTime = 0;
+        this.interactionCooldown = 30000; // 30秒のクールダウン
+        this.socialUrge = 0; // 社交欲求（時間とともに増加）
+        
         // タイミング制御
         this.lastActionTime = Date.now();
         this.lastThoughtTime = Date.now();
@@ -86,6 +91,11 @@ class Agent {
     }
     
     moveToLocation(location) {
+        // 現在の場所から離れる際に待機スポットを解放
+        if (this.currentLocation && this.currentLocation !== location) {
+            this.releaseWaitingSpot();
+        }
+        
         this.targetLocation = location;
         
         // 移動開始時に思考を一時停止
@@ -215,6 +225,14 @@ class Agent {
             this.energy = Math.min(1.0, this.energy + (deltaTime * 0.0002));
         }
         
+        // 社交欲求の更新（時間とともに増加）
+        this.socialUrge = Math.min(1.0, this.socialUrge + (deltaTime * 0.00005));
+        
+        // 相互作用のクールダウン更新
+        if (Date.now() - this.lastInteractionTime > this.interactionCooldown) {
+            this.lastInteractionTime = 0; // クールダウン終了
+        }
+        
         // 移動処理
         if (this.movementTarget) {
             const direction = new THREE.Vector3()
@@ -295,6 +313,11 @@ class Agent {
                 }
             }
         }
+        
+        // 待機列の更新（1秒ごと）
+        if (Math.floor(clock.getElapsedTime()) % 1 === 0) {
+            this.updateWaitingQueue();
+        }
     }
     
     async think() {
@@ -329,7 +352,14 @@ class Agent {
         } finally {
             this.isThinking = false;
             this.lastThoughtTime = Date.now();
-            this.thinkingDuration = 10000 + Math.random() * 20000; // 10-30秒
+            
+            // 近くにエージェントがいる場合は思考間隔を短縮
+            const nearbyAgents = this.getNearbyAgents();
+            if (nearbyAgents.length > 0) {
+                this.thinkingDuration = 5000 + Math.random() * 10000; // 5-15秒（短縮）
+            } else {
+                this.thinkingDuration = 10000 + Math.random() * 20000; // 10-30秒（通常）
+            }
         }
     }
     
@@ -359,9 +389,12 @@ class Agent {
         1. 夜間（22:00-6:00）は必ず自宅に帰る必要があります
         2. 夜間は自宅以外の場所に長く留まらないでください
         3. 夜間は体力を回復するために自宅で休むことが重要です
+        4. 同じ場所に他の人がいる場合は、積極的に交流を試みてください
+        5. 特にカフェ、公園、町の広場では、人との交流を大切にしてください
         
         この状況で、次に何をしたいですか？どのように感じていますか？
         特に夜間の場合は、自宅に帰ることを優先してください。
+        他の人がいる場合は、交流することも考えてください。
         `;
     }
     
@@ -397,14 +430,80 @@ class Agent {
             const routineLocation = this.getRoutineLocation(timeOfDay);
             const shouldFollowRoutine = Math.random() < this.personality.traits.routine;
 
-            // 社交的な行動の決定
-            if (nearbyAgents.length > 0 && Math.random() < this.personality.traits.sociability) {
-                const targetAgent = nearbyAgents[Math.floor(Math.random() * nearbyAgents.length)];
-                const relationship = this.relationships.get(targetAgent.name);
+            // 社交的な行動の決定（改善版）
+            if (nearbyAgents.length > 0) {
+                // 相互作用の確率を計算
+                let interactionProbability = this.personality.traits.sociability;
                 
-                if (relationship && relationship.affinity > 0.3) {
-                    decision.action = "interact";
-                    decision.targetAgent = targetAgent;
+                // 施設の種類による相互作用確率の調整
+                if (this.currentLocation.name === "カフェ" || this.currentLocation.name === "ファミレス") {
+                    interactionProbability *= 1.5; // 飲食店では相互作用しやすい
+                } else if (this.currentLocation.name === "公園" || this.currentLocation.name === "町の広場") {
+                    interactionProbability *= 1.3; // 公共空間では相互作用しやすい
+                } else if (this.currentLocation.name === "スポーツジム") {
+                    interactionProbability *= 1.2; // ジムでは運動の話で相互作用しやすい
+                }
+                
+                // 近くのエージェントが多いほど相互作用しやすい
+                if (nearbyAgents.length >= 2) {
+                    interactionProbability *= 1.2;
+                }
+                
+                // 時間帯による調整（昼間は相互作用しやすい）
+                if (timeOfDay === "day") {
+                    interactionProbability *= 1.1;
+                }
+                
+                // 気分による調整
+                if (this.mood === "良い" || this.mood === "楽しい") {
+                    interactionProbability *= 1.2;
+                }
+                
+                // 社交欲求を考慮した相互作用確率の調整
+                interactionProbability += this.socialUrge * 0.3;
+                
+                // 相互作用を試行
+                if (Math.random() < interactionProbability && this.lastInteractionTime === 0) {
+                    // 最も適切なターゲットを選択
+                    let bestTarget = null;
+                    let bestScore = 0;
+                    
+                    for (const agent of nearbyAgents) {
+                        const relationship = this.relationships.get(agent.name);
+                        if (!relationship) continue;
+                        
+                        // ターゲットスコアを計算
+                        let score = relationship.affinity;
+                        
+                        // 親密度が低い場合は初対面の可能性が高い
+                        if (relationship.familiarity < 0.3) {
+                            score += 0.3; // 新しい出会いを重視
+                        }
+                        
+                        // 相手の社交性も考慮
+                        score += agent.personality.traits.sociability * 0.2;
+                        
+                        // 相手の気分も考慮
+                        if (agent.mood === "良い" || agent.mood === "楽しい") {
+                            score += 0.2;
+                        }
+                        
+                        // 相手がクールダウン中でないことを確認
+                        if (agent.lastInteractionTime !== 0) {
+                            score -= 0.5; // クールダウン中の相手は避ける
+                        }
+                        
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestTarget = agent;
+                        }
+                    }
+                    
+                    // 関係性の閾値を下げて、より多くの相互作用を可能に
+                    if (bestTarget && bestScore > 0.1) {
+                        decision.action = "interact";
+                        decision.targetAgent = bestTarget;
+                    }
                 }
             }
 
@@ -479,6 +578,12 @@ class Agent {
     onArrival() {
         addLog(`📍 ${this.name}が${this.currentLocation.name}に到着`, 'arrival');
         
+        // 待機スポットを選択
+        this.selectWaitingSpot();
+        
+        // 到着時に近くのエージェントを確認
+        this.checkForNearbyAgents();
+        
         // 到着時の活動を決定
         if (this.currentLocation.activities.length > 0) {
             const activity = this.currentLocation.activities[
@@ -486,6 +591,196 @@ class Agent {
             ];
             this.currentActivity = activity;
             this.currentThought = `${activity}ことにしよう`;
+        }
+    }
+    
+    // 近くのエージェントを確認し、相互作用の機会を探すメソッド
+    checkForNearbyAgents() {
+        const nearbyAgents = this.getNearbyAgents();
+        
+        if (nearbyAgents.length > 0) {
+            // 社交性が高い場合は即座に相互作用を試行
+            if (this.personality.traits.sociability > 0.6) {
+                const targetAgent = nearbyAgents[Math.floor(Math.random() * nearbyAgents.length)];
+                const relationship = this.relationships.get(targetAgent.name);
+                
+                // 初対面または親密度が低い場合は挨拶
+                if (!relationship || relationship.familiarity < 0.3) {
+                    setTimeout(() => {
+                        this.interactWith(targetAgent);
+                    }, 2000); // 2秒後に相互作用開始
+                }
+            }
+            
+            // 近くにいるエージェントの情報をログに追加
+            addLog(`👥 ${this.name}が${this.currentLocation.name}で${nearbyAgents.length}人のエージェントを発見`, 'system');
+        }
+    }
+    
+    // 待機スポットを選択するメソッド
+    selectWaitingSpot() {
+        // 自宅の場合は待機スポットは不要
+        if (this.currentLocation.isHome) {
+            return;
+        }
+        
+        // 施設に待機スポットがある場合
+        if (this.currentLocation.waitingSpots && this.currentLocation.waitingSpots.length > 0) {
+            // 利用可能なスポットを探す
+            let availableSpot = null;
+            
+            for (const spot of this.currentLocation.waitingSpots) {
+                if (!this.currentLocation.occupiedSpots.has(spot)) {
+                    availableSpot = spot;
+                    break;
+                }
+            }
+            
+            if (availableSpot) {
+                // スポットを占有
+                this.currentLocation.occupiedSpots.add(availableSpot);
+                this.assignedWaitingSpot = availableSpot;
+                
+                // エージェントを待機スポットの位置に移動
+                const worldPosition = new THREE.Vector3();
+                worldPosition.copy(availableSpot.position);
+                worldPosition.add(this.currentLocation.position);
+                
+                this.mesh.position.copy(worldPosition);
+                
+                addLog(`🪑 ${this.name}が${this.currentLocation.name}の${availableSpot.type}に座りました (${this.currentLocation.occupiedSpots.size}/${this.currentLocation.waitingSpots.length})`, 'system');
+            } else {
+                // 全てのスポットが埋まっている場合、待機列を形成
+                this.createWaitingQueue();
+            }
+        } else {
+            // 待機スポットがない場合は施設の中心付近に配置
+            const offsetX = (Math.random() - 0.5) * 2;
+            const offsetZ = (Math.random() - 0.5) * 2;
+            
+            this.mesh.position.set(
+                this.currentLocation.position.x + offsetX,
+                0,
+                this.currentLocation.position.z + offsetZ
+            );
+        }
+    }
+    
+    // 待機列を形成するメソッド
+    createWaitingQueue() {
+        // 施設の入り口付近に待機列を形成
+        const queueOffset = 3; // 施設から3単位離れた位置
+        const queueSpacing = 1.5; // エージェント間の間隔
+        
+        // 現在の待機列の人数を計算
+        const waitingAgents = agents.filter(agent => 
+            agent.currentLocation === this.currentLocation && 
+            agent.assignedWaitingSpot === null &&
+            agent.isInWaitingQueue
+        );
+        
+        const queueIndex = waitingAgents.length;
+        
+        // 待機列の位置を計算（施設の入り口方向）
+        const entranceDirection = new THREE.Vector3(1, 0, 0); // 仮の入り口方向
+        const queuePosition = new THREE.Vector3();
+        queuePosition.copy(this.currentLocation.position);
+        queuePosition.add(entranceDirection.multiplyScalar(queueOffset + queueIndex * queueSpacing));
+        
+        this.mesh.position.copy(queuePosition);
+        this.isInWaitingQueue = true;
+        this.queueIndex = queueIndex;
+        
+        addLog(`⏳ ${this.name}が${this.currentLocation.name}の待機列に並びました（${queueIndex + 1}番目）`, 'system');
+    }
+    
+    // 待機列の順序を更新するメソッド
+    updateWaitingQueue() {
+        if (!this.isInWaitingQueue || !this.currentLocation) {
+            return;
+        }
+        
+        // 同じ施設の待機列にいるエージェントを取得
+        const waitingAgents = agents.filter(agent => 
+            agent.currentLocation === this.currentLocation && 
+            agent.isInWaitingQueue
+        ).sort((a, b) => (a.queueIndex || 0) - (b.queueIndex || 0));
+        
+        // 待機列の順序を再計算
+        waitingAgents.forEach((agent, index) => {
+            agent.queueIndex = index;
+            
+            // 待機列の位置を更新
+            const queueOffset = 3;
+            const queueSpacing = 1.5;
+            const entranceDirection = new THREE.Vector3(1, 0, 0);
+            const queuePosition = new THREE.Vector3();
+            queuePosition.copy(this.currentLocation.position);
+            queuePosition.add(entranceDirection.multiplyScalar(queueOffset + index * queueSpacing));
+            
+            agent.mesh.position.copy(queuePosition);
+        });
+        
+        // 待機列の先頭のエージェントが利用可能なスポットに移動できるかチェック
+        if (waitingAgents.length > 0) {
+            const firstInQueue = waitingAgents[0];
+            const availableSpot = this.findAvailableSpot();
+            
+            if (availableSpot) {
+                // 先頭のエージェントを待機スポットに移動
+                firstInQueue.moveToWaitingSpot(availableSpot);
+            }
+        }
+    }
+    
+    // 利用可能なスポットを探すメソッド
+    findAvailableSpot() {
+        if (!this.currentLocation.waitingSpots) {
+            return null;
+        }
+        
+        for (const spot of this.currentLocation.waitingSpots) {
+            if (!this.currentLocation.occupiedSpots.has(spot)) {
+                return spot;
+            }
+        }
+        
+        return null;
+    }
+    
+    // 待機スポットに移動するメソッド
+    moveToWaitingSpot(spot) {
+        // 待機列から離脱
+        this.isInWaitingQueue = false;
+        this.queueIndex = null;
+        
+        // スポットを占有
+        this.currentLocation.occupiedSpots.add(spot);
+        this.assignedWaitingSpot = spot;
+        
+        // エージェントを待機スポットの位置に移動
+        const worldPosition = new THREE.Vector3();
+        worldPosition.copy(spot.position);
+        worldPosition.add(this.currentLocation.position);
+        
+        this.mesh.position.copy(worldPosition);
+        
+        addLog(`🪑 ${this.name}が${this.currentLocation.name}の${spot.type}に移動しました`, 'system');
+        
+        // 待機列の順序を更新
+        this.updateWaitingQueue();
+    }
+    
+    // 待機スポットを解放するメソッド
+    releaseWaitingSpot() {
+        if (this.assignedWaitingSpot) {
+            this.currentLocation.occupiedSpots.delete(this.assignedWaitingSpot);
+            this.assignedWaitingSpot = null;
+        }
+        
+        if (this.isInWaitingQueue) {
+            this.isInWaitingQueue = false;
+            this.queueIndex = null;
         }
     }
     
@@ -497,6 +792,10 @@ class Agent {
 
         const relationship = this.relationships.get(otherAgent.name);
         if (!relationship) return;
+        
+        // 相互作用のクールダウンと社交欲求をリセット
+        this.lastInteractionTime = Date.now();
+        this.socialUrge = 0;
         
         // 相互作用の種類を決定
         const interactionTypes = this.getInteractionTypes(relationship);

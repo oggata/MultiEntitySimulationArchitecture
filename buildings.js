@@ -21,6 +21,9 @@ function createLocations() {
         const facilitySize = getFacilitySize(loc.name);
         const facilityHeight = facilitySize * 0.8; // 高さは幅の80%
         
+        // 待機スポットの座標を定義
+        const waitingSpots = getWaitingSpots(loc.name, facilitySize);
+        
         if(loc.name == "公園"){
             // 公園は特殊な形状（円形の緑地）
             const parkGeometry = new THREE.CircleGeometry(facilitySize * 0.8, 32);
@@ -121,6 +124,29 @@ function createLocations() {
                     );
                     locationGroup.add(bookshelf);
                 }
+                
+                // 図書館の机と椅子
+                for(let i = 0; i < 3; i++) {
+                    const deskGeometry = new THREE.BoxGeometry(1.5 * scale, 0.1 * scale, 0.8 * scale);
+                    const deskEdges = new THREE.EdgesGeometry(deskGeometry);
+                    const desk = new THREE.LineSegments(deskEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    desk.position.set(
+                        (i - 1) * 2 * scale,
+                        0.05 * scale,
+                        0
+                    );
+                    locationGroup.add(desk);
+
+                    const chairGeometry = new THREE.BoxGeometry(0.4 * scale, 0.4 * scale, 0.4 * scale);
+                    const chairEdges = new THREE.EdgesGeometry(chairGeometry);
+                    const chair = new THREE.LineSegments(chairEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    chair.position.set(
+                        (i - 1) * 2 * scale,
+                        0.2 * scale,
+                        -0.8 * scale
+                    );
+                    locationGroup.add(chair);
+                }
                 break;
 
             case "スポーツジム":
@@ -142,6 +168,19 @@ function createLocations() {
                         Math.sin(i * Math.PI/2) * 1.5 * scale
                     );
                     locationGroup.add(weight);
+                }
+                
+                // ジムのベンチ
+                for(let i = 0; i < 2; i++) {
+                    const gymBenchGeometry = new THREE.BoxGeometry(1.5 * scale, 0.2 * scale, 0.6 * scale);
+                    const gymBenchEdges = new THREE.EdgesGeometry(gymBenchGeometry);
+                    const gymBench = new THREE.LineSegments(gymBenchEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
+                    gymBench.position.set(
+                        i === 0 ? -2 * scale : 2 * scale,
+                        0.1 * scale,
+                        0
+                    );
+                    locationGroup.add(gymBench);
                 }
                 break;
 
@@ -188,6 +227,19 @@ function createLocations() {
                 playground.rotation.x = -Math.PI / 2;
                 playground.position.set(0, 0.01, 0);
                 locationGroup.add(playground);
+                
+                // 学校のベンチ
+                for(let i = 0; i < 2; i++) {
+                    const schoolBenchGeometry = new THREE.BoxGeometry(1.5 * scale, 0.2 * scale, 0.5 * scale);
+                    const schoolBenchEdges = new THREE.EdgesGeometry(schoolBenchGeometry);
+                    const schoolBench = new THREE.LineSegments(schoolBenchEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
+                    schoolBench.position.set(
+                        i === 0 ? -1.5 * scale : 1.5 * scale,
+                        0.1 * scale,
+                        2 * scale
+                    );
+                    locationGroup.add(schoolBench);
+                }
                 break;
 
             case "病院":
@@ -204,6 +256,19 @@ function createLocations() {
                 helipad.rotation.x = -Math.PI / 2;
                 helipad.position.set(0, facilityHeight + 0.1, 0);
                 locationGroup.add(helipad);
+                
+                // 病院の待合室の椅子
+                for(let i = 0; i < 4; i++) {
+                    const waitingChairGeometry = new THREE.BoxGeometry(0.4 * scale, 0.4 * scale, 0.4 * scale);
+                    const waitingChairEdges = new THREE.EdgesGeometry(waitingChairGeometry);
+                    const waitingChair = new THREE.LineSegments(waitingChairEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    waitingChair.position.set(
+                        (i - 1.5) * 1.2 * scale,
+                        0.2 * scale,
+                        -2 * scale
+                    );
+                    locationGroup.add(waitingChair);
+                }
                 break;
 
             case "スーパーマーケット":
@@ -226,6 +291,19 @@ function createLocations() {
                 const parking = new THREE.LineSegments(parkingEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
                 parking.position.set(0, 0.05 * scale, 3 * scale);
                 locationGroup.add(parking);
+                
+                // スーパーのレジ待機列
+                for(let i = 0; i < 3; i++) {
+                    const queueSpotGeometry = new THREE.BoxGeometry(0.3 * scale, 0.1 * scale, 0.3 * scale);
+                    const queueSpotEdges = new THREE.EdgesGeometry(queueSpotGeometry);
+                    const queueSpot = new THREE.LineSegments(queueSpotEdges, new THREE.LineBasicMaterial({ color: 0xffff00 }));
+                    queueSpot.position.set(
+                        -2 * scale,
+                        0.05 * scale,
+                        (i - 1) * 1.2 * scale
+                    );
+                    locationGroup.add(queueSpot);
+                }
                 break;
 
             case "ファミレス":
@@ -259,6 +337,19 @@ function createLocations() {
                 const counter = new THREE.LineSegments(counterEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
                 counter.position.set(0, 0.4 * scale, -2 * scale);
                 locationGroup.add(counter);
+                
+                // ファミレスの待機席
+                for(let i = 0; i < 2; i++) {
+                    const waitingSeatGeometry = new THREE.BoxGeometry(0.4 * scale, 0.4 * scale, 0.4 * scale);
+                    const waitingSeatEdges = new THREE.EdgesGeometry(waitingSeatGeometry);
+                    const waitingSeat = new THREE.LineSegments(waitingSeatEdges, new THREE.LineBasicMaterial({ color: 0xffff00 }));
+                    waitingSeat.position.set(
+                        (i - 0.5) * 1.5 * scale,
+                        0.2 * scale,
+                        -3 * scale
+                    );
+                    locationGroup.add(waitingSeat);
+                }
                 break;
         }
 
@@ -300,7 +391,9 @@ function createLocations() {
             position: new THREE.Vector3(loc.x, 0, loc.z),
             mesh: locationGroup,
             activities: loc.activities,
-            atmosphere: loc.atmosphere
+            atmosphere: loc.atmosphere,
+            waitingSpots: waitingSpots,
+            occupiedSpots: new Set() // 使用中のスポットを管理
         });
     });
 
@@ -446,5 +539,213 @@ function getFacilitySize(facilityName) {
     };
     
     return sizeMap[facilityName] || cityLayout.buildingSizes.medium;
+}
+
+// 待機スポットの座標を取得する関数
+function getWaitingSpots(facilityName, facilitySize) {
+    const waitingSpots = [];
+    const scale = facilitySize / 4; // 基準サイズ4に対するスケール
+
+    switch(facilityName) {
+        case "カフェ":
+            // カフェの待機スポットは椅子のみ
+            for(let i = 0; i < 4; i++) {
+                waitingSpots.push({
+                    position: new THREE.Vector3(
+                        Math.cos(i * Math.PI/2) * 1 * scale,
+                        0.2 * scale,
+                        Math.sin(i * Math.PI/2) * 1 * scale
+                    ),
+                    type: "chair"
+                });
+            }
+            break;
+
+        case "公園":
+            // 公園の待機スポットはベンチ（複数の座席）
+            for(let i = 0; i < 3; i++) {
+                waitingSpots.push({
+                    position: new THREE.Vector3(
+                        (i - 1) * 0.8 * scale,
+                        0.1 * scale,
+                        2 * scale
+                    ),
+                    type: "bench"
+                });
+            }
+            
+            // 公園内の散歩道にも待機スポットを追加
+            for(let i = 0; i < 4; i++) {
+                waitingSpots.push({
+                    position: new THREE.Vector3(
+                        Math.cos(i * Math.PI/2) * 1.5 * scale,
+                        0.05 * scale,
+                        Math.sin(i * Math.PI/2) * 1.5 * scale
+                    ),
+                    type: "path"
+                });
+            }
+            break;
+
+        case "図書館":
+            // 図書館の待機スポットは椅子のみ
+            for(let i = 0; i < 3; i++) {
+                waitingSpots.push({
+                    position: new THREE.Vector3(
+                        (i - 1) * 2 * scale,
+                        0.2 * scale,
+                        -0.8 * scale
+                    ),
+                    type: "chair"
+                });
+            }
+            break;
+
+        case "スポーツジム":
+            // ジムの待機スポットはベンチ（複数の座席）
+            for(let i = 0; i < 2; i++) {
+                for(let j = 0; j < 3; j++) {
+                    waitingSpots.push({
+                        position: new THREE.Vector3(
+                            (i === 0 ? -2 * scale : 2 * scale) + (j - 1) * 0.6 * scale,
+                            0.1 * scale,
+                            0
+                        ),
+                        type: "gymBench"
+                    });
+                }
+            }
+            
+            // トレーニングエリアにも待機スポットを追加
+            for(let i = 0; i < 4; i++) {
+                waitingSpots.push({
+                    position: new THREE.Vector3(
+                        Math.cos(i * Math.PI/2) * 1.5 * scale,
+                        0.05 * scale,
+                        Math.sin(i * Math.PI/2) * 1.5 * scale
+                    ),
+                    type: "trainingArea"
+                });
+            }
+            break;
+
+        case "町の広場":
+            // 広場の待機スポットはベンチ（各ベンチに複数の座席）
+            for(let i = 0; i < 4; i++) {
+                // 各ベンチに3つの座席を作成
+                for(let j = 0; j < 3; j++) {
+                    const benchAngle = i * Math.PI/2;
+                    const seatOffset = (j - 1) * 0.8 * scale; // ベンチに沿った座席の間隔
+                    
+                    // ベンチの方向に沿った座席位置を計算
+                    const seatX = Math.cos(benchAngle) * 3 * scale + Math.cos(benchAngle + Math.PI/2) * seatOffset;
+                    const seatZ = Math.sin(benchAngle) * 3 * scale + Math.sin(benchAngle + Math.PI/2) * seatOffset;
+                    
+                    waitingSpots.push({
+                        position: new THREE.Vector3(
+                            seatX,
+                            0.1 * scale,
+                            seatZ
+                        ),
+                        type: "bench"
+                    });
+                }
+            }
+            
+            // 噴水の周りにも待機スポットを追加
+            for(let i = 0; i < 6; i++) {
+                waitingSpots.push({
+                    position: new THREE.Vector3(
+                        Math.cos(i * Math.PI/3) * 2 * scale,
+                        0.05 * scale,
+                        Math.sin(i * Math.PI/3) * 2 * scale
+                    ),
+                    type: "fountain"
+                });
+            }
+            break;
+
+        case "学校":
+            // 学校の待機スポットはベンチ（複数の座席）
+            for(let i = 0; i < 2; i++) {
+                for(let j = 0; j < 3; j++) {
+                    waitingSpots.push({
+                        position: new THREE.Vector3(
+                            (i === 0 ? -1.5 * scale : 1.5 * scale) + (j - 1) * 0.6 * scale,
+                            0.1 * scale,
+                            2 * scale
+                        ),
+                        type: "schoolBench"
+                    });
+                }
+            }
+            
+            // 校庭にも待機スポットを追加
+            for(let i = 0; i < 4; i++) {
+                waitingSpots.push({
+                    position: new THREE.Vector3(
+                        Math.cos(i * Math.PI/2) * 1.5 * scale,
+                        0.05 * scale,
+                        Math.sin(i * Math.PI/2) * 1.5 * scale
+                    ),
+                    type: "playground"
+                });
+            }
+            break;
+
+        case "病院":
+            // 病院の待機スポットは椅子
+            for(let i = 0; i < 4; i++) {
+                waitingSpots.push({
+                    position: new THREE.Vector3(
+                        (i - 1.5) * 1.2 * scale,
+                        0.2 * scale,
+                        -2 * scale
+                    ),
+                    type: "waitingChair"
+                });
+            }
+            break;
+
+        case "スーパーマーケット":
+            // スーパーの待機スポットはレジ待機列
+            for(let i = 0; i < 3; i++) {
+                waitingSpots.push({
+                    position: new THREE.Vector3(
+                        -2 * scale,
+                        0.05 * scale,
+                        (i - 1) * 1.2 * scale
+                    ),
+                    type: "queueSpot"
+                });
+            }
+            break;
+
+        case "ファミレス":
+            // ファミレスの待機スポットは椅子と席
+            for(let i = 0; i < 6; i++) {
+                waitingSpots.push({
+                    position: new THREE.Vector3(
+                        Math.cos(i * Math.PI/3) * 1.5 * scale,
+                        0.25 * scale,
+                        Math.sin(i * Math.PI/3) * 1.5 * scale
+                    ),
+                    type: "chair"
+                });
+            }
+            // 待機席
+            for(let i = 0; i < 2; i++) {
+                waitingSpots.push({
+                    position: new THREE.Vector3(
+                        (i - 0.5) * 1.5 * scale,
+                        0.2 * scale,
+                        -3 * scale
+                    ),
+                    type: "waitingSeat"
+                });
+            }
+            break;
+    }
+    return waitingSpots;
 }
 

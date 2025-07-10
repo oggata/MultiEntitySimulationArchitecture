@@ -76,6 +76,105 @@ const homeManager = {
     }
 };
 
+// エージェント情報のlocalStorage管理
+const agentStorage = {
+    // エージェント情報をlocalStorageに保存
+    saveAgents() {
+        try {
+            const agentsData = agents.map(agent => ({
+                name: agent.name,
+                age: agent.age,
+                background: agent.background,
+                personality: agent.personality,
+                dailyRoutine: agent.dailyRoutine,
+                home: agent.home,
+                color: agent.characterInstance ? agent.characterInstance.color : null,
+                // 関係性情報も保存
+                relationships: Array.from(agent.relationships.entries()),
+                // 記憶情報も保存
+                shortTermMemory: agent.shortTermMemory,
+                longTermMemory: agent.longTermMemory
+            }));
+            
+            localStorage.setItem('resident_agents', JSON.stringify(agentsData));
+            console.log(`${agentsData.length}人のエージェント情報をlocalStorageに保存しました`);
+        } catch (error) {
+            console.error('エージェント情報の保存に失敗しました:', error);
+        }
+    },
+    
+    // localStorageからエージェント情報を読み込み
+    loadAgents() {
+        try {
+            const savedData = localStorage.getItem('resident_agents');
+            if (!savedData) {
+                console.log('保存されたエージェント情報が見つかりません');
+                return false;
+            }
+            
+            const agentsData = JSON.parse(savedData);
+            console.log(`${agentsData.length}人のエージェント情報をlocalStorageから読み込みました`);
+            
+            // 既存のエージェントをクリア
+            agents.length = 0;
+            
+            // 保存されたエージェントを復元
+            agentsData.forEach((agentData, index) => {
+                // 関係性をMapに変換
+                if (agentData.relationships) {
+                    agentData.relationships = new Map(agentData.relationships);
+                }
+                
+                // 自宅を先に復元（エージェント作成前に自宅の場所を確実に作成）
+                if (agentData.home) {
+                    homeManager.homes.set(agentData.home.name, agentData.home);
+                    createAgentHome(agentData.home);
+                }
+                
+                const agent = new Agent(agentData, index);
+                agents.push(agent);
+            });
+            
+            // エージェント情報を更新
+            updateAgentInfo();
+            
+            return true;
+        } catch (error) {
+            console.error('エージェント情報の読み込みに失敗しました:', error);
+            return false;
+        }
+    },
+    
+    // エージェント情報をクリア
+    clearAgents() {
+        try {
+            localStorage.removeItem('resident_agents');
+            console.log('エージェント情報をlocalStorageから削除しました');
+        } catch (error) {
+            console.error('エージェント情報の削除に失敗しました:', error);
+        }
+    },
+    
+    // 保存されたエージェント情報があるかチェック
+    hasSavedAgents() {
+        return localStorage.getItem('resident_agents') !== null;
+    },
+    
+    // 保存されているエージェントの人数を取得
+    getSavedAgentsCount() {
+        try {
+            const savedData = localStorage.getItem('resident_agents');
+            if (!savedData) return 0;
+            
+            const agentsData = JSON.parse(savedData);
+            return agentsData.length;
+        } catch (error) {
+            console.error('保存されたエージェント数の取得に失敗しました:', error);
+            return 0;
+        }
+    }
+};
+
 // エージェントクラス（拡張版）
 class Agent {
     constructor(data, index) {
@@ -108,7 +207,12 @@ class Agent {
                 this.home.z
             );
         }
+        
+        // 現在位置と目標位置を自宅に設定
         this.targetLocation = this.currentLocation;
+        
+        // 移動目標も自宅に設定
+        this.movementTarget = new THREE.Vector3(this.home.x, 0, this.home.z);
         
         // 記憶システム
         this.shortTermMemory = [];  // 短期記憶（最近の出来事）
@@ -151,14 +255,22 @@ class Agent {
         }
         // Characterクラスを使ってアバターを生成（gameはnullで渡す）
         this.characterInstance = new Character(scene, 'agent', null);
-        // 位置を初期化
-        if (this.currentLocation && this.currentLocation.position) {
+        
+        // 確実に自宅の位置に初期化
+        if (this.home) {
+            this.characterInstance.setPosition(
+                this.home.x,
+                0,
+                this.home.z
+            );
+        } else if (this.currentLocation && this.currentLocation.position) {
             this.characterInstance.setPosition(
                 this.currentLocation.position.x,
                 this.currentLocation.position.y || 0,
                 this.currentLocation.position.z
             );
         }
+        
         // 色を反映
         if (color) {
             //this.characterInstance.setColor(color);
@@ -318,6 +430,14 @@ class Agent {
     }
 
     update(deltaTime) {
+        // 初期位置の設定（初回のみ）
+        if (this.mesh && !this.initialPositionSet) {
+            if (this.home) {
+                this.mesh.position.set(this.home.x, 0, this.home.z);
+                this.initialPositionSet = true;
+            }
+        }
+        
         // エネルギーの更新（時間とともに減少）
         this.energy = Math.max(0.1, this.energy - (deltaTime * 0.0001));
         
@@ -1445,6 +1565,12 @@ async function generateNewAgent() {
         updateAgentInfo();
         addLog(`👤 新しいエージェント「${agentData.name}」が生成されました`, 'info', `\n            <div class="log-detail-section">\n                <h4>エージェントの詳細</h4>\n                <p>名前: ${agentData.name}</p>\n                <p>年齢: ${agentData.age}歳</p>\n                <p>性格: ${agentData.personality.description}</p>\n                <p>性格特性:</p>\n                <ul>\n                    <li>社交性: ${(agentData.personality.traits.sociability * 100).toFixed(0)}%</li>\n                    <li>活動的さ: ${(agentData.personality.traits.energy * 100).toFixed(0)}%</li>\n                    <li>ルーチン重視: ${(agentData.personality.traits.routine * 100).toFixed(0)}%</li>\n                    <li>好奇心: ${(agentData.personality.traits.curiosity * 100).toFixed(0)}%</li>\n                    <li>共感性: ${(agentData.personality.traits.empathy * 100).toFixed(0)}%</li>\n                </ul>\n            </div>\n        `);
         
+        // エージェント情報をlocalStorageに保存
+        agentStorage.saveAgents();
+        
+        // ボタンテキストを更新
+        updateStorageButtonText();
+        
         // 生成完了メッセージを表示
         generationMessage.textContent = `✅ エージェント「${agentData.name}」の生成が完了しました！`;
         generationProgress.textContent = '';
@@ -1456,6 +1582,13 @@ async function generateNewAgent() {
             generateMultipleAgentsBtn.disabled = false;
         }, 3000);
         
+        // ボタンテキストを更新
+        updateStorageButtonText();
+        
+        // シミュレーション開始ボタンの状態を更新
+        if (typeof updateSimulationButton === 'function') {
+            updateSimulationButton();
+        }
     } catch (error) {
         console.error('エージェント生成エラー:', error);
         
@@ -1473,6 +1606,99 @@ async function generateNewAgent() {
         alert('エージェントの生成に失敗しました: ' + error.message);
     }
 }
+
+// 保存されたエージェントを読み込む関数
+function loadSavedAgents() {
+    if (agentStorage.hasSavedAgents()) {
+        const success = agentStorage.loadAgents();
+        if (success) {
+            addLog(`📂 保存されたエージェント情報を読み込みました (${agents.length}人)`, 'info');
+            alert(`保存されたエージェント情報を読み込みました (${agents.length}人)`);
+            // ボタンテキストを更新（読み込み後は0人になる）
+            updateStorageButtonText();
+            // シミュレーション開始ボタンの状態を更新
+            if (typeof updateSimulationButton === 'function') {
+                updateSimulationButton();
+            }
+        } else {
+            addLog(`❌ エージェント情報の読み込みに失敗しました`, 'error');
+            alert('エージェント情報の読み込みに失敗しました');
+        }
+    } else {
+        addLog(`ℹ️ 保存されたエージェント情報が見つかりません`, 'info');
+        alert('保存されたエージェント情報が見つかりません');
+    }
+}
+
+// 全エージェントを削除する関数
+function clearAllAgents() {
+    if (agents.length === 0) {
+        alert('削除するエージェントがありません');
+        return;
+    }
+    
+    if (confirm(`本当に全エージェント (${agents.length}人) を削除しますか？\nこの操作は元に戻せません。`)) {
+        // エージェントをクリア
+        agents.length = 0;
+        
+        // 自宅管理システムもクリア
+        homeManager.homes.clear();
+        
+        // シーンから自宅を削除（簡易的な方法）
+        const homeObjects = scene.children.filter(child => 
+            child.userData && child.userData.type === 'home'
+        );
+        homeObjects.forEach(obj => scene.remove(obj));
+        
+        // localStorageからも削除
+        agentStorage.clearAgents();
+        
+        // ボタンテキストを更新
+        updateStorageButtonText();
+        
+        // UIを更新
+        updateAgentInfo();
+        // シミュレーション開始ボタンの状態を更新
+        if (typeof updateSimulationButton === 'function') {
+            updateSimulationButton();
+        }
+        
+        addLog(`🗑️ 全エージェント (${agents.length}人) を削除しました`, 'info');
+        alert('全エージェントを削除しました');
+    }
+}
+
+// 定期的にエージェント情報を保存する機能
+function startAutoSave() {
+    setInterval(() => {
+        if (agents.length > 0) {
+            agentStorage.saveAgents();
+            // ボタンテキストも更新
+            updateStorageButtonText();
+        }
+    }, 30000); // 30秒ごとに自動保存
+}
+
+// ボタンのテキストを更新する関数
+function updateStorageButtonText() {
+    const loadAgentsBtn = document.getElementById('loadAgentsBtn');
+    if (loadAgentsBtn && typeof agentStorage !== 'undefined') {
+        const savedCount = agentStorage.getSavedAgentsCount();
+        if (savedCount > 0) {
+            loadAgentsBtn.textContent = `保存されたエージェントを読み込み (${savedCount}人)`;
+        } else {
+            loadAgentsBtn.textContent = '保存されたエージェントを読み込み';
+        }
+    }
+}
+
+// 自動保存を開始
+startAutoSave();
+
+// ページ読み込み時にボタンテキストを更新
+document.addEventListener('DOMContentLoaded', () => {
+    updateStorageButtonText();
+});
 
 // 複数のエージェントを生成する関数
 async function generateMultipleAgents(count) {
@@ -1518,6 +1744,12 @@ async function generateMultipleAgents(count) {
                 <p>現在のエージェント総数: ${agents.length}人</p>
             </div>
         `);
+        
+        // エージェント情報をlocalStorageに保存
+        agentStorage.saveAgents();
+        
+        // ボタンテキストを更新
+        updateStorageButtonText();
         
         // 生成完了メッセージを表示
         generationMessage.textContent = `✅ ${count}人のエージェントの生成が完了しました！`;

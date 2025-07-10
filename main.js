@@ -172,6 +172,17 @@ function init() {
         });
     }
 
+    // 保存されたエージェントを自動読み込み
+    if (typeof agentStorage !== 'undefined' && agentStorage.hasSavedAgents()) {
+        console.log('保存されたエージェント情報を自動読み込み中...');
+        const success = agentStorage.loadAgents();
+        if (success) {
+            addLog(`📂 保存されたエージェント情報を自動読み込みしました (${agents.length}人)`, 'info');
+        } else {
+            addLog(`❌ エージェント情報の自動読み込みに失敗しました`, 'error');
+        }
+    }
+
     // カメラ制御ボタンのイベント登録
     const personBtn = document.getElementById('personViewBtn');
     const facilityBtn = document.getElementById('facilityViewBtn');
@@ -503,10 +514,19 @@ function updateAgentInfo() {
         
         agentsList.appendChild(agentCard);
     });
+    
+    // シミュレーション開始ボタンの状態を更新
+    updateSimulationButton();
 }
 
 // シミュレーション制御
 function startSimulation() {
+    // エージェントの存在チェック
+    if (agents.length === 0) {
+        alert('エージェントが一人もいません。先にエージェントを生成してください。');
+        return;
+    }
+    
     apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) {
         alert('OpenAI APIキーを入力してください');
@@ -839,6 +859,20 @@ function getMessageHistory(agentName) {
             updateMessageHistory();
         }
     }
+
+// シミュレーション開始ボタンの状態を更新
+function updateSimulationButton() {
+    const startSimulationBtn = document.querySelector('button[onclick="startSimulation()"]');
+    if (startSimulationBtn) {
+        if (agents.length === 0) {
+            startSimulationBtn.disabled = true;
+            startSimulationBtn.textContent = 'シミュレーション開始 (エージェントが必要)';
+        } else {
+            startSimulationBtn.disabled = false;
+            startSimulationBtn.textContent = 'シミュレーション開始';
+        }
+    }
+}
 
 // コミュニケーション機能の関数
 function updateCommunicationButtons() {

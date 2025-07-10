@@ -727,64 +727,21 @@ class CityLayout {
                     buildingX = roadEdgeX + side.x * this.minBuildingDistance;
                     buildingZ = roadEdgeZ + side.z * this.minBuildingDistance;
                     
-                    // すべての道路との距離をチェック（建物の境界ボックスを考慮）
+                    // すべての道路との距離をチェック（外接円ベース）
                     let isValidPosition = true;
-                    let minDistanceToAnyRoad = Infinity;
+                    const buildingRadius = Math.sqrt(2) * (buildingSize / 2); // 建物の外接円半径
+                    const margin = this.minBuildingDistance;
                     
                     for (const checkRoad of this.roads) {
-                        // 建物の境界ボックスを計算
-                        const buildingHalfSize = buildingSize / 2;
-                        const buildingBounds = {
-                            minX: buildingX - buildingHalfSize,
-                            maxX: buildingX + buildingHalfSize,
-                            minZ: buildingZ - buildingHalfSize,
-                            maxZ: buildingZ + buildingHalfSize
-                        };
-                        
-                        // 道路の境界を計算
+                        const distanceToRoadLine = this.pointToLineDistance(buildingX, buildingZ, checkRoad);
                         const checkRoadWidth = checkRoad.isMain ? this.roadWidth * 2 : checkRoad.isShort ? this.roadWidth * 0.25 : this.roadWidth;
-                        const roadHalfWidth = checkRoadWidth / 2;
+                        const minRequiredDistance = (checkRoadWidth / 2) + buildingRadius + margin;
                         
-                        // 道路の方向ベクトルを計算
-                        const roadDirX = checkRoad.end.x - checkRoad.start.x;
-                        const roadDirZ = checkRoad.end.z - checkRoad.start.z;
-                        const roadLength = Math.sqrt(roadDirX * roadDirX + roadDirZ * roadDirZ);
-                        const roadUnitX = roadDirX / roadLength;
-                        const roadUnitZ = roadDirZ / roadLength;
-                        
-                        // 道路に垂直な方向ベクトルを計算
-                        const perpX = -roadUnitZ;
-                        const perpZ = roadUnitX;
-                        
-                        // 道路の境界ボックスを計算
-                        const roadBounds = {
-                            minX: Math.min(checkRoad.start.x, checkRoad.end.x) - Math.abs(perpX * roadHalfWidth),
-                            maxX: Math.max(checkRoad.start.x, checkRoad.end.x) + Math.abs(perpX * roadHalfWidth),
-                            minZ: Math.min(checkRoad.start.z, checkRoad.end.z) - Math.abs(perpZ * roadHalfWidth),
-                            maxZ: Math.max(checkRoad.start.z, checkRoad.end.z) + Math.abs(perpZ * roadHalfWidth)
-                        };
-                        
-                        // 建物と道路の境界ボックスが重複しているかチェック
-                        const overlapX = !(buildingBounds.maxX < roadBounds.minX || buildingBounds.minX > roadBounds.maxX);
-                        const overlapZ = !(buildingBounds.maxZ < roadBounds.minZ || buildingBounds.minZ > roadBounds.maxZ);
-                        
-                        if (overlapX && overlapZ) {
-                            console.log(`  建物が道路と重複しているため除外: ${buildingType}`);
+                        if (distanceToRoadLine < minRequiredDistance) {
+                            console.log(`  建物外接円が道路帯に近すぎるため除外: ${buildingType} 距離: ${distanceToRoadLine.toFixed(2)} 必要距離: ${minRequiredDistance.toFixed(2)}`);
                             isValidPosition = false;
                             break;
                         }
-                        
-                        // 建物の境界から道路の境界までの最小距離を計算
-                        const distanceToCheckRoad = this.pointToLineDistance(buildingX, buildingZ, checkRoad);
-                        const minRequiredDistance = roadHalfWidth + buildingHalfSize + this.minBuildingDistance;
-                        
-                        if (distanceToCheckRoad < minRequiredDistance) {
-                            console.log(`  建物が道路に近すぎるため除外: ${buildingType} 道路距離: ${distanceToCheckRoad.toFixed(2)} 必要距離: ${minRequiredDistance.toFixed(2)}`);
-                            isValidPosition = false;
-                            break;
-                        }
-                        
-                        minDistanceToAnyRoad = Math.min(minDistanceToAnyRoad, distanceToCheckRoad);
                     }
                     
                     if (!isValidPosition) {
@@ -821,15 +778,18 @@ class CityLayout {
                         distanceToRoad = this.pointToLineDistance(buildingX, buildingZ, road);
                         console.log(`  調整後: 新しい距離=${distanceToRoad.toFixed(2)}`);
                         
-                        // 調整後もすべての道路との距離を再チェック
+                        // 調整後もすべての道路との距離を再チェック（外接円ベース）
                         let stillValid = true;
+                        const buildingRadius = Math.sqrt(2) * (buildingSize / 2); // 建物の外接円半径
+                        const margin = this.minBuildingDistance;
+                        
                         for (const checkRoad of this.roads) {
-                            const distanceToCheckRoad = this.pointToLineDistance(buildingX, buildingZ, checkRoad);
+                            const distanceToRoadLine = this.pointToLineDistance(buildingX, buildingZ, checkRoad);
                             const checkRoadWidth = checkRoad.isMain ? this.roadWidth * 2 : checkRoad.isShort ? this.roadWidth * 0.25 : this.roadWidth;
-                            const minRequiredDistance = checkRoadWidth/2 + buildingSize/2 + this.minBuildingDistance;
+                            const minRequiredDistance = (checkRoadWidth / 2) + buildingRadius + margin;
                             
-                            if (distanceToCheckRoad < minRequiredDistance) {
-                                console.log(`  調整後も道路に近すぎるため除外: ${buildingType} 道路距離: ${distanceToCheckRoad.toFixed(2)}`);
+                            if (distanceToRoadLine < minRequiredDistance) {
+                                console.log(`  調整後も建物外接円が道路帯に近すぎるため除外: ${buildingType} 距離: ${distanceToRoadLine.toFixed(2)}`);
                                 stillValid = false;
                                 break;
                             }
@@ -854,15 +814,18 @@ class CityLayout {
                         distanceToRoad = this.pointToLineDistance(buildingX, buildingZ, road);
                         console.log(`  調整後: 新しい距離=${distanceToRoad.toFixed(2)}`);
                         
-                        // 調整後もすべての道路との距離を再チェック
+                        // 調整後もすべての道路との距離を再チェック（外接円ベース）
                         let stillValid = true;
+                        const buildingRadius = Math.sqrt(2) * (buildingSize / 2); // 建物の外接円半径
+                        const margin = this.minBuildingDistance;
+                        
                         for (const checkRoad of this.roads) {
-                            const distanceToCheckRoad = this.pointToLineDistance(buildingX, buildingZ, checkRoad);
+                            const distanceToRoadLine = this.pointToLineDistance(buildingX, buildingZ, checkRoad);
                             const checkRoadWidth = checkRoad.isMain ? this.roadWidth * 2 : checkRoad.isShort ? this.roadWidth * 0.25 : this.roadWidth;
-                            const minRequiredDistance = checkRoadWidth/2 + buildingSize/2 + this.minBuildingDistance;
+                            const minRequiredDistance = (checkRoadWidth / 2) + buildingRadius + margin;
                             
-                            if (distanceToCheckRoad < minRequiredDistance) {
-                                console.log(`  調整後も道路に近すぎるため除外: ${buildingType} 道路距離: ${distanceToCheckRoad.toFixed(2)}`);
+                            if (distanceToRoadLine < minRequiredDistance) {
+                                console.log(`  調整後も建物外接円が道路帯に近すぎるため除外: ${buildingType} 距離: ${distanceToRoadLine.toFixed(2)}`);
                                 stillValid = false;
                                 break;
                             }

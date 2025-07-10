@@ -9,6 +9,12 @@ let timeSpeed = 1;
 let currentTime = 8 * 60; // 8:00 AM in minutes
 const clock = new THREE.Clock();
 
+// グローバル変数をwindowに公開
+window.agents = agents;
+
+// LLMへの問い合わせ回数を管理
+let llmCallCount = 0;
+
 // カメラ制御用インデックス
 let currentAgentIndex = 0;
 let currentFacilityIndex = 0;
@@ -23,6 +29,49 @@ let cameraFollowEnabled = false;
 let lastTimeUpdate = 0;
 let timeUpdateInterval = 0.1; // 0.1秒ごとに時間を更新（1xの場合）
 
+// localStorageからAPIキーを読み込み
+function loadApiKeyFromStorage() {
+    const savedApiKey = localStorage.getItem('openai_api_key');
+    if (savedApiKey) {
+        document.getElementById('apiKey').value = savedApiKey;
+        apiKey = savedApiKey;
+    }
+}
+
+// APIキーをlocalStorageに保存
+function saveApiKeyToStorage(key) {
+    localStorage.setItem('openai_api_key', key);
+}
+
+// localStorageからプロンプトを読み込み
+function loadPromptFromStorage() {
+    const savedPrompt = localStorage.getItem('topic_prompt');
+    if (savedPrompt) {
+        document.getElementById('topicPrompt').value = savedPrompt;
+    }
+}
+
+// プロンプトをlocalStorageに保存
+function savePromptToStorage(prompt) {
+    localStorage.setItem('topic_prompt', prompt);
+}
+
+// LLMへの問い合わせ回数を更新
+function updateLlmCallCount() {
+    llmCallCount++;
+    const countDisplay = document.getElementById('llmCallCount');
+    if (countDisplay) {
+        countDisplay.textContent = llmCallCount;
+    }
+}
+
+// LLMへの問い合わせ回数を表示する要素を更新
+function updateLlmCallCountDisplay() {
+    const countDisplay = document.getElementById('llmCallCount');
+    if (countDisplay) {
+        countDisplay.textContent = llmCallCount;
+    }
+}
 // Three.jsの初期化
 function init() {
     scene = new THREE.Scene();
@@ -87,12 +136,41 @@ function init() {
     
     // 施設の描画
     cityLayout.drawFacilities();
+    
+    // 入り口接続の描画
+    cityLayout.drawEntranceConnections();
 
     // パネルのHTMLを更新
     updatePanelHTML();
     
     // パネルのドラッグ機能を設定
     setupPanelDrag();
+
+    // localStorageからAPIキーを読み込み
+    loadApiKeyFromStorage();
+
+    // APIキーの変更を監視してlocalStorageに保存
+    const apiKeyInput = document.getElementById('apiKey');
+    if (apiKeyInput) {
+        apiKeyInput.addEventListener('input', (e) => {
+            const newKey = e.target.value.trim();
+            if (newKey) {
+                saveApiKeyToStorage(newKey);
+            }
+        });
+    }
+
+    // localStorageからプロンプトを読み込み
+    loadPromptFromStorage();
+
+    // プロンプトの変更を監視してlocalStorageに保存
+    const topicPromptInput = document.getElementById('topicPrompt');
+    if (topicPromptInput) {
+        topicPromptInput.addEventListener('input', (e) => {
+            const newPrompt = e.target.value.trim();
+            savePromptToStorage(newPrompt);
+        });
+    }
 
     // カメラ制御ボタンのイベント登録
     const personBtn = document.getElementById('personViewBtn');
@@ -133,6 +211,25 @@ function init() {
             cityLayout.clearRoadNetworkVisualization();
             cityLayout.clearPathVisualization();
             addLog('🗑️ 道路表示をクリアしました', 'system');
+        });
+    }
+
+    // 入り口接続表示ボタンのイベント登録
+    const toggleEntranceBtn = document.getElementById('toggleEntranceConnections');
+    if (toggleEntranceBtn) {
+        toggleEntranceBtn.addEventListener('click', () => {
+            if (cityLayout.entranceConnections && cityLayout.entranceConnections.length > 0) {
+                // 入り口接続を非表示
+                for (const connection of cityLayout.entranceConnections) {
+                    scene.remove(connection);
+                }
+                cityLayout.entranceConnections = [];
+                addLog('🚪 入り口接続を非表示にしました', 'system');
+            } else {
+                // 入り口接続を表示
+                cityLayout.drawEntranceConnections();
+                addLog('🚪 入り口接続を表示しました', 'system');
+            }
         });
     }
 }
@@ -283,6 +380,7 @@ function updateAgentInfo() {
         const infoDiv = document.createElement('div');
         infoDiv.innerHTML = `
             <div class="agent-info-row">📍 場所: ${agent.currentLocation.name}</div>
+            <div class="agent-info-row">🎯 目的地: ${agent.getDestinationInfo()}</div>
             <div class="agent-info-row">⚡ 体力: ${Math.round(agent.energy * 100)}%</div>
             <div class="agent-info-row">😊 気分: ${agent.mood}</div>
         `;
@@ -351,8 +449,8 @@ function startSimulation() {
     }
 
     // APIキーの形式を検証
-    if (!apiKey.startsWith('sk-')) {
-        alert('無効なAPIキー形式です。sk-で始まる有効なAPIキーを入力してください。');
+    if (!(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
+        alert('無効なAPIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
         return;
     }
     
@@ -449,6 +547,9 @@ function getSelectedApiProvider() {
     return radio ? radio.value : 'openai';
 }
 window.getSelectedApiProvider = getSelectedApiProvider;
+
+// LLMへの問い合わせ回数更新関数をグローバルに公開
+window.updateLlmCallCount = updateLlmCallCount;
 
 // カメラ追従対象の表示を更新
 function updateCameraTargetDisplay() {
@@ -601,6 +702,3 @@ function updateCameraFollow() {
     // カメラの向きを人物に向ける
     camera.lookAt(pos.x, pos.y + 1, pos.z);
 }
-
-
-

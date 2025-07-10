@@ -237,7 +237,10 @@ class CityLayout {
         // 道路との最小距離をチェック
         for (const road of this.roads) {
             const distance = this.pointToLineDistance(x, z, road);
-            if (distance < this.roadWidth + this.buildingSize/2) {
+            const roadWidth = road.isMain ? this.roadWidth * 2 : road.isShort ? this.roadWidth * 0.25 : this.roadWidth;
+            
+            // 建物が道路の上に配置されていないかチェック（より厳しく）
+            if (distance < roadWidth/2 + this.buildingSize/2 + this.minBuildingDistance * 0.5) {
                 return false;
             }
         }
@@ -635,6 +638,9 @@ class CityLayout {
         
         console.log(`建物生成開始: 道路数 = ${this.roads.length}`);
         
+        // まず、locationDataの施設を優先的に配置
+        const placedFacilities = new Set();
+        
         // 各道路に沿って建物を配置
         this.roads.forEach((road, roadIndex) => {
             console.log(`道路 ${roadIndex} に沿って建物を配置`);
@@ -683,23 +689,160 @@ class CityLayout {
                         continue;
                     }
                     
-                    // 建物タイプを決定
-                    const buildingType = this.getRandomBuildingType();
-                    const buildingSize = this.getBuildingSizeByType(buildingType);
+                    // 建物タイプを決定（locationDataの施設を優先）
+                    let buildingType;
+                    let buildingSize;
                     
-                    // 道路から建物までの距離を計算（道路に接するように）
+                    // まだ配置されていないlocationDataの施設があるかチェック
+                    if (placedFacilities.size < locationData.length) {
+                        // 未配置の施設からランダムに選択
+                        const unplacedFacilities = locationData.filter(loc => !placedFacilities.has(loc.name));
+                        const selectedFacility = unplacedFacilities[Math.floor(Math.random() * unplacedFacilities.length)];
+                        buildingType = selectedFacility.name;
+                        // locationDataの施設も適切なサイズを取得
+                        buildingSize = this.getBuildingSizeByType(buildingType);
+                        placedFacilities.add(selectedFacility.name);
+                        console.log(`  locationData施設を選択: ${buildingType} サイズ: ${buildingSize}`);
+                    } else {
+                        // すべての施設が配置済みの場合はランダムな建物を配置
+                        buildingType = this.getRandomBuildingType();
+                        buildingSize = this.getBuildingSizeByType(buildingType);
+                    }
+                    
+                    // 道路から建物までの距離を計算（道路の外側に配置）
                     const roadWidth = road.isMain ? this.roadWidth * 2 : road.isShort ? this.roadWidth * 0.25 : this.roadWidth;
-                    const buildingDistance = roadWidth + buildingSize/2 + this.minBuildingDistance * 0.5; // 距離を短縮
+                    
+                    // 建物が道路の外側に配置されるように最小距離を設定
+                    // より厳しい距離ルールを適用
+                    const minDistanceFromRoad = roadWidth/2 + buildingSize/2 + this.minBuildingDistance * 2;
+                    const buildingDistance = minDistanceFromRoad;
                     let buildingX = roadX + side.x * buildingDistance;
                     let buildingZ = roadZ + side.z * buildingDistance;
                     
-                    // 建物が実際に道路に接しているかチェック
+                    // 建物の位置を道路の外側に強制的に配置
+                    const roadEdgeX = roadX + side.x * (roadWidth/2 + buildingSize/2 + this.minBuildingDistance);
+                    const roadEdgeZ = roadZ + side.z * (roadWidth/2 + buildingSize/2 + this.minBuildingDistance);
+                    
+                    // 建物を道路の端から十分な距離に配置
+                    buildingX = roadEdgeX + side.x * this.minBuildingDistance;
+                    buildingZ = roadEdgeZ + side.z * this.minBuildingDistance;
+                    
+                    // すべての道路との距離をチェック（建物の境界ボックスを考慮）
+                    let isValidPosition = true;
+                    let minDistanceToAnyRoad = Infinity;
+                    
+                    for (const checkRoad of this.roads) {
+                        // 建物の境界ボックスを計算
+                        const buildingHalfSize = buildingSize / 2;
+                        const buildingBounds = {
+                            minX: buildingX - buildingHalfSize,
+                            maxX: buildingX + buildingHalfSize,
+                            minZ: buildingZ - buildingHalfSize,
+                            maxZ: buildingZ + buildingHalfSize
+                        };
+                        
+                        // 道路の境界を計算
+                        const checkRoadWidth = checkRoad.isMain ? this.roadWidth * 2 : checkRoad.isShort ? this.roadWidth * 0.25 : this.roadWidth;
+                        const roadHalfWidth = checkRoadWidth / 2;
+                        
+                        // 道路の方向ベクトルを計算
+                        const roadDirX = checkRoad.end.x - checkRoad.start.x;
+                        const roadDirZ = checkRoad.end.z - checkRoad.start.z;
+                        const roadLength = Math.sqrt(roadDirX * roadDirX + roadDirZ * roadDirZ);
+                        const roadUnitX = roadDirX / roadLength;
+                        const roadUnitZ = roadDirZ / roadLength;
+                        
+                        // 道路に垂直な方向ベクトルを計算
+                        const perpX = -roadUnitZ;
+                        const perpZ = roadUnitX;
+                        
+                        // 道路の境界ボックスを計算
+                        const roadBounds = {
+                            minX: Math.min(checkRoad.start.x, checkRoad.end.x) - Math.abs(perpX * roadHalfWidth),
+                            maxX: Math.max(checkRoad.start.x, checkRoad.end.x) + Math.abs(perpX * roadHalfWidth),
+                            minZ: Math.min(checkRoad.start.z, checkRoad.end.z) - Math.abs(perpZ * roadHalfWidth),
+                            maxZ: Math.max(checkRoad.start.z, checkRoad.end.z) + Math.abs(perpZ * roadHalfWidth)
+                        };
+                        
+                        // 建物と道路の境界ボックスが重複しているかチェック
+                        const overlapX = !(buildingBounds.maxX < roadBounds.minX || buildingBounds.minX > roadBounds.maxX);
+                        const overlapZ = !(buildingBounds.maxZ < roadBounds.minZ || buildingBounds.minZ > roadBounds.maxZ);
+                        
+                        if (overlapX && overlapZ) {
+                            console.log(`  建物が道路と重複しているため除外: ${buildingType}`);
+                            isValidPosition = false;
+                            break;
+                        }
+                        
+                        // 建物の境界から道路の境界までの最小距離を計算
+                        const distanceToCheckRoad = this.pointToLineDistance(buildingX, buildingZ, checkRoad);
+                        const minRequiredDistance = roadHalfWidth + buildingHalfSize + this.minBuildingDistance;
+                        
+                        if (distanceToCheckRoad < minRequiredDistance) {
+                            console.log(`  建物が道路に近すぎるため除外: ${buildingType} 道路距離: ${distanceToCheckRoad.toFixed(2)} 必要距離: ${minRequiredDistance.toFixed(2)}`);
+                            isValidPosition = false;
+                            break;
+                        }
+                        
+                        minDistanceToAnyRoad = Math.min(minDistanceToAnyRoad, distanceToCheckRoad);
+                    }
+                    
+                    if (!isValidPosition) {
+                        continue;
+                    }
+                    
+                    // 建物が道路の外側にあるかチェック（現在の道路）
                     let distanceToRoad = this.pointToLineDistance(buildingX, buildingZ, road);
-                    const maxDistanceToRoad = roadWidth + buildingSize/2 + this.minBuildingDistance;
+                    const minDistanceToRoad = roadWidth/2 + buildingSize/2 + this.minBuildingDistance;
+                    const maxDistanceToRoad = roadWidth/2 + buildingSize/2 + this.minBuildingDistance * 4;
+                    
+                    // 大サイズの建物も小さい建物と同じロジックで配置
+                    const isLargeBuilding = buildingSize >= this.buildingSizes.large;
+                    if (isLargeBuilding) {
+                        // 大サイズの建物も小さい建物と同じ距離ルールを適用
+                        const largeBuildingMinDistance = roadWidth/2 + buildingSize/2 + this.minBuildingDistance;
+                        if (distanceToRoad < largeBuildingMinDistance) {
+                            console.log(`  大サイズ建物が道路に近すぎるため除外: ${buildingType} 距離: ${distanceToRoad.toFixed(2)}`);
+                            continue;
+                        }
+                    }
+                    
+                    // 建物が道路に近すぎる場合、位置を調整
+                    if (distanceToRoad < minDistanceToRoad) {
+                        console.log(`  建物が道路に近すぎるため調整: 元の距離=${distanceToRoad.toFixed(2)}`);
+                        
+                        // 建物を道路から離す
+                        const adjustmentFactor = minDistanceToRoad / distanceToRoad;
+                        const adjustedDistance = buildingDistance * adjustmentFactor;
+                        buildingX = roadX + side.x * adjustedDistance;
+                        buildingZ = roadZ + side.z * adjustedDistance;
+                        
+                        // 調整後の距離を再計算
+                        distanceToRoad = this.pointToLineDistance(buildingX, buildingZ, road);
+                        console.log(`  調整後: 新しい距離=${distanceToRoad.toFixed(2)}`);
+                        
+                        // 調整後もすべての道路との距離を再チェック
+                        let stillValid = true;
+                        for (const checkRoad of this.roads) {
+                            const distanceToCheckRoad = this.pointToLineDistance(buildingX, buildingZ, checkRoad);
+                            const checkRoadWidth = checkRoad.isMain ? this.roadWidth * 2 : checkRoad.isShort ? this.roadWidth * 0.25 : this.roadWidth;
+                            const minRequiredDistance = checkRoadWidth/2 + buildingSize/2 + this.minBuildingDistance;
+                            
+                            if (distanceToCheckRoad < minRequiredDistance) {
+                                console.log(`  調整後も道路に近すぎるため除外: ${buildingType} 道路距離: ${distanceToCheckRoad.toFixed(2)}`);
+                                stillValid = false;
+                                break;
+                            }
+                        }
+                        
+                        if (!stillValid) {
+                            continue;
+                        }
+                    }
                     
                     // 建物が道路から離れすぎている場合、位置を調整
                     if (distanceToRoad > maxDistanceToRoad) {
-                        console.log(`  建物位置を調整: 元の距離=${distanceToRoad.toFixed(2)}`);
+                        console.log(`  建物が道路から離れすぎているため調整: 元の距離=${distanceToRoad.toFixed(2)}`);
                         
                         // 建物を道路に近づける
                         const adjustmentFactor = maxDistanceToRoad / distanceToRoad;
@@ -710,10 +853,86 @@ class CityLayout {
                         // 調整後の距離を再計算
                         distanceToRoad = this.pointToLineDistance(buildingX, buildingZ, road);
                         console.log(`  調整後: 新しい距離=${distanceToRoad.toFixed(2)}`);
+                        
+                        // 調整後もすべての道路との距離を再チェック
+                        let stillValid = true;
+                        for (const checkRoad of this.roads) {
+                            const distanceToCheckRoad = this.pointToLineDistance(buildingX, buildingZ, checkRoad);
+                            const checkRoadWidth = checkRoad.isMain ? this.roadWidth * 2 : checkRoad.isShort ? this.roadWidth * 0.25 : this.roadWidth;
+                            const minRequiredDistance = checkRoadWidth/2 + buildingSize/2 + this.minBuildingDistance;
+                            
+                            if (distanceToCheckRoad < minRequiredDistance) {
+                                console.log(`  調整後も道路に近すぎるため除外: ${buildingType} 道路距離: ${distanceToCheckRoad.toFixed(2)}`);
+                                stillValid = false;
+                                break;
+                            }
+                        }
+                        
+                        if (!stillValid) {
+                            continue;
+                        }
+                    }
+                    
+                    // 建物が道路の真ん中に配置されていないかチェック（より厳密に）
+                    const buildingEdgeToRoadCenter = distanceToRoad;
+                    const roadCenterToRoadEdge = roadWidth/2;
+                    const buildingEdgeToRoadEdge = buildingEdgeToRoadCenter - roadCenterToRoadEdge;
+                    
+                    // 建物の端が道路の端に触れているか、または道路内にあるかチェック
+                    if (buildingEdgeToRoadEdge <= 0) {
+                        console.log(`  建物が道路内にあるため除外: (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)}) 建物端-道路端距離: ${buildingEdgeToRoadEdge.toFixed(2)}`);
+                        continue;
+                    }
+                    
+                    // 建物が道路に近すぎる場合も除外（安全マージン）
+                    const safetyMargin = this.minBuildingDistance * 0.5;
+                    if (buildingEdgeToRoadEdge < safetyMargin) {
+                        console.log(`  建物が道路に近すぎるため除外: (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)}) 建物端-道路端距離: ${buildingEdgeToRoadEdge.toFixed(2)}`);
+                        continue;
+                    }
+                    
+                    // 建物が交差点の真ん中に配置されていないかチェック
+                    let tooCloseToIntersectionForBuilding = false;
+                    for (const intersection of this.intersections) {
+                        const distanceToIntersection = Math.sqrt(
+                            Math.pow(buildingX - intersection.x, 2) + 
+                            Math.pow(buildingZ - intersection.z, 2)
+                        );
+                        // 交差点からの最小距離 = 建物サイズ + 余裕分（より厳しく）
+                        const minDistanceFromIntersection = buildingSize/2 + this.minBuildingDistance * 3;
+                        if (distanceToIntersection < minDistanceFromIntersection) {
+                            console.log(`  建物が交差点に近すぎるため除外: (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)}) 交差点距離: ${distanceToIntersection.toFixed(2)}`);
+                            tooCloseToIntersectionForBuilding = true;
+                            break;
+                        }
+                    }
+                    
+                    if (tooCloseToIntersectionForBuilding) {
+                        continue;
                     }
                     
                     // 建物の位置が有効かチェック
                     if (this.isValidBuildingPosition(buildingX, buildingZ)) {
+                        // すべての建物について他の道路との距離をチェック
+                        let isValidForAllRoads = true;
+                        for (const otherRoad of this.roads) {
+                            if (otherRoad === road) continue; // 現在の道路はスキップ
+                            
+                            const distanceToOtherRoad = this.pointToLineDistance(buildingX, buildingZ, otherRoad);
+                            const otherRoadWidth = otherRoad.isMain ? this.roadWidth * 2 : otherRoad.isShort ? this.roadWidth * 0.25 : this.roadWidth;
+                            const minDistanceToOtherRoad = otherRoadWidth/2 + buildingSize/2 + this.minBuildingDistance * 1.5;
+                            
+                            if (distanceToOtherRoad < minDistanceToOtherRoad) {
+                                console.log(`  建物が他の道路に近すぎるため除外: ${buildingType} 他の道路距離: ${distanceToOtherRoad.toFixed(2)}`);
+                                isValidForAllRoads = false;
+                                break;
+                            }
+                        }
+                        
+                        if (!isValidForAllRoads) {
+                            continue;
+                        }
+                        
                         // 他の建物との重複をチェック
                         if (!this.isBuildingOverlapping(buildingX, buildingZ, buildingSize)) {
                             // 建物の向きを道路の方向に向ける（入り口が道路を向くように）
@@ -740,7 +959,7 @@ class CityLayout {
             });
         });
         
-        console.log(`建物生成完了: ${this.buildings.length} 棟配置`);
+        console.log(`建物生成完了: ${this.buildings.length} 棟配置 (locationData施設: ${placedFacilities.size}個)`);
     }
     
     // 建物の重複チェック
@@ -788,6 +1007,13 @@ class CityLayout {
             'gym': 'large',
             'library': 'large',
             'plaza': 'large',
+            '公園': 'large',
+            '学校': 'large',
+            'スーパーマーケット': 'large',
+            '病院': 'large',
+            'スポーツジム': 'large',
+            '図書館': 'large',
+            '町の広場': 'large',
             
             // 中サイズの建物
             'shop': 'medium',
@@ -796,6 +1022,9 @@ class CityLayout {
             'cafe': 'medium',
             'bank': 'medium',
             'post_office': 'medium',
+            'カフェ': 'medium',
+            'ファミレス': 'medium',
+            '郵便局': 'medium',
             
             // 小サイズの建物
             'house': 'small',
@@ -819,6 +1048,13 @@ class CityLayout {
             'gym': 0xFF6347,         // 赤
             'library': 0x4682B4,     // 青
             'plaza': 0x90EE90,       // 薄緑
+            '公園': 0x228B22,        // 緑
+            '学校': 0x87CEEB,        // 空色
+            'スーパーマーケット': 0xFFD700, // 金色
+            '病院': 0xFFFFFF,        // 白
+            'スポーツジム': 0xFF6347, // 赤
+            '図書館': 0x4682B4,      // 青
+            '町の広場': 0x90EE90,    // 薄緑
             
             // 中サイズの建物（商業施設）
             'shop': 0xFF69B4,        // ピンク
@@ -827,6 +1063,9 @@ class CityLayout {
             'cafe': 0x8B4513,        // 茶色
             'bank': 0x32CD32,        // ライムグリーン
             'post_office': 0x4169E1, // ロイヤルブルー
+            'カフェ': 0x8B4513,      // 茶色
+            'ファミレス': 0xFF4500,  // オレンジ
+            '郵便局': 0x4169E1,      // ロイヤルブルー
             
             // 小サイズの建物（住宅）
             'house': 0xFF00FF,       // マゼンタ
@@ -904,70 +1143,55 @@ class CityLayout {
     // 施設の配置を道路の位置関係を考慮して生成
     generateFacilities() {
         const facilities = [];
-        const facilityTypes = [
-            'カフェ', '公園', '図書館', 'スポーツジム', '町の広場', 
-            '学校', '病院', 'スーパーマーケット', 'ファミレス'
-        ];
         
-        console.log(`施設生成開始: 道路数 = ${this.roads.length}`);
-        
-        // 各道路に沿って施設を配置
-        this.roads.forEach((road, roadIndex) => {
-            console.log(`道路 ${roadIndex} に沿って施設を配置`);
+        // config.jsのlocationDataの施設タイプを使用してランダム配置
+        locationData.forEach(loc => {
+            // ランダムな座標を生成（重複しないように）
+            let attempts = 0;
+            let facilityX, facilityZ;
+            let placed = false;
             
-            // 道路の方向を計算
-            const roadDirX = road.end.x - road.start.x;
-            const roadDirZ = road.end.z - road.start.z;
-            const roadLength = Math.sqrt(roadDirX * roadDirX + roadDirZ * roadDirZ);
-            
-            // 道路に垂直な方向を計算
-            const perpDirX = -roadDirZ / roadLength;
-            const perpDirZ = roadDirX / roadLength;
-            
-            // 道路の両側に施設を配置
-            const sides = [
-                { x: perpDirX, z: perpDirZ },   // 道路の片側
-                { x: -perpDirX, z: -perpDirZ }  // 道路の反対側
-            ];
-            
-            sides.forEach((side, sideIndex) => {
-                // 道路に沿って施設を配置するポイントを計算
-                const numFacilities = Math.floor(roadLength / (this.buildingSize * 3)); // 施設は建物より間隔を広く
+            while (attempts < 200 && !placed) {
+                // ランダムな座標を生成
+                facilityX = (Math.random() - 0.5) * this.gridSize * 0.8;
+                facilityZ = (Math.random() - 0.5) * this.gridSize * 0.8;
                 
-                for (let i = 0; i < numFacilities; i++) {
-                    // 道路に沿った位置
-                    const roadT = (i + 0.5) / numFacilities;
-                    const roadX = road.start.x + roadDirX * roadT;
-                    const roadZ = road.start.z + roadDirZ * roadT;
+                // 建物や他の施設との重複をチェック（条件を緩和）
+                if (!this.isBuildingOverlapping(facilityX, facilityZ, this.buildingSize * 1.2) && 
+                    !this.isFacilityOverlapping(facilityX, facilityZ, facilities)) {
                     
-                    // 道路から離れた施設の位置
-                    const facilityDistance = this.roadWidth + this.buildingSize + this.minBuildingDistance * 2;
-                    const facilityX = roadX + side.x * facilityDistance;
-                    const facilityZ = roadZ + side.z * facilityDistance;
-                    
-                    // 施設の位置が有効かチェック
-                    if (this.isValidBuildingPosition(facilityX, facilityZ)) {
-                        // 他の建物・施設との重複をチェック
-                        if (!this.isBuildingOverlapping(facilityX, facilityZ, this.buildingSize) && !this.isFacilityOverlapping(facilityX, facilityZ, facilities)) {
-                            const facilityType = facilityTypes[Math.floor(Math.random() * facilityTypes.length)];
-                            facilities.push({
-                                name: facilityType,
-                                x: facilityX,
-                                z: facilityZ,
-                                type: 'facility',
-                                size: this.buildingSize * 1.5, // 施設は建物より大きい
-                                rotation: Math.atan2(roadDirX, roadDirZ), // 施設の向き（道路方向）
-                                roadIndex: roadIndex // どの道路に接しているか
-                            });
-                            console.log(`  施設配置成功: ${facilityType} (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)}) 向き: ${(Math.atan2(roadDirX, roadDirZ) * 180 / Math.PI).toFixed(1)}°`);
-                        } else {
-                            console.log(`  施設重複のため除外: (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)})`);
-                        }
-                    } else {
-                        console.log(`  無効な位置のため除外: (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)})`);
+                    // 最も近い道路を見つける
+                    const nearestRoad = this.findNearestRoad(facilityX, facilityZ);
+                    if (nearestRoad) {
+                        const roadIndex = this.roads.indexOf(nearestRoad);
+                        
+                        facilities.push({
+                            name: loc.name,
+                            x: facilityX,
+                            z: facilityZ,
+                            type: 'facility',
+                            size: this.buildingSize * 1.5, // 施設は建物より大きい
+                            rotation: 0, // デフォルトの向き
+                            roadIndex: roadIndex,
+                            distanceToRoad: this.pointToLineDistance(facilityX, facilityZ, nearestRoad)
+                        });
+                        
+                        console.log(`  施設配置成功: ${loc.name} (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)})`);
+                        placed = true;
                     }
                 }
-            });
+                attempts++;
+            }
+            
+            if (!placed) {
+                console.log(`  施設配置失敗: ${loc.name} (試行回数: ${attempts})`);
+                // 最後の試行で失敗した理由をデバッグ
+                const lastX = (Math.random() - 0.5) * this.gridSize * 0.8;
+                const lastZ = (Math.random() - 0.5) * this.gridSize * 0.8;
+                console.log(`    最後の試行座標: (${lastX.toFixed(1)}, ${lastZ.toFixed(1)})`);
+                console.log(`    建物重複: ${this.isBuildingOverlapping(lastX, lastZ, this.buildingSize * 1.2)}`);
+                console.log(`    施設重複: ${this.isFacilityOverlapping(lastX, lastZ, facilities)}`);
+            }
         });
         
         console.log(`施設生成完了: ${facilities.length} 施設配置`);
@@ -981,7 +1205,7 @@ class CityLayout {
                 Math.pow(x - facility.x, 2) + 
                 Math.pow(z - facility.z, 2)
             );
-            if (distance < this.buildingSize * 3) { // 施設間はより広い間隔
+            if (distance < this.buildingSize * 2) { // 施設間の間隔を緩和
                 return true;
             }
         }
@@ -1134,6 +1358,126 @@ class CityLayout {
                 this.roadCenterLines.push(line);
             }
         }
+        
+        // 建物の入り口接続を表示
+        this.entranceConnections = [];
+        
+        // 建物の入り口接続を描画
+        for (const building of this.buildings) {
+            const connection = this.createEntranceConnection(building);
+            if (connection) {
+                // 入り口接続の線を描画
+                const linePoints = [
+                    new THREE.Vector3(connection.start.x, 0.08, connection.start.z),
+                    new THREE.Vector3(connection.end.x, 0.08, connection.end.z)
+                ];
+                const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
+                const material = new THREE.LineBasicMaterial({ 
+                    color: 0xff00ff,
+                    linewidth: 3,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const line = new THREE.Line(geometry, material);
+                scene.add(line);
+                this.entranceConnections.push(line);
+                
+                // 入り口位置にマーカーを表示
+                const entranceGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+                const entranceMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xff00ff,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const entranceMarker = new THREE.Mesh(entranceGeometry, entranceMaterial);
+                entranceMarker.position.set(connection.start.x, 0.2, connection.start.z);
+                scene.add(entranceMarker);
+                this.entranceConnections.push(entranceMarker);
+            }
+        }
+        
+        // 施設の入り口接続を描画
+        for (const facility of this.facilities) {
+            const connection = this.createEntranceConnection(facility);
+            if (connection) {
+                // 入り口接続の線を描画
+                const linePoints = [
+                    new THREE.Vector3(connection.start.x, 0.08, connection.start.z),
+                    new THREE.Vector3(connection.end.x, 0.08, connection.end.z)
+                ];
+                const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
+                const material = new THREE.LineBasicMaterial({ 
+                    color: 0x00ffff,
+                    linewidth: 3,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const line = new THREE.Line(geometry, material);
+                scene.add(line);
+                this.entranceConnections.push(line);
+                
+                // 入り口位置にマーカーを表示
+                const entranceGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+                const entranceMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0x00ffff,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const entranceMarker = new THREE.Mesh(entranceGeometry, entranceMaterial);
+                entranceMarker.position.set(connection.start.x, 0.2, connection.start.z);
+                scene.add(entranceMarker);
+                this.entranceConnections.push(entranceMarker);
+            }
+        }
+        
+        // エージェントの自宅の入り口接続を描画
+        if (window.agents && window.agents.length > 0) {
+            for (const agent of window.agents) {
+                if (agent.home) {
+                    const homeBuilding = {
+                        x: agent.home.x,
+                        z: agent.home.z,
+                        size: 2, // 家のサイズ
+                        rotation: 0, // 家は正面を向いていると仮定
+                        type: 'home'
+                    };
+                    
+                    const connection = this.createEntranceConnection(homeBuilding);
+                    if (connection) {
+                        // 入り口接続の線を描画
+                        const linePoints = [
+                            new THREE.Vector3(connection.start.x, 0.08, connection.start.z),
+                            new THREE.Vector3(connection.end.x, 0.08, connection.end.z)
+                        ];
+                        const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
+                        const material = new THREE.LineBasicMaterial({ 
+                            color: 0xff8800,
+                            linewidth: 3,
+                            transparent: true,
+                            opacity: 0.8
+                        });
+                        
+                        const line = new THREE.Line(geometry, material);
+                        scene.add(line);
+                        this.entranceConnections.push(line);
+                        
+                        // 入り口位置にマーカーを表示
+                        const entranceGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+                        const entranceMaterial = new THREE.MeshBasicMaterial({ 
+                            color: 0xff8800,
+                            transparent: true,
+                            opacity: 0.7
+                        });
+                        const entranceMarker = new THREE.Mesh(entranceGeometry, entranceMaterial);
+                        entranceMarker.position.set(connection.start.x, 0.2, connection.start.z);
+                        scene.add(entranceMarker);
+                        this.entranceConnections.push(entranceMarker);
+                    }
+                }
+            }
+        }
     }
     
     // 道路ネットワーク表示をクリア
@@ -1155,6 +1499,101 @@ class CityLayout {
             }
             this.roadCenterLines = [];
         }
+        
+        if (this.entranceConnections) {
+            for (const connection of this.entranceConnections) {
+                scene.remove(connection);
+                connection.geometry.dispose();
+                connection.material.dispose();
+            }
+            this.entranceConnections = [];
+        }
+        
+        // 入り口接続の配列を初期化
+        this.entranceConnections = [];
+    }
+    
+    // 入り口接続を描画
+    drawEntranceConnections() {
+        this.entranceConnections = [];
+        
+        // 建物の入り口接続を描画
+        for (const building of this.buildings) {
+            const connection = this.createEntranceConnection(building);
+            if (connection) {
+                const dx = connection.end.x - connection.start.x;
+                const dz = connection.end.z - connection.start.z;
+                const length = Math.sqrt(dx * dx + dz * dz);
+                const angle = Math.atan2(dz, dx);
+                
+                // 入り口通路の地面
+                const pathGeometry = new THREE.PlaneGeometry(length, 1.5, Math.ceil(length), 2);
+                const pathEdges = new THREE.EdgesGeometry(pathGeometry);
+                const pathMaterial = new THREE.LineBasicMaterial({ color: 0x666666 });
+                const path = new THREE.LineSegments(pathEdges, pathMaterial);
+                path.position.set(
+                    (connection.start.x + connection.end.x) / 2,
+                    0.03,
+                    (connection.start.z + connection.end.z) / 2
+                );
+                path.rotation.x = -Math.PI / 2;
+                path.rotation.z = angle;
+                scene.add(path);
+                this.entranceConnections.push(path);
+                
+                // 入り口の階段
+                const stepGeometry = new THREE.BoxGeometry(1.2, 0.1, 0.2);
+                const stepEdges = new THREE.EdgesGeometry(stepGeometry);
+                const stepMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
+                const step = new THREE.LineSegments(stepEdges, stepMaterial);
+                step.position.set(
+                    connection.start.x,
+                    0.05,
+                    connection.start.z
+                );
+                scene.add(step);
+                this.entranceConnections.push(step);
+            }
+        }
+        
+        // 施設の入り口接続を描画
+        for (const facility of this.facilities) {
+            const connection = this.createEntranceConnection(facility);
+            if (connection) {
+                const dx = connection.end.x - connection.start.x;
+                const dz = connection.end.z - connection.start.z;
+                const length = Math.sqrt(dx * dx + dz * dz);
+                const angle = Math.atan2(dz, dx);
+                
+                // 入り口通路の地面
+                const pathGeometry = new THREE.PlaneGeometry(length, 2, Math.ceil(length), 2);
+                const pathEdges = new THREE.EdgesGeometry(pathGeometry);
+                const pathMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
+                const path = new THREE.LineSegments(pathEdges, pathMaterial);
+                path.position.set(
+                    (connection.start.x + connection.end.x) / 2,
+                    0.03,
+                    (connection.start.z + connection.end.z) / 2
+                );
+                path.rotation.x = -Math.PI / 2;
+                path.rotation.z = angle;
+                scene.add(path);
+                this.entranceConnections.push(path);
+                
+                // 入り口の階段
+                const stepGeometry = new THREE.BoxGeometry(1.5, 0.1, 0.3);
+                const stepEdges = new THREE.EdgesGeometry(stepGeometry);
+                const stepMaterial = new THREE.LineBasicMaterial({ color: 0x555555 });
+                const step = new THREE.LineSegments(stepEdges, stepMaterial);
+                step.position.set(
+                    connection.start.x,
+                    0.05,
+                    connection.start.z
+                );
+                scene.add(step);
+                this.entranceConnections.push(step);
+            }
+        }
     }
 
     // 建物の入り口位置を計算
@@ -1172,6 +1611,43 @@ class CityLayout {
     // 建物内の中心位置を計算
     getBuildingCenter(building) {
         return { x: building.x, z: building.z };
+    }
+    
+    // 建物の入り口から道路までの接続通路を作成
+    createEntranceConnection(building) {
+        const entrance = this.getBuildingEntrance(building);
+        const nearestRoad = this.findNearestRoad(entrance.x, entrance.z);
+        
+        if (!nearestRoad) return null;
+        
+        // 道路上の最も近い点を計算
+        const roadPoint = this.findNearestRoadPoint(entrance.x, entrance.z);
+        
+        // 入り口から道路までの通路を作成
+        const connection = {
+            start: { x: entrance.x, z: entrance.z },
+            end: { x: roadPoint.x, z: roadPoint.z },
+            type: 'entrance',
+            building: building
+        };
+        
+        return connection;
+    }
+    
+    // 最も近い道路を検索
+    findNearestRoad(x, z) {
+        let nearestRoad = null;
+        let minDistance = Infinity;
+        
+        for (const road of this.roads) {
+            const distance = this.pointToLineDistance(x, z, road);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestRoad = road;
+            }
+        }
+        
+        return nearestRoad;
     }
     
     // 建物への経路を計算（入り口経由）

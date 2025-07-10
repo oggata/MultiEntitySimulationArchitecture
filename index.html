@@ -23,6 +23,10 @@
             <label><input type="radio" name="apiProvider" value="openai" checked> OpenAI</label>
             <label><input type="radio" name="apiProvider" value="gemini"> Gemini</label>
         </div>
+        <div class="prompt-section">
+            <label for="topicPrompt">話題のテーマ:</label>
+            <textarea id="topicPrompt" placeholder="例: テーマ、社会課題について&#10;例: 環境問題、地域コミュニティについて&#10;例: 健康、ライフスタイルについて" rows="3"></textarea>
+        </div>
         <button onclick="startSimulation()">シミュレーション開始</button>
         <button onclick="pauseSimulation()" id="pauseBtn" disabled>一時停止</button>
         <button onclick="setTimeSpeed()">時間速度: <span id="speed">1x</span></button>
@@ -38,9 +42,13 @@
         <div class="road-visualization">
             <button id="toggleRoadNetwork">道路ネットワーク表示</button>
             <button id="clearRoadVisualization">道路表示クリア</button>
+            <button id="toggleEntranceConnections">入り口接続表示</button>
+        </div>
+        <div class="llm-stats">
+            <span>LLM呼び出し回数: <span id="llmCallCount">0</span></span>
         </div>
         <div class="warning">
-            ⚠️ APIキーは保存されません。
+            ⚠️ APIキーはlocalStorageに保存されます。
         </div>
     </div>
     

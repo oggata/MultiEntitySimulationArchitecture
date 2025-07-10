@@ -1,6 +1,6 @@
 // 場所の作成
 function createLocations() {
-    // 動的に生成された施設データを使用
+    // cityLayout.facilitiesから動的に生成された施設データを使用
     const dynamicLocationData = cityLayout.facilities.map(facility => {
         // 施設タイプに応じてアクティビティと雰囲気を設定
         const facilityInfo = getFacilityInfo(facility.name);
@@ -48,6 +48,13 @@ function createLocations() {
             const building = new THREE.LineSegments(buildingEdges, buildingMaterial);
             building.position.set(0, facilityHeight/2, 0);
             locationGroup.add(building);
+        }
+
+        // 建物の入り口通路を追加
+        if (loc.name !== "公園" && loc.name !== "町の広場") {
+            addEntrancePath(locationGroup, facilitySize, loc.color);
+        } else if (loc.name === "公園" || loc.name === "町の広場") {
+            addPublicSpaceEntrance(locationGroup, facilitySize, loc.name);
         }
 
         // 場所特有の装飾（サイズに応じてスケール調整）
@@ -444,6 +451,9 @@ function createLocations() {
         signLine2.position.copy(signMesh2.position);
         homeGroup.add(signLine2);
 
+        // 家の入り口通路を追加
+        addHomeEntrancePath(homeGroup, homeSize, agent.home.color);
+        
         // 家の位置を設定
         homeGroup.position.set(agent.home.x, 0, agent.home.z);
         scene.add(homeGroup);
@@ -458,6 +468,241 @@ function createLocations() {
             owner: agent.name
         });
     });
+}
+
+// 建物の入り口通路を作成する関数
+function addEntrancePath(locationGroup, facilitySize, buildingColor) {
+    const pathWidth = facilitySize * 0.3; // 通路の幅
+    const pathLength = facilitySize * 0.8; // 通路の長さ
+    
+    // 通路の地面
+    const pathGeometry = new THREE.PlaneGeometry(pathWidth, pathLength);
+    const pathEdges = new THREE.EdgesGeometry(pathGeometry);
+    const pathMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
+    const path = new THREE.LineSegments(pathEdges, pathMaterial);
+    path.rotation.x = -Math.PI / 2;
+    path.position.set(0, 0.02, facilitySize * 0.6); // 建物の手前に配置
+    locationGroup.add(path);
+    
+    // 入り口の階段（小さな段差）
+    const stepGeometry = new THREE.BoxGeometry(pathWidth * 0.8, 0.1, 0.2);
+    const stepEdges = new THREE.EdgesGeometry(stepGeometry);
+    const stepMaterial = new THREE.LineBasicMaterial({ color: buildingColor });
+    const step = new THREE.LineSegments(stepEdges, stepMaterial);
+    step.position.set(0, 0.05, facilitySize * 0.4);
+    locationGroup.add(step);
+    
+    // 入り口のドア枠
+    const doorFrameGeometry = new THREE.BoxGeometry(0.8, facilitySize * 0.4, 0.1);
+    const doorFrameEdges = new THREE.EdgesGeometry(doorFrameGeometry);
+    const doorFrameMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
+    const doorFrame = new THREE.LineSegments(doorFrameEdges, doorFrameMaterial);
+    doorFrame.position.set(0, facilitySize * 0.2, facilitySize * 0.45);
+    locationGroup.add(doorFrame);
+    
+    // 入り口の看板
+    const entranceSignGeometry = new THREE.PlaneGeometry(1.5, 0.5);
+    const entranceSignEdges = new THREE.EdgesGeometry(entranceSignGeometry);
+    const entranceSignMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+    const entranceSign = new THREE.LineSegments(entranceSignEdges, entranceSignMaterial);
+    entranceSign.position.set(0, 0.5, facilitySize * 0.3);
+    locationGroup.add(entranceSign);
+}
+
+// エージェントの自宅を作成する関数
+function createAgentHome(homeData) {
+    const homeGroup = new THREE.Group();
+    
+    // 自宅のサイズ（小サイズ）
+    const homeSize = cityLayout.buildingSizes.small;
+    const homeHeight = homeSize * 0.8;
+    
+    // 家の基本構造
+    const houseGeometry = new THREE.BoxGeometry(homeSize, homeHeight, homeSize);
+    const houseEdges = new THREE.EdgesGeometry(houseGeometry);
+    const house = new THREE.LineSegments(houseEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
+    house.position.set(0, homeHeight/2, 0);
+    homeGroup.add(house);
+
+    // 屋根
+    const roofGeometry = new THREE.ConeGeometry(homeSize * 0.75, homeSize * 0.5, 4);
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+    roof.position.set(0, homeHeight + homeSize * 0.25, 0);
+    roof.rotation.y = Math.PI / 4;
+    homeGroup.add(roof);
+
+    // 看板（自宅）
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 64;
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, 256, 64);
+    context.shadowColor = '#00ffff';
+    context.shadowBlur = 16;
+    context.font = 'bold 24px sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = '#00ffff';
+    context.fillText(homeData.name, 128, 32);
+    const texture = new THREE.CanvasTexture(canvas);
+    const signGeometry = new THREE.PlaneGeometry(2, 0.5);
+    const signMaterial = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.7 });
+    const signMesh = new THREE.Mesh(signGeometry, signMaterial);
+    signMesh.position.set(0, homeHeight + 0.5, homeSize * 0.6);
+    homeGroup.add(signMesh);
+    const signEdges = new THREE.EdgesGeometry(signGeometry);
+    const signLine = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+    signLine.position.copy(signMesh.position);
+    homeGroup.add(signLine);
+
+    // 家の位置を設定
+    homeGroup.position.set(homeData.x, 0, homeData.z);
+    scene.add(homeGroup);
+    
+    // 家の入り口接続を作成
+    const homeBuilding = {
+        x: homeData.x,
+        z: homeData.z,
+        size: homeSize,
+        rotation: 0, // 家は正面を向いていると仮定
+        type: 'home'
+    };
+    
+    // 入り口接続を描画
+    if (cityLayout && cityLayout.drawEntranceConnections) {
+        const connection = cityLayout.createEntranceConnection(homeBuilding);
+        if (connection) {
+            const dx = connection.end.x - connection.start.x;
+            const dz = connection.end.z - connection.start.z;
+            const length = Math.sqrt(dx * dx + dz * dz);
+            const angle = Math.atan2(dz, dx);
+            
+            // 家の入り口通路の地面
+            const pathGeometry = new THREE.PlaneGeometry(length, 1.2, Math.ceil(length), 2);
+            const pathEdges = new THREE.EdgesGeometry(pathGeometry);
+            const pathMaterial = new THREE.LineBasicMaterial({ color: 0x555555 });
+            const path = new THREE.LineSegments(pathEdges, pathMaterial);
+            path.position.set(
+                (connection.start.x + connection.end.x) / 2,
+                0.03,
+                (connection.start.z + connection.end.z) / 2
+            );
+            path.rotation.x = -Math.PI / 2;
+            path.rotation.z = angle;
+            scene.add(path);
+            
+            // 家の入り口の階段
+            const stepGeometry = new THREE.BoxGeometry(1, 0.1, 0.15);
+            const stepEdges = new THREE.EdgesGeometry(stepGeometry);
+            const stepMaterial = new THREE.LineBasicMaterial({ color: homeData.color });
+            const step = new THREE.LineSegments(stepEdges, stepMaterial);
+            step.position.set(
+                connection.start.x,
+                0.05,
+                connection.start.z
+            );
+            scene.add(step);
+        }
+    }
+    
+    locations.push({
+        name: homeData.name,
+        position: new THREE.Vector3(homeData.x, 0, homeData.z),
+        mesh: homeGroup,
+        activities: ["休憩する", "眠る", "読書する"],
+        atmosphere: "静かで落ち着いた雰囲気の家",
+        isHome: true,
+        owner: homeData.name.replace('の家', '')
+    });
+}
+
+// 家の入り口通路を作成する関数
+function addHomeEntrancePath(homeGroup, homeSize, homeColor) {
+    const pathWidth = homeSize * 0.4; // 通路の幅
+    const pathLength = homeSize * 0.6; // 通路の長さ
+    
+    // 通路の地面
+    const pathGeometry = new THREE.PlaneGeometry(pathWidth, pathLength);
+    const pathEdges = new THREE.EdgesGeometry(pathGeometry);
+    const pathMaterial = new THREE.LineBasicMaterial({ color: 0x666666 });
+    const path = new THREE.LineSegments(pathEdges, pathMaterial);
+    path.rotation.x = -Math.PI / 2;
+    path.position.set(0, 0.02, homeSize * 0.5); // 家の手前に配置
+    homeGroup.add(path);
+    
+    // 入り口の階段
+    const stepGeometry = new THREE.BoxGeometry(pathWidth * 0.6, 0.1, 0.15);
+    const stepEdges = new THREE.EdgesGeometry(stepGeometry);
+    const stepMaterial = new THREE.LineBasicMaterial({ color: homeColor });
+    const step = new THREE.LineSegments(stepEdges, stepMaterial);
+    step.position.set(0, 0.05, homeSize * 0.35);
+    homeGroup.add(step);
+    
+    // 入り口のドア枠
+    const doorFrameGeometry = new THREE.BoxGeometry(0.6, homeSize * 0.3, 0.1);
+    const doorFrameEdges = new THREE.EdgesGeometry(doorFrameGeometry);
+    const doorFrameMaterial = new THREE.LineBasicMaterial({ color: 0x333333 });
+    const doorFrame = new THREE.LineSegments(doorFrameEdges, doorFrameMaterial);
+    doorFrame.position.set(0, homeSize * 0.15, homeSize * 0.4);
+    homeGroup.add(doorFrame);
+    
+    // 玄関のポーチ
+    const porchGeometry = new THREE.BoxGeometry(pathWidth * 0.8, 0.05, 0.3);
+    const porchEdges = new THREE.EdgesGeometry(porchGeometry);
+    const porchMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
+    const porch = new THREE.LineSegments(porchEdges, porchMaterial);
+    porch.position.set(0, 0.025, homeSize * 0.25);
+    homeGroup.add(porch);
+}
+
+// 公園と広場の入り口を作成する関数
+function addPublicSpaceEntrance(locationGroup, facilitySize, spaceName) {
+    const pathWidth = facilitySize * 0.4; // 通路の幅
+    const pathLength = facilitySize * 0.5; // 通路の長さ
+    
+    // 通路の地面
+    const pathGeometry = new THREE.PlaneGeometry(pathWidth, pathLength);
+    const pathEdges = new THREE.EdgesGeometry(pathGeometry);
+    const pathMaterial = new THREE.LineBasicMaterial({ color: 0x555555 });
+    const path = new THREE.LineSegments(pathEdges, pathMaterial);
+    path.rotation.x = -Math.PI / 2;
+    path.position.set(0, 0.02, facilitySize * 0.4); // 施設の手前に配置
+    locationGroup.add(path);
+    
+    // 入り口の看板
+    const signGeometry = new THREE.PlaneGeometry(2, 0.8);
+    const signEdges = new THREE.EdgesGeometry(signGeometry);
+    const signMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+    const sign = new THREE.LineSegments(signEdges, signMaterial);
+    sign.position.set(0, 1, facilitySize * 0.3);
+    locationGroup.add(sign);
+    
+    // 入り口の柵（公園の場合）
+    if (spaceName === "公園") {
+        for (let i = 0; i < 3; i++) {
+            const fenceGeometry = new THREE.BoxGeometry(0.1, 0.8, 0.1);
+            const fenceEdges = new THREE.EdgesGeometry(fenceGeometry);
+            const fenceMaterial = new THREE.LineBasicMaterial({ color: 0x8B4513 });
+            const fence = new THREE.LineSegments(fenceEdges, fenceMaterial);
+            fence.position.set(
+                (i - 1) * 1.5,
+                0.4,
+                facilitySize * 0.25
+            );
+            locationGroup.add(fence);
+        }
+    }
+    
+    // 入り口のベンチ（広場の場合）
+    if (spaceName === "町の広場") {
+        const benchGeometry = new THREE.BoxGeometry(2, 0.2, 0.6);
+        const benchEdges = new THREE.EdgesGeometry(benchGeometry);
+        const benchMaterial = new THREE.LineBasicMaterial({ color: 0x8B4513 });
+        const bench = new THREE.LineSegments(benchEdges, benchMaterial);
+        bench.position.set(0, 0.1, facilitySize * 0.2);
+        locationGroup.add(bench);
+    }
 }
 
 // 施設情報を取得する関数
@@ -507,6 +752,151 @@ function getFacilityInfo(facilityName) {
             color: 0xFF69B4,
             activities: ["食事する", "会話する", "休憩する"],
             atmosphere: "家族向けの温かいレストラン"
+        },
+        '郵便局': {
+            color: 0x4169E1,
+            activities: ["郵便物を出す", "手紙を書く", "荷物を送る", "手続きをする"],
+            atmosphere: "静かで落ち着いた公共施設"
+        },
+        '銀行': {
+            color: 0x32CD32,
+            activities: ["お金を下ろす", "振り込みをする", "相談する", "手続きをする"],
+            atmosphere: "重厚で信頼感のある金融機関"
+        },
+        '美容院': {
+            color: 0xFF1493,
+            activities: ["髪を切る", "美容の相談をする", "雑誌を読む", "リラックスする"],
+            atmosphere: "明るく親しみやすい美容空間"
+        },
+        'クリーニング店': {
+            color: 0x20B2AA,
+            activities: ["洗濯物を出す", "取り置きを取る", "相談する"],
+            atmosphere: "清潔で整然とした洗濯店"
+        },
+        '薬局': {
+            color: 0x00CED1,
+            activities: ["薬を買う", "健康相談をする", "サプリメントを選ぶ"],
+            atmosphere: "清潔で安心感のある薬局"
+        },
+        '本屋': {
+            color: 0x8B4513,
+            activities: ["本を探す", "立ち読みする", "本の相談をする", "雑誌を読む"],
+            atmosphere: "本の香りが漂う知的空間"
+        },
+        'コンビニ': {
+            color: 0xFF4500,
+            activities: ["買い物する", "雑誌を読む", "休憩する", "軽食を買う"],
+            atmosphere: "24時間営業の便利な店"
+        },
+        'パン屋': {
+            color: 0xFFB6C1,
+            activities: ["パンを買う", "香りを楽しむ", "朝食を買う", "おやつを買う"],
+            atmosphere: "焼きたてパンの香りが漂う温かい店"
+        },
+        '花屋': {
+            color: 0xFF69B4,
+            activities: ["花を買う", "花の相談をする", "花を眺める", "プレゼントを選ぶ"],
+            atmosphere: "色とりどりの花が並ぶ華やかな店"
+        },
+        '電気屋': {
+            color: 0x1E90FF,
+            activities: ["電化製品を見る", "相談する", "買い物する", "修理を依頼する"],
+            atmosphere: "最新の電化製品が並ぶ明るい店"
+        },
+        '八百屋': {
+            color: 0x32CD32,
+            activities: ["野菜を買う", "果物を買う", "新鮮な食材を選ぶ", "店主と話す"],
+            atmosphere: "新鮮な野菜や果物が並ぶ活気のある店"
+        },
+        '魚屋': {
+            color: 0x00CED1,
+            activities: ["魚を買う", "鮮度を確認する", "調理法を聞く", "刺身を買う"],
+            atmosphere: "新鮮な魚の香りが漂う海鮮店"
+        },
+        '肉屋': {
+            color: 0xDC143C,
+            activities: ["肉を買う", "調理法を聞く", "新鮮さを確認する", "注文する"],
+            atmosphere: "新鮮な肉が並ぶ専門店"
+        },
+        'ケーキ屋': {
+            color: 0xFFB6C1,
+            activities: ["ケーキを買う", "ケーキを眺める", "誕生日ケーキを注文する", "おやつを買う"],
+            atmosphere: "甘い香りが漂う可愛らしい店"
+        },
+        '喫茶店': {
+            color: 0x8B4513,
+            activities: ["コーヒーを飲む", "ケーキを食べる", "会話する", "読書する"],
+            atmosphere: "昭和の雰囲気が残る落ち着いた店"
+        },
+        'ラーメン屋': {
+            color: 0xFF6347,
+            activities: ["ラーメンを食べる", "会話する", "暖かいスープを楽しむ"],
+            atmosphere: "醤油の香りが漂う温かい店"
+        },
+        '寿司屋': {
+            color: 0x00CED1,
+            activities: ["寿司を食べる", "刺身を食べる", "会話する", "職人の技を楽しむ"],
+            atmosphere: "新鮮な魚と職人の技が光る高級店"
+        },
+        '居酒屋': {
+            color: 0xFF4500,
+            activities: ["お酒を飲む", "料理を食べる", "会話する", "リラックスする"],
+            atmosphere: "温かみのある日本の居酒屋"
+        },
+        '銭湯': {
+            color: 0x20B2AA,
+            activities: ["お風呂に入る", "リラックスする", "会話する", "体を休める"],
+            atmosphere: "日本の伝統的な銭湯"
+        },
+        'ゲームセンター': {
+            color: 0xFF1493,
+            activities: ["ゲームをする", "友達と遊ぶ", "景品を狙う", "楽しむ"],
+            atmosphere: "活気があり、音と光が溢れる遊び場"
+        },
+        '映画館': {
+            color: 0x4B0082,
+            activities: ["映画を見る", "ポップコーンを食べる", "映画の話をする", "リラックスする"],
+            atmosphere: "暗くて落ち着いた映画鑑賞空間"
+        },
+        'カラオケ': {
+            color: 0xFF69B4,
+            activities: ["歌を歌う", "友達と楽しむ", "リラックスする", "飲み物を飲む"],
+            atmosphere: "明るく楽しいカラオケ空間"
+        },
+        'ボーリング場': {
+            color: 0x1E90FF,
+            activities: ["ボーリングをする", "友達と遊ぶ", "スコアを競う", "楽しむ"],
+            atmosphere: "活気があり、音が響く遊び場"
+        },
+        '温泉': {
+            color: 0x20B2AA,
+            activities: ["温泉に入る", "リラックスする", "会話する", "体を休める"],
+            atmosphere: "日本の伝統的な温泉施設"
+        },
+        '神社': {
+            color: 0x8B4513,
+            activities: ["お参りする", "願い事をする", "静かに過ごす", "写真を撮る"],
+            atmosphere: "静寂で神聖な日本の伝統施設"
+        },
+        '寺': {
+            color: 0x8B4513,
+            activities: ["お参りする", "静かに過ごす", "仏像を見る", "心を落ち着かせる"],
+            atmosphere: "静寂で厳かな仏教施設"
+        },
+        '消防署': {
+            color: 0xFF0000,
+            activities: ["見学する", "防災について学ぶ", "消防車を見る"],
+            atmosphere: "安全を守る重要な公共施設"
+        },
+        '警察署': {
+            color: 0x0000FF,
+            activities: ["相談する", "届け出をする", "安全について学ぶ"],
+            atmosphere: "地域の安全を守る重要な施設"
+        },
+        '市役所': {
+            color: 0x808080,
+            activities: ["手続きをする", "相談する", "書類を提出する", "情報を集める"],
+            atmosphere: "地域の行政を担う重要な施設"
         }
     };
     

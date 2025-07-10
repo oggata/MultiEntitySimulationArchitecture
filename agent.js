@@ -367,6 +367,10 @@ class Agent {
         const recentMemories = this.shortTermMemory.slice(-5).map(m => m.event).join(', ');
         const currentMood = this.calculateMood();
         
+        // プロンプトテーマを取得
+        const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
+        const themeContext = topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する話題や関心事についても考えてください。` : '';
+        
         return `
         私は${this.name}、${this.age}歳。${this.personality.description}
         
@@ -390,7 +394,7 @@ class Agent {
         2. 夜間は自宅以外の場所に長く留まらないでください
         3. 夜間は体力を回復するために自宅で休むことが重要です
         4. 同じ場所に他の人がいる場合は、積極的に交流を試みてください
-        5. 特にカフェ、公園、町の広場では、人との交流を大切にしてください
+        5. 特にカフェ、公園、町の広場では、人との交流を大切にしてください${themeContext}
         
         この状況で、次に何をしたいですか？どのように感じていますか？
         特に夜間の場合は、自宅に帰ることを優先してください。
@@ -848,7 +852,11 @@ class Agent {
     
     async performInteraction(otherAgent, interactionType) {
         try {
-            const prompt = `\nあなたは${this.name}という${this.age}歳の${this.personality.description}です。\n現在${this.currentLocation.name}にいて、${otherAgent.name}さんと${interactionType}をしています。\n\nあなたの性格特性:\n- 社交性: ${this.personality.traits.sociability}\n- 活動的さ: ${this.personality.traits.energy}\n- ルーチン重視: ${this.personality.traits.routine}\n- 好奇心: ${this.personality.traits.curiosity}\n- 共感性: ${this.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${this.relationships.get(otherAgent.name).familiarity}\n- 好感度: ${this.relationships.get(otherAgent.name).affinity}\n\nこの状況で、自然な会話を生成してください。1-2文程度の短い会話にしてください。\n`;
+            // プロンプトテーマを取得
+            const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
+            const themeContext = topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する話題についても話してください。` : '';
+            
+            const prompt = `\nあなたは${this.name}という${this.age}歳の${this.personality.description}です。\n現在${this.currentLocation.name}にいて、${otherAgent.name}さんと${interactionType}をしています。\n\nあなたの性格特性:\n- 社交性: ${this.personality.traits.sociability}\n- 活動的さ: ${this.personality.traits.energy}\n- ルーチン重視: ${this.personality.traits.routine}\n- 好奇心: ${this.personality.traits.curiosity}\n- 共感性: ${this.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${this.relationships.get(otherAgent.name).familiarity}\n- 好感度: ${this.relationships.get(otherAgent.name).affinity}${themeContext}\n\nこの状況で、自然な会話を生成してください。1-2文程度の短い会話にしてください。\n`;
             const message = await callLLM({
                 prompt,
                 systemPrompt: "あなたは自律的なエージェントの会話システムです。与えられた状況に基づいて、自然な会話を生成してください。",
@@ -861,7 +869,11 @@ class Agent {
             // 相手の反応
             setTimeout(async () => {
                 if (otherAgent && !otherAgent.isThinking) {
-                    const responsePrompt = `\nあなたは${otherAgent.name}という${otherAgent.age}歳の${otherAgent.personality.description}です。\n${this.name}さんから「${message}」と言われました。\n\nあなたの性格特性:\n- 社交性: ${otherAgent.personality.traits.sociability}\n- 活動的さ: ${otherAgent.personality.traits.energy}\n- ルーチン重視: ${otherAgent.personality.traits.routine}\n- 好奇心: ${otherAgent.personality.traits.curiosity}\n- 共感性: ${otherAgent.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${otherAgent.relationships.get(this.name).familiarity}\n- 好感度: ${otherAgent.relationships.get(this.name).affinity}\n\nこの状況で、自然な返答を生成してください。1-2文程度の短い返答にしてください。\n`;
+                    // プロンプトテーマを取得
+                    const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
+                    const themeContext = topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する話題についても話してください。` : '';
+                    
+                    const responsePrompt = `\nあなたは${otherAgent.name}という${otherAgent.age}歳の${otherAgent.personality.description}です。\n${this.name}さんから「${message}」と言われました。\n\nあなたの性格特性:\n- 社交性: ${otherAgent.personality.traits.sociability}\n- 活動的さ: ${otherAgent.personality.traits.energy}\n- ルーチン重視: ${otherAgent.personality.traits.routine}\n- 好奇心: ${otherAgent.personality.traits.curiosity}\n- 共感性: ${otherAgent.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${otherAgent.relationships.get(this.name).familiarity}\n- 好感度: ${otherAgent.relationships.get(this.name).affinity}${themeContext}\n\nこの状況で、自然な返答を生成してください。1-2文程度の短い返答にしてください。\n`;
                     try {
                         const responseMessage = await callLLM({
                             prompt: responsePrompt,
@@ -916,7 +928,11 @@ class Agent {
     async performActivity() {
         if (this.currentActivity) {
             try {
-                const prompt = `\nあなたは${this.name}という${this.age}歳の${this.personality.description}です。\n現在${this.currentLocation.name}で${this.currentActivity}しています。\n\nあなたの性格特性:\n- 社交性: ${this.personality.traits.sociability}\n- 活動的さ: ${this.personality.traits.energy}\n- ルーチン重視: ${this.personality.traits.routine}\n- 好奇心: ${this.personality.traits.curiosity}\n- 共感性: ${this.personality.traits.empathy}\n\nこの状況で、あなたが感じていることや考えていることを自然な形で表現してください。\n1-2文程度の短い思考にしてください。\n`;
+                // プロンプトテーマを取得
+                const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
+                const themeContext = topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する考えや関心事についても表現してください。` : '';
+                
+                const prompt = `\nあなたは${this.name}という${this.age}歳の${this.personality.description}です。\n現在${this.currentLocation.name}で${this.currentActivity}しています。\n\nあなたの性格特性:\n- 社交性: ${this.personality.traits.sociability}\n- 活動的さ: ${this.personality.traits.energy}\n- ルーチン重視: ${this.personality.traits.routine}\n- 好奇心: ${this.personality.traits.curiosity}\n- 共感性: ${this.personality.traits.empathy}${themeContext}\n\nこの状況で、あなたが感じていることや考えていることを自然な形で表現してください。\n1-2文程度の短い思考にしてください。\n`;
                 const thought = await callLLM({
                     prompt,
                     systemPrompt: "あなたは自律的なエージェントの思考システムです。与えられた状況に基づいて、自然な思考を生成してください。",
@@ -1003,6 +1019,14 @@ class Agent {
         
         return "普通";
     }
+    
+    // 目的地の情報を取得
+    getDestinationInfo() {
+        if (this.targetLocation && this.targetLocation !== this.currentLocation) {
+            return this.targetLocation.name;
+        }
+        return "なし";
+    }
 }
 
 // エージェント生成関数
@@ -1014,12 +1038,12 @@ async function generateNewAgent() {
     }
     // APIプロバイダーによってバリデーションを分岐
     const provider = window.getSelectedApiProvider ? window.getSelectedApiProvider() : 'openai';
-    if (provider === 'openai' && !apiKey.startsWith('sk-')) {
-        alert('無効なOpenAI APIキー形式です。sk-で始まる有効なAPIキーを入力してください。');
+    if (provider === 'openai' && !(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
+        alert('無効なOpenAI APIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
         return;
     }
     try {
-        const prompt = `\nあなたは自律的なエージェントの性格生成システムです。\n以下の条件に基づいて、新しいエージェントの性格と特徴を生成してください。\n出力は必ず有効なJSON形式のみで、余分な説明やテキストは含めないでください。\n\n条件：\n1. 名前（日本語の一般的な名前）\n2. 年齢（20-70歳の範囲の整数）\n3. 性格の説明（2-3文程度）\n4. 性格特性（0-1の範囲の数値、小数点以下2桁まで）：\n   - 社交性（sociability）\n   - 活動的さ（energy）\n   - ルーチン重視度（routine）\n   - 好奇心（curiosity）\n   - 共感性（empathy）\n5. 日課（各時間帯で2つまでの場所）\n6. 自宅の位置（x, z座標は-20から20の範囲の整数）\n\n有効な場所：\n- カフェ\n- 公園\n- 図書館\n- スポーツジム\n- 町の広場\n- 自宅\n\n出力形式（必ずこの形式のJSONのみを出力）：\n{\n    "name": "名前",\n    "age": 年齢,\n    "personality": {\n        "description": "性格の説明",\n        "traits": {\n            "sociability": 0.00,\n            "energy": 0.00,\n            "routine": 0.00,\n            "curiosity": 0.00,\n            "empathy": 0.00\n        }\n    },\n    "dailyRoutine": {\n        "morning": ["場所1", "場所2"],\n        "afternoon": ["場所1", "場所2"],\n        "evening": ["場所1", "場所2"],\n        "night": ["自宅"]\n    },\n    "home": {\n        "name": "名前の家",\n        "x": 整数,\n        "z": 整数,\n        "color": "0x" + Math.floor(Math.random()*16777215).toString(16)\n    }\n}`;
+        const prompt = `\nあなたは自律的なエージェントの性格生成システムです。\n以下の条件に基づいて、新しいエージェントの性格と特徴を生成してください。\n出力は必ず有効なJSON形式のみで、余分な説明やテキストは含めないでください。\n\n条件：\n1. 名前（日本語の一般的な苗字と名前の組み合わせ、例：田中太郎、佐藤花子など）\n2. 年齢（20-70歳の範囲の整数）\n3. 性格の説明（2-3文程度）\n4. 性格特性（0-1の範囲の数値、小数点以下2桁まで）：\n   - 社交性（sociability）\n   - 活動的さ（energy）\n   - ルーチン重視度（routine）\n   - 好奇心（curiosity）\n   - 共感性（empathy）\n5. 日課（各時間帯で2つまでの場所）\n6. 自宅の位置（x, z座標は-20から20の範囲の整数）\n\n有効な場所：\n- カフェ\n- 公園\n- 図書館\n- スポーツジム\n- 町の広場\n- 自宅\n\n出力形式（必ずこの形式のJSONのみを出力）：\n{\n    "name": "苗字 名前",\n    "age": 年齢,\n    "personality": {\n        "description": "性格の説明",\n        "traits": {\n            "sociability": 0.00,\n            "energy": 0.00,\n            "routine": 0.00,\n            "curiosity": 0.00,\n            "empathy": 0.00\n        }\n    },\n    "dailyRoutine": {\n        "morning": ["場所1", "場所2"],\n        "afternoon": ["場所1", "場所2"],\n        "evening": ["場所1", "場所2"],\n        "night": ["自宅"]\n    },\n    "home": {\n        "name": "苗字の家",\n        "x": 整数,\n        "z": 整数,\n        "color": "0x" + Math.floor(Math.random()*16777215).toString(16)\n    }\n}`;
         const content = await callLLM({
             prompt,
             systemPrompt: "あなたは自律的なエージェントの性格生成システムです。必ず有効なJSON形式のみを出力し、余分な説明やテキストは含めないでください。",
@@ -1038,8 +1062,11 @@ async function generateNewAgent() {
             jsonStr += '}';
         }
         if (!jsonStr.includes('"home"')) {
+            const agentName = JSON.parse(jsonStr).name;
+            // 苗字を抽出（最初の文字列を苗字とする）
+            const lastName = agentName.split(' ')[0] || agentName;
             const homeInfo = {
-                name: JSON.parse(jsonStr).name + "の家",
+                name: lastName + "の家",
                 x: Math.floor(Math.random() * 41) - 20,
                 z: Math.floor(Math.random() * 41) - 20,
                 color: "0x" + Math.floor(Math.random()*16777215).toString(16)
@@ -1156,6 +1183,11 @@ async function callLLM({ prompt, systemPrompt = '', maxTokens = 150, temperature
     const apiKey = document.getElementById('apiKey') ? document.getElementById('apiKey').value.trim() : '';
     if (!apiKey) throw new Error('APIキーが入力されていません');
 
+    // LLMへの問い合わせ回数をカウント
+    if (window.updateLlmCallCount) {
+        window.updateLlmCallCount();
+    }
+
     if (provider === 'openai') {
         const body = {
             model: "gpt-3.5-turbo",
@@ -1176,7 +1208,11 @@ async function callLLM({ prompt, systemPrompt = '', maxTokens = 150, temperature
             body: JSON.stringify(body)
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message || 'OpenAI API呼び出しに失敗しました');
+        if (!response.ok) {
+            console.error('OpenAI API エラー:', data);
+            const errorMessage = data.error?.message || 'OpenAI API呼び出しに失敗しました';
+            throw new Error(`OpenAI API エラー: ${errorMessage}`);
+        }
         return data.choices[0].message.content;
     } else if (provider === 'gemini') {
         // Gemini API

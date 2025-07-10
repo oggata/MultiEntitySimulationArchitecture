@@ -1,5 +1,58 @@
 
 
+// 都市レイアウト設定
+const cityLayoutConfig = {
+    // マップ全体のサイズ設定
+    gridSize: 300,                    // マップ全体のサイズ（現在の150から2倍に）
+    
+    // 道路設定
+    roadWidth: 2,                     // 標準道路の幅
+    numMainStreets: 5,                // メインストリートの本数（現在の3から増加）
+    blockSize: 15,                    // 街区のサイズ（現在の10から増加）
+    shortRoadRatio: 0.6,              // 短い道路の出現率（0.0〜1.0）
+    
+    // 建物設定
+    buildingSize: 4,                  // 標準建物サイズ
+    minBuildingDistance: 8,           // 建物間の最小距離（現在の6から増加）
+    
+    // 建物サイズの定義
+    buildingSizes: {
+        large: 8,                     // 大：公園、学校、スーパーなど
+        medium: 4,                    // 中：ファミレス、商店など
+        small: 2                      // 小：個人の自宅など
+    },
+    
+    // 安全マージン設定（建物サイズに応じて）
+    safetyMargins: {
+        large: 16,                    // 大きな建物の安全マージン（32→16に緩和）
+        medium: 10,                   // 中サイズ建物の安全マージン（20→10に緩和）
+        small: 6                      // 小サイズ建物の安全マージン（12→6に緩和）
+    },
+    
+    // 施設設定
+    facilitySizeMultiplier: 1.2,      // 施設サイズの倍率（建物サイズに対する）
+    
+    // 重複チェック設定
+    overlapMargins: {
+        large: 24,                    // 大きな建物同士の間隔
+        medium: 16,                   // 中サイズ建物の間隔
+        small: 12                     // 小サイズ建物の間隔
+    }
+};
+
+// 時間設定
+const timeConfig = {
+    // 1日の長さ（分単位）
+    dayLengthMinutes: 30,             // 1日 = 30分（現在の設定を遅くする）
+    
+    // 時間の進行速度（ミリ秒単位）
+    timeUpdateInterval: 1000,         // 1秒ごとに時間を更新
+    
+    // 時間表示設定
+    showTime: true,                   // 時間表示を有効にする
+    timeFormat: '24hour'              // 24時間形式で表示
+};
+
 // 場所の詳細設定（座標は動的に決定される）
 const locationData = [
     {

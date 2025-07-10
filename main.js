@@ -27,7 +27,7 @@ let cameraMode = 'free'; // 'free', 'agent', 'facility'
 
 // 時間制御用の変数
 let lastTimeUpdate = 0;
-let timeUpdateInterval = 0.1; // 0.1秒ごとに時間を更新（1xの場合）
+let timeUpdateInterval = timeConfig.timeUpdateInterval / 1000; // configから読み込み（秒単位に変換）
 
 // localStorageからAPIキーを読み込み
 function loadApiKeyFromStorage() {
@@ -353,22 +353,36 @@ function updateTime() {
     
     const currentElapsedTime = clock.getElapsedTime();
     
-    // 時間更新の間隔を制御
+    // 時間更新の間隔を制御（configから読み込み）
     if (currentElapsedTime - lastTimeUpdate < timeUpdateInterval) {
         return;
     }
     
     lastTimeUpdate = currentElapsedTime;
     
-    currentTime += timeSpeed;
+    // 1日の長さをconfigから計算（分単位）
+    const dayLengthMinutes = timeConfig.dayLengthMinutes;
+    const timeIncrement = (24 * 60) / (dayLengthMinutes * 60); // 1秒あたりの時間増分
+    
+    currentTime += timeSpeed * timeIncrement;
     if (currentTime >= 24 * 60) {
         currentTime = 0;
     }
     
     const hours = Math.floor(currentTime / 60);
     const minutes = Math.floor(currentTime % 60);
-    const timeString = `${hours < 12 ? '午前' : '午後'} ${hours === 0 ? 12 : hours > 12 ? hours - 12 : hours}:${minutes.toString().padStart(2, '0')}`;
-    document.getElementById('time-display').textContent = timeString;
+    
+    // 時間表示形式をconfigから読み込み
+    let timeString;
+    if (timeConfig.timeFormat === '24hour') {
+        timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    } else {
+        timeString = `${hours < 12 ? '午前' : '午後'} ${hours === 0 ? 12 : hours > 12 ? hours - 12 : hours}:${minutes.toString().padStart(2, '0')}`;
+    }
+    
+    if (timeConfig.showTime) {
+        document.getElementById('time-display').textContent = timeString;
+    }
     
     // 時間帯による環境の変化
     updateEnvironment(hours);
@@ -565,19 +579,20 @@ function setTimeSpeed() {
     const nextIndex = (currentIndex + 1) % speeds.length;
     timeSpeed = speeds[nextIndex];
     
-    // 時間更新間隔を速度に応じて調整
+    // 時間更新間隔を速度に応じて調整（configベース）
+    const baseInterval = timeConfig.timeUpdateInterval / 1000; // 基本間隔（秒）
     switch (timeSpeed) {
         case 1:
-            timeUpdateInterval = 0.1; // 0.1秒ごと（最も遅い）
+            timeUpdateInterval = baseInterval; // 基本間隔
             break;
         case 2:
-            timeUpdateInterval = 0.05; // 0.05秒ごと
+            timeUpdateInterval = baseInterval / 2; // 2倍速
             break;
         case 5:
-            timeUpdateInterval = 0.02; // 0.02秒ごと
+            timeUpdateInterval = baseInterval / 5; // 5倍速
             break;
         case 10:
-            timeUpdateInterval = 0.01; // 0.01秒ごと（最も速い）
+            timeUpdateInterval = baseInterval / 10; // 10倍速
             break;
     }
     

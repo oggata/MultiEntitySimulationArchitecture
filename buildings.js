@@ -404,70 +404,7 @@ function createLocations() {
         });
     });
 
-    // エージェントの自宅を作成
-    agentPersonalities.forEach(agent => {
-        const homeGroup = new THREE.Group();
-        
-        // 自宅のサイズ（小サイズ）
-        const homeSize = cityLayout.buildingSizes.small;
-        const homeHeight = homeSize * 0.8;
-        
-        // 家の基本構造
-        const houseGeometry = new THREE.BoxGeometry(homeSize, homeHeight, homeSize);
-        const houseEdges = new THREE.EdgesGeometry(houseGeometry);
-        const house = new THREE.LineSegments(houseEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
-        house.position.set(0, homeHeight/2, 0);
-        homeGroup.add(house);
 
-        // 屋根
-        const roofGeometry = new THREE.ConeGeometry(homeSize * 0.75, homeSize * 0.5, 4);
-        const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-        const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
-        roof.position.set(0, homeHeight + homeSize * 0.25, 0);
-        roof.rotation.y = Math.PI / 4;
-        homeGroup.add(roof);
-
-        // 看板（自宅）
-        const canvas2 = document.createElement('canvas');
-        canvas2.width = 256;
-        canvas2.height = 64;
-        const context2 = canvas2.getContext('2d');
-        context2.clearRect(0, 0, 256, 64);
-        context2.shadowColor = '#00ffff';
-        context2.shadowBlur = 16;
-        context2.font = 'bold 24px sans-serif';
-        context2.textAlign = 'center';
-        context2.textBaseline = 'middle';
-        context2.fillStyle = '#00ffff';
-        context2.fillText(agent.home.name, 128, 32);
-        const texture2 = new THREE.CanvasTexture(canvas2);
-        const signGeometry2 = new THREE.PlaneGeometry(2, 0.5);
-        const signMaterial2 = new THREE.MeshBasicMaterial({ map: texture2, transparent: true, opacity: 0.7 });
-        const signMesh2 = new THREE.Mesh(signGeometry2, signMaterial2);
-        signMesh2.position.set(0, homeHeight + 0.5, homeSize * 0.6);
-        homeGroup.add(signMesh2);
-        const signEdges2 = new THREE.EdgesGeometry(signGeometry2);
-        const signLine2 = new THREE.LineSegments(signEdges2, new THREE.LineBasicMaterial({ color: 0x00ffff }));
-        signLine2.position.copy(signMesh2.position);
-        homeGroup.add(signLine2);
-
-        // 家の入り口通路を追加
-        addHomeEntrancePath(homeGroup, homeSize, agent.home.color);
-        
-        // 家の位置を設定
-        homeGroup.position.set(agent.home.x, 0, agent.home.z);
-        scene.add(homeGroup);
-        
-        locations.push({
-            name: agent.home.name,
-            position: new THREE.Vector3(agent.home.x, 0, agent.home.z),
-            mesh: homeGroup,
-            activities: ["休憩する", "眠る", "読書する"],
-            atmosphere: "静かで落ち着いた雰囲気の家",
-            isHome: true,
-            owner: agent.name
-        });
-    });
 }
 
 // 建物の入り口通路を作成する関数

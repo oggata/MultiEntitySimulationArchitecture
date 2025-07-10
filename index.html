@@ -31,6 +31,7 @@
         <button onclick="pauseSimulation()" id="pauseBtn" disabled>一時停止</button>
         <button onclick="setTimeSpeed()">時間速度: <span id="speed">1x</span></button>
         <button onclick="generateNewAgent()" id="generateAgentBtn">新しいエージェントを生成</button>
+        <button onclick="generateMultipleAgents(5)" id="generateMultipleAgentsBtn">新しいエージェントを5人作成</button>
         <div class="camera-controls">
             <div class="camera-status">
                 <span id="cameraModeDisplay">全体表示</span>
@@ -38,6 +39,10 @@
             <button id="personViewBtn">人物視点切り替え</button>
             <button id="facilityViewBtn">施設視点切り替え</button>
             <button id="resetCamera">全体表示</button>
+        </div>
+        <div class="communication-controls">
+            <button id="callAgentBtn" disabled>📞 電話をかける</button>
+            <button id="messageAgentBtn" disabled>💬 メッセージを送る</button>
         </div>
         <div class="road-visualization">
             <button id="toggleRoadNetwork">道路ネットワーク表示</button>
@@ -63,6 +68,23 @@
     </div>
 
     <button id="showPanelsBtn" style="position:fixed; left:10px; bottom:10px; z-index:9999; display:none; font-size:13px;">パネル再表示</button>
+
+    <!-- メッセージモーダル -->
+    <div id="messageModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="messageModalTitle">メッセージ</h3>
+                <span class="close" id="closeMessageModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="messageHistory" class="message-history"></div>
+                <div class="message-input-area">
+                    <textarea id="messageInput" placeholder="メッセージを入力してください..." rows="3"></textarea>
+                    <button id="sendMessageBtn">送信</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
      

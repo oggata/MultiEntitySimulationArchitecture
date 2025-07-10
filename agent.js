@@ -3,10 +3,21 @@ class Agent {
     constructor(data, index) {
         this.name = data.name;
         this.age = data.age;
+        this.background = data.background; // 新しい背景情報
         this.personality = data.personality;
         this.dailyRoutine = data.dailyRoutine;
         this.home = data.home;
-        this.currentLocation = locations.find(loc => loc.name === this.home.name) || locations[0];
+        // 自宅から出発するように設定
+        this.currentLocation = locations.find(loc => loc.name === this.home.name);
+        if (!this.currentLocation) {
+            // 自宅が見つからない場合は自宅を作成
+            this.currentLocation = {
+                name: this.home.name,
+                position: { x: this.home.x, y: 0, z: this.home.z },
+                type: 'home'
+            };
+            locations.push(this.currentLocation);
+        }
         this.targetLocation = this.currentLocation;
         
         // 記憶システム
@@ -322,21 +333,48 @@ class Agent {
     
     async think() {
         if (!apiKey || !simulationRunning || simulationPaused) return;
-        
         this.isThinking = true;
         const timeOfDay = this.getTimeOfDay();
         const nearbyAgents = this.getNearbyAgents();
-        
         try {
-            // 思考プロンプトの構築
-            const prompt = this.buildThoughtPrompt(timeOfDay, nearbyAgents);
-            
-            // デモ用の思考シミュレーション（実際のAPI呼び出しの代わり）
-            const decision = await this.simulateThought(prompt, timeOfDay, nearbyAgents);
-            
-            // 決定に基づいて行動
+            // LLMに完全自由行動を問い合わせるプロンプト
+            const prompt = this.buildLLMActionPrompt(timeOfDay, nearbyAgents);
+            const aiResponse = await callLLM({
+                prompt,
+                systemPrompt: "あなたは自律的なエージェントの意思決定システムです。夢や価値観、状況に基づき、現実的かつ自由な行動を1つだけ日本語で具体的に提案してください。場所や行動、理由も含めてください。JSON形式で出力してください。例: {\"action\":\"move\",\"target\":\"図書館\",\"reason\":\"起業のための本を探す\"}。施設名は必ず既存のものから選んでください。",
+                maxTokens: 200,
+                temperature: 0.9
+            });
+            // 返答をパース
+            let decision = { action: null, thought: aiResponse, targetLocation: null, targetAgent: null };
+            try {
+                const parsed = JSON.parse(aiResponse.match(/\{[\s\S]*\}/)[0]);
+                if (parsed.action === "move" && parsed.target) {
+                    const loc = locations.find(l => l.name === parsed.target);
+                    if (loc) {
+                        decision.action = "move";
+                        decision.targetLocation = loc;
+                        decision.thought = parsed.reason || `${loc.name}へ移動したい`; 
+                    }
+                } else if (parsed.action === "interact" && parsed.target) {
+                    const agent = agents.find(a => a.name === parsed.target);
+                    if (agent) {
+                        decision.action = "interact";
+                        decision.targetAgent = agent;
+                        decision.thought = parsed.reason || `${agent.name}と話したい`;
+                    }
+                } else if (parsed.action === "activity" && parsed.target) {
+                    decision.action = "activity";
+                    this.currentActivity = parsed.target;
+                    decision.thought = parsed.reason || `${parsed.target}をしたい`;
+                } else {
+                    decision.thought = parsed.reason || aiResponse;
+                }
+            } catch (e) {
+                // パース失敗時は思考のみ
+                decision.thought = aiResponse;
+            }
             this.executeDecision(decision);
-            
             logAgentAction(this, 'think', `
                 <div class="log-detail-section">
                     <h4>思考の詳細</h4>
@@ -346,60 +384,28 @@ class Agent {
                     <p>思考内容: ${this.currentThought}</p>
                 </div>
             `);
-            
         } catch (error) {
             console.error(`${this.name}の思考プロセスエラー:`, error);
         } finally {
             this.isThinking = false;
             this.lastThoughtTime = Date.now();
-            
-            // 近くにエージェントがいる場合は思考間隔を短縮
             const nearbyAgents = this.getNearbyAgents();
             if (nearbyAgents.length > 0) {
-                this.thinkingDuration = 5000 + Math.random() * 10000; // 5-15秒（短縮）
+                this.thinkingDuration = 5000 + Math.random() * 10000;
             } else {
-                this.thinkingDuration = 10000 + Math.random() * 20000; // 10-30秒（通常）
+                this.thinkingDuration = 10000 + Math.random() * 20000;
             }
         }
     }
-    
-    buildThoughtPrompt(timeOfDay, nearbyAgents) {
+
+    buildLLMActionPrompt(timeOfDay, nearbyAgents) {
         const recentMemories = this.shortTermMemory.slice(-5).map(m => m.event).join(', ');
         const currentMood = this.calculateMood();
-        
-        // プロンプトテーマを取得
         const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
         const themeContext = topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する話題や関心事についても考えてください。` : '';
-        
         return `
-        私は${this.name}、${this.age}歳。${this.personality.description}
-        
-        現在の状況:
-        - 時間帯: ${timeOfDay}（夜間は22:00-6:00）
-        - 現在地: ${this.currentLocation.name}（${this.currentLocation.atmosphere}）
-        - 体力: ${Math.round(this.energy * 100)}%
-        - 気分: ${currentMood}
-        - 最近の出来事: ${recentMemories || 'なし'}
-        
-        ${nearbyAgents.length > 0 ? `近くにいる人: ${nearbyAgents.map(a => a.name).join(', ')}` : ''}
-        
-        私の性格特性:
-        - 社交性: ${this.personality.traits.sociability}
-        - 活動的さ: ${this.personality.traits.energy}
-        - ルーチン重視: ${this.personality.traits.routine}
-        - 好奇心: ${this.personality.traits.curiosity}
-        
-        重要な行動ルール:
-        1. 夜間（22:00-6:00）は必ず自宅に帰る必要があります
-        2. 夜間は自宅以外の場所に長く留まらないでください
-        3. 夜間は体力を回復するために自宅で休むことが重要です
-        4. 同じ場所に他の人がいる場合は、積極的に交流を試みてください
-        5. 特にカフェ、公園、町の広場では、人との交流を大切にしてください${themeContext}
-        
-        この状況で、次に何をしたいですか？どのように感じていますか？
-        特に夜間の場合は、自宅に帰ることを優先してください。
-        他の人がいる場合は、交流することも考えてください。
-        `;
+あなたは${this.name}（${this.age}歳）です。\n
+【現在の状況】\n- 時間帯: ${timeOfDay}\n- 現在地: ${this.currentLocation.name}\n- 体力: ${Math.round(this.energy * 100)}%\n- 気分: ${currentMood}\n- 最近の出来事: ${recentMemories || 'なし'}\n${nearbyAgents.length > 0 ? `- 近くにいる人: ${nearbyAgents.map(a => a.name).join(', ')}` : ''}\n\n【ペルソナ】\n- 性格: ${this.personality.description}\n- 価値観: ${this.personality.values}\n- 夢・目標: ${this.personality.goals}\n- 趣味: ${(this.background && this.background.hobbies) ? this.background.hobbies.join(', ') : ''}\n\n【ルール】\n- 夜間（22:00-6:00）は必ず自宅に帰ること\n- 施設名は必ず既存のもの（${locations.map(l => l.name).join('、')}）から選ぶこと\n- できるだけ現実的な行動を1つだけ提案してください\n- 例: {\"action\":\"move\",\"target\":\"図書館\",\"reason\":\"起業のための本を探す\"}\n${themeContext}\n\n今の状況で、あなたが最もしたいこと・すべきことを1つだけJSON形式で答えてください。`;
     }
     
     async simulateThought(prompt, timeOfDay, nearbyAgents) {
@@ -1043,7 +1049,82 @@ async function generateNewAgent() {
         return;
     }
     try {
-        const prompt = `\nあなたは自律的なエージェントの性格生成システムです。\n以下の条件に基づいて、新しいエージェントの性格と特徴を生成してください。\n出力は必ず有効なJSON形式のみで、余分な説明やテキストは含めないでください。\n\n条件：\n1. 名前（日本語の一般的な苗字と名前の組み合わせ、例：田中太郎、佐藤花子など）\n2. 年齢（20-70歳の範囲の整数）\n3. 性格の説明（2-3文程度）\n4. 性格特性（0-1の範囲の数値、小数点以下2桁まで）：\n   - 社交性（sociability）\n   - 活動的さ（energy）\n   - ルーチン重視度（routine）\n   - 好奇心（curiosity）\n   - 共感性（empathy）\n5. 日課（各時間帯で2つまでの場所）\n6. 自宅の位置（x, z座標は-20から20の範囲の整数）\n\n有効な場所：\n- カフェ\n- 公園\n- 図書館\n- スポーツジム\n- 町の広場\n- 自宅\n\n出力形式（必ずこの形式のJSONのみを出力）：\n{\n    "name": "苗字 名前",\n    "age": 年齢,\n    "personality": {\n        "description": "性格の説明",\n        "traits": {\n            "sociability": 0.00,\n            "energy": 0.00,\n            "routine": 0.00,\n            "curiosity": 0.00,\n            "empathy": 0.00\n        }\n    },\n    "dailyRoutine": {\n        "morning": ["場所1", "場所2"],\n        "afternoon": ["場所1", "場所2"],\n        "evening": ["場所1", "場所2"],\n        "night": ["自宅"]\n    },\n    "home": {\n        "name": "苗字の家",\n        "x": 整数,\n        "z": 整数,\n        "color": "0x" + Math.floor(Math.random()*16777215).toString(16)\n    }\n}`;
+        const prompt = `あなたは自律的なエージェントの詳細なペルソナ生成システムです。
+以下の条件に基づいて、新しいエージェントの詳細なペルソナと特徴を生成してください。
+出力は必ず有効なJSON形式のみで、余分な説明やテキストは含めないでください。
+
+条件：
+1. 名前（日本語の一般的な苗字と名前の組み合わせ、例：田中太郎、佐藤花子など）
+2. 年齢（20-70歳の範囲の整数）
+3. 出身地（日本の都道府県、または海外の国名）
+4. 学歴（最終学歴、大学名や専門学校名など具体的に）
+5. 職業経歴（過去の仕事や現在の職業、職種を具体的に）
+6. 趣味・嗜好（3-5個の具体的な趣味）
+7. 宗教・信仰（無宗教、仏教、キリスト教、神道など、または具体的な宗派）
+8. 家族構成（配偶者の有無、子供の有無、同居家族など）
+9. 性格の詳細説明（3-4文程度で詳しく）
+10. 性格特性（0-1の範囲の数値、小数点以下2桁まで）：
+    - 社交性（sociability）
+    - 活動的さ（energy）
+    - ルーチン重視度（routine）
+    - 好奇心（curiosity）
+    - 共感性（empathy）
+    - 責任感（responsibility）
+    - 創造性（creativity）
+    - 論理的思考（logic）
+11. 価値観・信念（人生観や大切にしている価値観）
+12. 目標・夢（将来の目標や夢）
+13. 日課（各時間帯で2つまでの場所）
+14. 自宅の位置（x, z座標は-20から20の範囲の整数）
+
+有効な場所：
+- カフェ
+- 公園
+- 図書館
+- スポーツジム
+- 町の広場
+- 自宅
+
+出力形式（必ずこの形式のJSONのみを出力）：
+{
+    "name": "苗字 名前",
+    "age": 年齢,
+    "background": {
+        "birthplace": "出身地",
+        "education": "学歴",
+        "career": "職業経歴",
+        "hobbies": ["趣味1", "趣味2", "趣味3"],
+        "religion": "宗教・信仰",
+        "family": "家族構成"
+    },
+    "personality": {
+        "description": "性格の詳細説明",
+        "traits": {
+            "sociability": 0.00,
+            "energy": 0.00,
+            "routine": 0.00,
+            "curiosity": 0.00,
+            "empathy": 0.00,
+            "responsibility": 0.00,
+            "creativity": 0.00,
+            "logic": 0.00
+        },
+        "values": "価値観・信念",
+        "goals": "目標・夢"
+    },
+    "dailyRoutine": {
+        "morning": ["場所1", "場所2"],
+        "afternoon": ["場所1", "場所2"],
+        "evening": ["場所1", "場所2"],
+        "night": ["自宅"]
+    },
+    "home": {
+        "name": "苗字の家",
+        "x": 整数,
+        "z": 整数,
+        "color": "0x" + Math.floor(Math.random()*16777215).toString(16)
+    }
+}`;
         const content = await callLLM({
             prompt,
             systemPrompt: "あなたは自律的なエージェントの性格生成システムです。必ず有効なJSON形式のみを出力し、余分な説明やテキストは含めないでください。",
@@ -1058,21 +1139,81 @@ async function generateNewAgent() {
         if (jsonStart !== -1 && jsonEnd !== -1) {
             jsonStr = content.substring(jsonStart, jsonEnd);
         }
+        
+        // JSONの前処理
+        console.log('元のレスポンス:', content);
+        console.log('抽出されたJSON文字列:', jsonStr);
+        
+        // 不完全なJSONを修正
         if (!jsonStr.endsWith('}')) {
             jsonStr += '}';
         }
-        if (!jsonStr.includes('"home"')) {
-            const agentName = JSON.parse(jsonStr).name;
-            // 苗字を抽出（最初の文字列を苗字とする）
-            const lastName = agentName.split(' ')[0] || agentName;
-            const homeInfo = {
-                name: lastName + "の家",
-                x: Math.floor(Math.random() * 41) - 20,
-                z: Math.floor(Math.random() * 41) - 20,
-                color: "0x" + Math.floor(Math.random()*16777215).toString(16)
-            };
-            jsonStr = jsonStr.slice(0, -1) + ',"home":' + JSON.stringify(homeInfo) + '}';
+        
+        // バッククォートやマークダウン記法を除去
+        jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+        
+        // 末尾のカンマを除去
+        jsonStr = jsonStr.replace(/,(\s*})/g, '$1');
+        
+        // 不完全な色の値を修正
+        jsonStr = jsonStr.replace(/"color":\s*"0x"\s*}/g, '"color": "0x' + Math.floor(Math.random()*16777215).toString(16) + '"}');
+        jsonStr = jsonStr.replace(/"color":\s*"0x"\s*,/g, '"color": "0x' + Math.floor(Math.random()*16777215).toString(16) + '",');
+        
+        // 不完全な数値を修正
+        jsonStr = jsonStr.replace(/"x":\s*(\d+)\s*,/g, '"x": $1,');
+        jsonStr = jsonStr.replace(/"z":\s*(-\d+)\s*,/g, '"z": $1,');
+        jsonStr = jsonStr.replace(/"z":\s*(\d+)\s*,/g, '"z": $1,');
+        
+        // JSONの構造を修正
+        jsonStr = jsonStr.replace(/"color":\s*"([^"]+)"\s*}/g, '"color": "$1"}');
+        jsonStr = jsonStr.replace(/"color":\s*"([^"]+)"\s*,/g, '"color": "$1",');
+        
+        // 末尾の余分な文字を除去
+        jsonStr = jsonStr.replace(/\s*}\s*$/g, '}');
+        jsonStr = jsonStr.replace(/\s*}\s*}\s*$/g, '}}');
+        
+        // 不完全なJSONの修正
+        jsonStr = jsonStr.replace(/"color":\s*"([^"]+)"\s*}\s*$/g, '"color": "$1"}');
+        jsonStr = jsonStr.replace(/"color":\s*"([^"]+)"\s*}\s*}\s*$/g, '"color": "$1"}}');
+        
+        // 複数の閉じ括弧の正規化
+        jsonStr = jsonStr.replace(/\s*}\s*}\s*}\s*$/g, '}}}');
+        jsonStr = jsonStr.replace(/\s*}\s*}\s*$/g, '}}');
+        jsonStr = jsonStr.replace(/\s*}\s*$/g, '}');
+        
+        // 末尾の余分な文字を完全に除去
+        jsonStr = jsonStr.replace(/\s*$/g, '');
+        jsonStr = jsonStr.replace(/\s*}\s*$/g, '}');
+        
+        // 不完全なJSONの最後の修正
+        if (jsonStr.endsWith('"')) {
+            jsonStr += '}';
         }
+        if (!jsonStr.endsWith('}')) {
+            jsonStr += '}';
+        }
+        
+        // JSONの構造を完全に検証・修正
+        try {
+            // まず基本的な修正を試行
+            let testJson = jsonStr;
+            
+            // 色の値の修正
+            testJson = testJson.replace(/"color":\s*"([^"]+)"\s*}/g, '"color": "$1"}');
+            
+            // 末尾の修正
+            testJson = testJson.replace(/\s*$/g, '');
+            if (!testJson.endsWith('}')) {
+                testJson += '}';
+            }
+            
+            // テストパース
+            JSON.parse(testJson);
+            jsonStr = testJson;
+        } catch (testError) {
+            console.log('基本的な修正で失敗、詳細な修正を試行');
+        }
+        
         let agentData;
         try {
             agentData = JSON.parse(jsonStr);
@@ -1080,7 +1221,73 @@ async function generateNewAgent() {
         } catch (parseError) {
             console.error('JSONパースエラー:', parseError);
             console.error('パースしようとしたJSON:', jsonStr);
-            throw new Error('生成されたデータの形式が不正です');
+            
+            // より詳細なエラー情報を提供
+            try {
+                // 部分的な修正を試行
+                let fixedJson = jsonStr;
+                
+                // 一般的なJSONエラーの修正
+                fixedJson = fixedJson.replace(/,\s*}/g, '}'); // 末尾のカンマを除去
+                fixedJson = fixedJson.replace(/,\s*]/g, ']'); // 配列の末尾カンマを除去
+                fixedJson = fixedJson.replace(/\\"/g, '"'); // エスケープされた引用符を修正
+                
+                // 不完全な色の値を修正
+                fixedJson = fixedJson.replace(/"color":\s*"0x"\s*}/g, '"color": "0x' + Math.floor(Math.random()*16777215).toString(16) + '"}');
+                fixedJson = fixedJson.replace(/"color":\s*"0x"\s*,/g, '"color": "0x' + Math.floor(Math.random()*16777215).toString(16) + '",');
+                
+                // 不完全な数値を修正
+                fixedJson = fixedJson.replace(/"x":\s*(\d+)\s*,/g, '"x": $1,');
+                fixedJson = fixedJson.replace(/"z":\s*(-\d+)\s*,/g, '"z": $1,');
+                fixedJson = fixedJson.replace(/"z":\s*(\d+)\s*,/g, '"z": $1,');
+                
+                // JSONの構造を修正
+                fixedJson = fixedJson.replace(/"color":\s*"([^"]+)"\s*}/g, '"color": "$1"}');
+                fixedJson = fixedJson.replace(/"color":\s*"([^"]+)"\s*,/g, '"color": "$1",');
+                
+                // 末尾の余分な文字を除去
+                fixedJson = fixedJson.replace(/\s*}\s*$/g, '}');
+                fixedJson = fixedJson.replace(/\s*}\s*}\s*$/g, '}}');
+                
+                // 不完全なJSONの修正
+                fixedJson = fixedJson.replace(/"color":\s*"([^"]+)"\s*}\s*$/g, '"color": "$1"}');
+                fixedJson = fixedJson.replace(/"color":\s*"([^"]+)"\s*}\s*}\s*$/g, '"color": "$1"}}');
+                
+                // 複数の閉じ括弧の正規化
+                fixedJson = fixedJson.replace(/\s*}\s*}\s*}\s*$/g, '}}}');
+                fixedJson = fixedJson.replace(/\s*}\s*}\s*$/g, '}}');
+                fixedJson = fixedJson.replace(/\s*}\s*$/g, '}');
+                
+                // 末尾の余分な文字を完全に除去
+                fixedJson = fixedJson.replace(/\s*$/g, '');
+                fixedJson = fixedJson.replace(/\s*}\s*$/g, '}');
+                
+                // 不完全なJSONの最後の修正
+                if (fixedJson.endsWith('"')) {
+                    fixedJson += '}';
+                }
+                if (!fixedJson.endsWith('}')) {
+                    fixedJson += '}';
+                }
+                
+                agentData = JSON.parse(fixedJson);
+                console.log('修正後のエージェントデータ:', agentData);
+            } catch (secondError) {
+                console.error('修正後もJSONパースエラー:', secondError);
+                throw new Error('生成されたデータの形式が不正です。JSONの構文エラーがあります。');
+            }
+        }
+        
+        // home情報の追加
+        if (!agentData.home) {
+            const agentName = agentData.name || 'エージェント';
+            const lastName = agentName.split(' ')[0] || agentName;
+            agentData.home = {
+                name: lastName + "の家",
+                x: Math.floor(Math.random() * 41) - 20,
+                z: Math.floor(Math.random() * 41) - 20,
+                color: "0x" + Math.floor(Math.random()*16777215).toString(16)
+            };
         }
         if (!validateAgentData(agentData)) {
             throw new Error('生成されたデータが要件を満たしていません');
@@ -1097,14 +1304,70 @@ async function generateNewAgent() {
     }
 }
 
+// 複数のエージェントを生成する関数
+async function generateMultipleAgents(count) {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if (!apiKey) {
+        alert('APIキーを入力してください');
+        return;
+    }
+
+    const generateAgentBtn = document.getElementById('generateAgentBtn');
+    const generateMultipleAgentsBtn = document.getElementById('generateMultipleAgentsBtn');
+    
+    // ボタンを無効化
+    generateAgentBtn.disabled = true;
+    generateMultipleAgentsBtn.disabled = true;
+    generateMultipleAgentsBtn.textContent = `生成中... (0/${count})`;
+
+    try {
+        for (let i = 0; i < count; i++) {
+            try {
+                await generateNewAgent();
+                generateMultipleAgentsBtn.textContent = `生成中... (${i + 1}/${count})`;
+                
+                // 少し待機してから次のエージェントを生成
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+                console.error(`${i + 1}番目のエージェント生成エラー:`, error);
+                // エラーが発生しても続行
+            }
+        }
+        
+        addLog(`🎉 ${count}人の新しいエージェントが生成されました`, 'info', `
+            <div class="log-detail-section">
+                <h4>一括生成完了</h4>
+                <p>生成されたエージェント数: ${count}人</p>
+                <p>現在のエージェント総数: ${agents.length}人</p>
+            </div>
+        `);
+    } catch (error) {
+        console.error('一括エージェント生成エラー:', error);
+        alert('エージェントの一括生成に失敗しました: ' + error.message);
+    } finally {
+        // ボタンを再有効化
+        generateAgentBtn.disabled = false;
+        generateMultipleAgentsBtn.disabled = false;
+        generateMultipleAgentsBtn.textContent = '新しいエージェントを5人作成';
+    }
+}
+
 // エージェントデータの検証関数
 function validateAgentData(data) {
     const requiredFields = [
-        'name', 'age', 'personality', 'dailyRoutine', 'home'
+        'name', 'age', 'background', 'personality', 'dailyRoutine', 'home'
+    ];
+    
+    const requiredBackgroundFields = [
+        'birthplace', 'education', 'career', 'hobbies', 'religion', 'family'
     ];
     
     const requiredTraits = [
         'sociability', 'energy', 'routine', 'curiosity', 'empathy'
+    ];
+    
+    const requiredPersonalityFields = [
+        'description', 'traits', 'values', 'goals'
     ];
     
     const requiredRoutines = [
@@ -1116,7 +1379,9 @@ function validateAgentData(data) {
     ];
     
     const validLocations = [
-        'カフェ', '公園', '図書館', 'スポーツジム', '町の広場', '自宅'
+        'カフェ', '公園', '図書館', 'スポーツジム', '町の広場', '自宅', '会社', 'オフィス', '学校', '大学', '病院', 'クリニック', 'スーパーマーケット', 'コンビニ', 'レストラン', '居酒屋', '美容院', '理容室', '銀行', '郵便局', '駅', 'バス停', '映画館', 'ゲームセンター', 'カラオケ', '温泉', '銭湯', '神社', '寺院', '教会', 'モール', 'ショッピングセンター', 'デパート', '書店', '花屋', 'パン屋', '肉屋', '魚屋', '八百屋', '薬局', 'ドラッグストア', 'ホームセンター', 'ガソリンスタンド', '洗車場', '駐車場', '駐輪場', 'ゴルフ場', 'テニスコート', 'プール', 'ジム', 'ヨガスタジオ', 'ダンススタジオ', '音楽教室', '英会話教室', '塾', '保育園', '幼稚園', '老人ホーム', 'デイサービス', '介護施設', 'リハビリセンター', '歯科医院', '眼科', '耳鼻科', '皮膚科', '内科', '外科', '小児科', '産婦人科', '精神科', '心療内科', '整形外科', '形成外科', '美容外科', '皮膚科', '泌尿器科', '循環器科', '呼吸器科', '消化器科', '神経内科', '脳外科', '心臓血管外科', '胸部外科', '乳腺外科', '甲状腺外科', '内分泌外科', '肝臓外科', '膵臓外科', '大腸外科', '肛門外科', '血管外科', '移植外科', '小児外科', '新生児外科', '胎児外科', '小児泌尿器科', '小児整形外科', '小児形成外科', '小児皮膚科', '小児眼科', '小児耳鼻科', '小児歯科', '小児精神科', '小児心療内科', '小児神経科', '小児循環器科', '小児呼吸器科', '小児消化器科', '小児内分泌科', '小児血液科', '小児腫瘍科', '小児感染症科', '小児アレルギー科', '小児免疫科', '小児腎臓科', '小児肝臓科', '小児膵臓科', '小児大腸科', '小児肛門科', '小児血管科', '小児移植科', '小児新生児科', '小児胎児科', '小児泌尿器科', '小児整形外科', '小児形成外科', '小児皮膚科', '小児眼科', '小児耳鼻科', '小児歯科', '小児精神科', '小児心療内科', '小児神経科', '小児循環器科', '小児呼吸器科', '小児消化器科', '小児内分泌科', '小児血液科', '小児腫瘍科', '小児感染症科', '小児アレルギー科', '小児免疫科', '小児腎臓科', '小児肝臓科', '小児膵臓科', '小児大腸科', '小児肛門科', '小児血管科', '小児移植科', '小児新生児科', '小児胎児科',
+        // 活動名も場所として許可
+        'ジョギング', 'ランニング', 'ウォーキング', '散歩', '料理教室', '料理', '読書', '勉強', '仕事場', '職場', 'オフィス', '会議室', '打ち合わせ', 'ミーティング', 'プレゼンテーション', '研修', 'トレーニング', '練習', '稽古', 'レッスン', '授業', '講義', 'セミナー', 'ワークショップ', 'イベント', 'パーティー', '宴会', '飲み会', '食事会', 'ランチ', 'ディナー', '朝食', '昼食', '夕食', 'お茶', 'コーヒー', 'ティータイム', '休憩', 'リラックス', '瞑想', 'ヨガ', 'ストレッチ', '筋トレ', 'エクササイズ', 'スポーツ', 'テニス', 'ゴルフ', '野球', 'サッカー', 'バスケットボール', 'バレーボール', '卓球', 'バドミントン', 'スイミング', '水泳', 'マラソン', 'トライアスロン', 'サイクリング', '登山', 'ハイキング', 'キャンプ', '釣り', '狩猟', 'ガーデニング', '園芸', '家庭菜園', 'DIY', '手芸', '編み物', '刺繍', '陶芸', '絵画', '写真', 'カメラ', '映画鑑賞', 'テレビ', 'ラジオ', '音楽', '楽器', 'ピアノ', 'ギター', 'バイオリン', 'ドラム', '歌', 'カラオケ', 'ダンス', 'バレエ', 'ジャズダンス', 'ヒップホップ', '社交ダンス', 'ボールルームダンス', 'ラテンダンス', 'ベリーダンス', 'フラメンコ', 'タップダンス', 'コンテンポラリーダンス', 'モダンダンス', 'クラシックバレエ', 'ネオクラシックバレエ', 'ロマンティックバレエ', 'バロックダンス', 'ルネサンスダンス', '中世ダンス', '古代ダンス', '民族舞踊', 'アフリカンダンス', 'アジアンダンス', 'ヨーロッパンダンス', 'アメリカンダンス', '南米ダンス', 'オセアニアダンス', '北極圏ダンス', '砂漠ダンス', '山岳ダンス', '海洋ダンス', '森林ダンス', '草原ダンス', '都市ダンス', '農村ダンス', '漁村ダンス', '鉱山ダンス', '工場ダンス', 'オフィスダンス', '学校ダンス', '病院ダンス', '教会ダンス', '寺院ダンス', '神社ダンス', 'モスクダンス', 'シナゴーグダンス', '教会ダンス', '寺院ダンス', '神社ダンス', 'モスクダンス', 'シナゴーグダンス', '教会ダンス', '寺院ダンス', '神社ダンス', 'モスクダンス', 'シナゴーグダンス'
     ];
 
     // 必須フィールドのチェック
@@ -1133,45 +1398,77 @@ function validateAgentData(data) {
         return false;
     }
 
-    // 性格特性のチェック
-    for (const trait of requiredTraits) {
-        const value = data.personality.traits[trait];
-        if (typeof value !== 'number' || value < 0 || value > 1) {
-            console.error(`性格特性が不正です: ${trait}`);
+    // 背景情報のチェック（新しい構造に対応）
+    if (data.background) {
+        for (const field of requiredBackgroundFields) {
+            if (!data.background[field]) {
+                console.error(`背景情報が不足しています: ${field}`);
+                return false;
+            }
+        }
+
+        // 趣味の配列チェック
+        if (!Array.isArray(data.background.hobbies) || data.background.hobbies.length < 3) {
+            console.error('趣味が3つ以上必要です');
             return false;
         }
     }
 
-    // 日課のチェック
-    for (const routine of requiredRoutines) {
-        if (!Array.isArray(data.dailyRoutine[routine])) {
-            console.error(`日課が不正です: ${routine}`);
-            return false;
-        }
-        
-        // 場所の妥当性チェック
-        for (const location of data.dailyRoutine[routine]) {
-            if (!validLocations.includes(location)) {
-                console.error(`不正な場所が指定されています: ${location}`);
+    // 性格情報のチェック（新しい構造に対応）
+    if (data.personality) {
+        for (const field of requiredPersonalityFields) {
+            if (!data.personality[field]) {
+                console.error(`性格情報が不足しています: ${field}`);
                 return false;
             }
         }
     }
 
-    // 自宅情報のチェック
-    for (const field of requiredHomeFields) {
-        if (!data.home[field]) {
-            console.error(`自宅情報が不足しています: ${field}`);
-            return false;
+    // 性格特性のチェック（新しい構造に対応）
+    if (data.personality.traits) {
+        for (const trait of requiredTraits) {
+            const value = data.personality.traits[trait];
+            if (typeof value !== 'number' || value < 0 || value > 1) {
+                console.error(`性格特性が不正です: ${trait}`);
+                return false;
+            }
         }
     }
 
-    // 座標の範囲チェック
-    if (typeof data.home.x !== 'number' || typeof data.home.z !== 'number' ||
-        data.home.x < -20 || data.home.x > 20 ||
-        data.home.z < -20 || data.home.z > 20) {
-        console.error('自宅の座標が不正です');
-        return false;
+    // 日課のチェック（新しい構造に対応）
+    if (data.dailyRoutine) {
+        for (const routine of requiredRoutines) {
+            if (!Array.isArray(data.dailyRoutine[routine])) {
+                console.error(`日課が不正です: ${routine}`);
+                return false;
+            }
+            
+            // 場所の妥当性チェック
+            for (const location of data.dailyRoutine[routine]) {
+                if (!validLocations.includes(location)) {
+                    console.error(`不正な場所が指定されています: ${location}`);
+                    return false;
+                }
+            }
+        }
+    }
+
+    // 自宅情報のチェック（新しい構造に対応）
+    if (data.home) {
+        for (const field of requiredHomeFields) {
+            if (!data.home[field]) {
+                console.error(`自宅情報が不足しています: ${field}`);
+                return false;
+            }
+        }
+
+        // 座標の範囲チェック
+        if (typeof data.home.x !== 'number' || typeof data.home.z !== 'number' ||
+            data.home.x < -20 || data.home.x > 20 ||
+            data.home.z < -20 || data.home.z > 20) {
+            console.error('自宅の座標が不正です');
+            return false;
+        }
     }
 
     return true;

@@ -18,12 +18,15 @@ let llmCallCount = 0;
 // カメラ制御用インデックス
 let currentAgentIndex = 0;
 let currentFacilityIndex = 0;
-
-// カメラモード管理
-let cameraMode = 'free'; // 'free', 'agent', 'facility'
 let targetAgent = null;
 let targetFacility = null;
 let cameraFollowEnabled = false;
+let cameraMode = 'free'; // 'free', 'agent', 'facility'
+
+// コミュニケーション機能の変数
+let currentMessageAgent = null;
+let messageHistory = [];
+let isCallActive = false;
 
 // 時間制御用の変数
 let lastTimeUpdate = 0;
@@ -232,6 +235,44 @@ function init() {
             }
         });
     }
+
+    // コミュニケーション機能のイベント登録
+    const callAgentBtn = document.getElementById('callAgentBtn');
+    const messageAgentBtn = document.getElementById('messageAgentBtn');
+    const messageModal = document.getElementById('messageModal');
+    const closeMessageModal = document.getElementById('closeMessageModal');
+    const sendMessageBtn = document.getElementById('sendMessageBtn');
+    const messageInput = document.getElementById('messageInput');
+
+    if (callAgentBtn) {
+        callAgentBtn.addEventListener('click', startCall);
+    }
+    if (messageAgentBtn) {
+        messageAgentBtn.addEventListener('click', openMessageModal);
+    }
+    if (closeMessageModal) {
+        closeMessageModal.addEventListener('click', closeMessageModalHandler);
+    }
+    if (sendMessageBtn) {
+        sendMessageBtn.addEventListener('click', sendMessage);
+    }
+    if (messageInput) {
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
+
+    // モーダルの外側クリックで閉じる
+    if (messageModal) {
+        messageModal.addEventListener('click', (e) => {
+            if (e.target === messageModal) {
+                closeMessageModalHandler();
+            }
+        });
+    }
 }
 
 // マウスコントロール
@@ -376,6 +417,21 @@ function updateAgentInfo() {
         `;
         agentCard.appendChild(nameDiv);
         
+        // 背景情報
+        if (agent.background) {
+            const backgroundDiv = document.createElement('div');
+            backgroundDiv.className = 'agent-background';
+            backgroundDiv.innerHTML = `
+                <div class="agent-info-row">🏠 出身地: ${agent.background.birthplace}</div>
+                <div class="agent-info-row">🎓 学歴: ${agent.background.education}</div>
+                <div class="agent-info-row">💼 職業: ${agent.background.career}</div>
+                <div class="agent-info-row">🎨 趣味: ${agent.background.hobbies.join(', ')}</div>
+                <div class="agent-info-row">⛪ 宗教: ${agent.background.religion}</div>
+                <div class="agent-info-row">👨‍👩‍👧‍👦 家族: ${agent.background.family}</div>
+            `;
+            agentCard.appendChild(backgroundDiv);
+        }
+        
         // 現在の情報
         const infoDiv = document.createElement('div');
         infoDiv.innerHTML = `
@@ -385,6 +441,18 @@ function updateAgentInfo() {
             <div class="agent-info-row">😊 気分: ${agent.mood}</div>
         `;
         agentCard.appendChild(infoDiv);
+        
+        // 性格・価値観情報
+        if (agent.personality) {
+            const personalityDiv = document.createElement('div');
+            personalityDiv.className = 'agent-personality';
+            personalityDiv.innerHTML = `
+                <div class="agent-info-row">💭 性格: ${agent.personality.description}</div>
+                <div class="agent-info-row">🎯 価値観: ${agent.personality.values}</div>
+                <div class="agent-info-row">🌟 目標: ${agent.personality.goals}</div>
+            `;
+            agentCard.appendChild(personalityDiv);
+        }
         
         // 現在の思考
         if (agent.currentThought) {
@@ -634,6 +702,12 @@ function focusCameraOnAgentByIndex(index) {
     // カメラモード表示を更新
     updateCameraModeDisplay();
     
+    // エージェント情報パネルで該当エージェントまでスクロール
+    scrollToAgentInfo(agent);
+    
+    // コミュニケーションボタンの状態を更新
+    updateCommunicationButtons();
+    
     addLog(`👁️ ${agent.name}の視点に切り替えました（追従モード有効）`, 'system');
 }
 
@@ -671,6 +745,9 @@ function resetCamera() {
     // カメラモード表示を更新
     updateCameraModeDisplay();
     
+    // コミュニケーションボタンの状態を更新
+    updateCommunicationButtons();
+    
     addLog(`🗺️ 全体表示に切り替えました`, 'system');
 }
 
@@ -701,4 +778,205 @@ function updateCameraFollow() {
     
     // カメラの向きを人物に向ける
     camera.lookAt(pos.x, pos.y + 1, pos.z);
+}
+
+// エージェント情報パネルで指定されたエージェントまでスクロール
+function scrollToAgentInfo(targetAgent) {
+    const agentsList = document.getElementById('agents-list');
+    if (!agentsList) return;
+    
+    // エージェント情報パネル内のすべてのエージェントカードを取得
+    const agentCards = agentsList.querySelectorAll('.agent-card');
+    
+    // 該当エージェントのカードを探す
+    let targetCard = null;
+    agentCards.forEach(card => {
+        const nameElement = card.querySelector('.agent-name');
+        if (nameElement && nameElement.textContent.includes(targetAgent.name)) {
+            targetCard = card;
+        }
+    });
+    
+    if (targetCard) {
+        // 該当エージェントのカードまでスムーズにスクロール
+        targetCard.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+        
+        // 一時的にハイライト表示
+        targetCard.style.backgroundColor = '#4CAF50';
+        targetCard.style.color = 'white';
+        
+        // 3秒後にハイライトを解除
+        setTimeout(() => {
+            targetCard.style.backgroundColor = '';
+            targetCard.style.color = '';
+        }, 3000);
+    }
+}
+
+// コミュニケーション機能の関数
+function updateCommunicationButtons() {
+    const callAgentBtn = document.getElementById('callAgentBtn');
+    const messageAgentBtn = document.getElementById('messageAgentBtn');
+    
+    if (!callAgentBtn || !messageAgentBtn) return;
+    
+    // 人物視点モードでエージェントが選択されている場合のみ有効
+    const isAgentSelected = cameraMode === 'agent' && targetAgent;
+    
+    callAgentBtn.disabled = !isAgentSelected || isCallActive;
+    messageAgentBtn.disabled = !isAgentSelected;
+    
+    if (isAgentSelected) {
+        callAgentBtn.textContent = isCallActive ? '📞 通話中...' : '📞 電話をかける';
+        messageAgentBtn.textContent = '💬 メッセージを送る';
+    } else {
+        callAgentBtn.textContent = '📞 電話をかける';
+        messageAgentBtn.textContent = '💬 メッセージを送る';
+    }
+}
+
+function startCall() {
+    if (!targetAgent || isCallActive) return;
+    
+    isCallActive = true;
+    currentMessageAgent = targetAgent;
+    messageHistory = [];
+    
+    // 通話開始メッセージを追加
+    addMessageToHistory('user', `📞 ${targetAgent.name}に電話をかけました`);
+    addMessageToHistory('agent', `${targetAgent.name}: はい、もしもし。${targetAgent.name}です。`);
+    
+    updateCommunicationButtons();
+    addLog(`📞 ${targetAgent.name}に電話をかけました`, 'communication');
+    
+    // 自動でメッセージモーダルを開く
+    openMessageModal();
+}
+
+function openMessageModal() {
+    if (!targetAgent) return;
+    
+    const messageModal = document.getElementById('messageModal');
+    const messageModalTitle = document.getElementById('messageModalTitle');
+    
+    if (!messageModal || !messageModalTitle) return;
+    
+    currentMessageAgent = targetAgent;
+    messageModalTitle.textContent = `${targetAgent.name}とのメッセージ`;
+    
+    // メッセージ履歴を表示
+    updateMessageHistory();
+    
+    messageModal.style.display = 'block';
+}
+
+function closeMessageModalHandler() {
+    const messageModal = document.getElementById('messageModal');
+    if (messageModal) {
+        messageModal.style.display = 'none';
+    }
+    
+    // 通話を終了
+    if (isCallActive) {
+        endCall();
+    }
+}
+
+function endCall() {
+    if (!isCallActive) return;
+    
+    isCallActive = false;
+    currentMessageAgent = null;
+    messageHistory = [];
+    
+    updateCommunicationButtons();
+    addLog(`📞 通話を終了しました`, 'communication');
+}
+
+function addMessageToHistory(sender, message) {
+    messageHistory.push({
+        sender: sender,
+        message: message,
+        timestamp: new Date()
+    });
+}
+
+function updateMessageHistory() {
+    const messageHistoryDiv = document.getElementById('messageHistory');
+    if (!messageHistoryDiv) return;
+    
+    messageHistoryDiv.innerHTML = '';
+    
+    messageHistory.forEach(item => {
+        const messageItem = document.createElement('div');
+        messageItem.className = `message-item message-${item.sender}`;
+        messageItem.textContent = item.message;
+        messageHistoryDiv.appendChild(messageItem);
+    });
+    
+    // 最新のメッセージまでスクロール
+    messageHistoryDiv.scrollTop = messageHistoryDiv.scrollHeight;
+}
+
+async function sendMessage() {
+    const messageInput = document.getElementById('messageInput');
+    if (!messageInput || !currentMessageAgent) return;
+    
+    const message = messageInput.value.trim();
+    if (!message) return;
+    
+    // ユーザーのメッセージを履歴に追加
+    addMessageToHistory('user', message);
+    messageInput.value = '';
+    
+    // メッセージ履歴を更新
+    updateMessageHistory();
+    
+    addLog(`💬 ${currentMessageAgent.name}にメッセージを送信: ${message}`, 'communication');
+    
+    // エージェントの返答を生成
+    await generateAgentResponse(message);
+}
+
+async function generateAgentResponse(userMessage) {
+    if (!currentMessageAgent) return;
+    
+    try {
+        // エージェントの性格と状況を考慮したプロンプトを作成
+        const prompt = `
+あなたは${currentMessageAgent.name}（${currentMessageAgent.age}歳、${currentMessageAgent.personality}）です。
+現在の状況：
+- 場所: ${currentMessageAgent.currentLocation.name}
+- 気分: ${currentMessageAgent.mood}
+- 体力: ${Math.round(currentMessageAgent.energy * 100)}%
+- 現在の思考: ${currentMessageAgent.currentThought || '特にない'}
+
+ユーザーからのメッセージ: "${userMessage}"
+
+このメッセージに対して、${currentMessageAgent.name}らしい自然な返答を1-2文で返してください。
+性格や現在の状況を反映した返答にしてください。
+`;
+
+        const response = await callLLM({
+            prompt: prompt,
+            systemPrompt: `あなたは${currentMessageAgent.name}です。自然で親しみやすい返答を心がけてください。`,
+            maxTokens: 100,
+            temperature: 0.8
+        });
+        
+        // エージェントの返答を履歴に追加
+        addMessageToHistory('agent', `${currentMessageAgent.name}: ${response}`);
+        updateMessageHistory();
+        
+        addLog(`💬 ${currentMessageAgent.name}からの返答: ${response}`, 'communication');
+        
+    } catch (error) {
+        console.error('エージェント返答生成エラー:', error);
+        const fallbackResponse = `${currentMessageAgent.name}: すみません、今忙しくて返答できません。`;
+        addMessageToHistory('agent', fallbackResponse);
+        updateMessageHistory();
+    }
 }

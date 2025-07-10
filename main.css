@@ -471,5 +471,146 @@ button:disabled {
 
 .camera-target-display span {
     font-size: 12px;
+    color: #fff;
+    text-shadow: none;
+}
+
+/* コミュニケーション機能のスタイル */
+.communication-controls {
+    margin: 10px 0;
+    padding: 10px 0;
+    border-top: 1px solid #333;
+    border-bottom: 1px solid #333;
+}
+
+.communication-controls button {
+    width: 100%;
+    margin: 5px 0;
+    padding: 8px;
+    font-size: 12px;
+}
+
+/* モーダルスタイル */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.modal-content {
+    background-color: #1a1a1a;
+    margin: 5% auto;
+    padding: 0;
+    border: 1px solid #fff;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #2a2a2a;
+    border-bottom: 1px solid #333;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 16px;
+}
+
+.close {
+    color: #aaa;
+    font-size: 28px;
     font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close:hover {
+    color: #fff;
+}
+
+.modal-body {
+    padding: 15px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.message-history {
+    margin-bottom: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: #0a0a0a;
+}
+
+.message-item {
+    margin: 8px 0;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.message-user {
+    background-color: #4CAF50;
+    color: white;
+    margin-left: 20px;
+    text-align: right;
+}
+
+.message-agent {
+    background-color: #2196F3;
+    color: white;
+    margin-right: 20px;
+}
+
+.message-input-area {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.message-input-area textarea {
+    flex: 1;
+    padding: 8px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #fff;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+}
+
+.message-input-area button {
+    padding: 8px 16px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.message-input-area button:hover {
+    background: #45a049;
+}
+
+.message-input-area button:disabled {
+    background: #666;
+    cursor: not-allowed;
 }

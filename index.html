@@ -32,6 +32,10 @@
         <button onclick="setTimeSpeed()">時間速度: <span id="speed">1x</span></button>
         <button onclick="generateNewAgent()" id="generateAgentBtn">新しいエージェントを生成</button>
         <button onclick="generateMultipleAgents(5)" id="generateMultipleAgentsBtn">新しいエージェントを5人作成</button>
+        <div id="generationStatus" style="display: none; margin-top: 10px; padding: 10px; background-color: #f0f8ff; border: 1px solid #007acc; border-radius: 5px; text-align: center;">
+            <div id="generationMessage">エージェントを生成中...</div>
+            <div id="generationProgress" style="margin-top: 5px; font-size: 12px; color: #666;"></div>
+        </div>
         <div class="camera-controls">
             <div class="camera-status">
                 <span id="cameraModeDisplay">全体表示</span>
@@ -80,7 +84,10 @@
                 <div id="messageHistory" class="message-history"></div>
                 <div class="message-input-area">
                     <textarea id="messageInput" placeholder="メッセージを入力してください..." rows="3"></textarea>
-                    <button id="sendMessageBtn">送信</button>
+                    <div class="message-buttons">
+                        <button id="sendMessageBtn">送信</button>
+                        <button id="clearMessageBtn" onclick="clearCurrentMessageHistory()">履歴クリア</button>
+                    </div>
                 </div>
             </div>
         </div>

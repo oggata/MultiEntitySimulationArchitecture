@@ -448,6 +448,49 @@ function addEntrancePath(locationGroup, facilitySize, buildingColor) {
 
 // エージェントの自宅を作成する関数
 function createAgentHome(homeData) {
+    // 既存の自宅との重複チェック
+    const existingHomes = locations.filter(loc => loc.isHome);
+    const isDuplicate = existingHomes.some(home => {
+        const distance = Math.sqrt(
+            (home.position.x - homeData.x) ** 2 + 
+            (home.position.z - homeData.z) ** 2
+        );
+        return distance < 3; // 3マス以内にある場合は重複とみなす
+    });
+    
+    if (isDuplicate) {
+        console.warn(`自宅「${homeData.name}」が既存の自宅と重複しています。座標を調整します。`);
+        // 重複している場合、新しい座標を生成
+        let attempts = 0;
+        const maxAttempts = 50;
+        
+        while (attempts < maxAttempts) {
+            const newX = Math.floor(Math.random() * 41) - 20;
+            const newZ = Math.floor(Math.random() * 41) - 20;
+            
+            const isTooClose = existingHomes.some(home => {
+                const distance = Math.sqrt(
+                    (home.position.x - newX) ** 2 + 
+                    (home.position.z - newZ) ** 2
+                );
+                return distance < 3;
+            });
+            
+            if (!isTooClose) {
+                homeData.x = newX;
+                homeData.z = newZ;
+                console.log(`自宅「${homeData.name}」の座標を (${newX}, ${newZ}) に調整しました。`);
+                break;
+            }
+            
+            attempts++;
+        }
+        
+        if (attempts >= maxAttempts) {
+            console.error(`自宅「${homeData.name}」の重複回避に失敗しました。`);
+        }
+    }
+    
     const homeGroup = new THREE.Group();
     
     // 自宅のサイズ（小サイズ）

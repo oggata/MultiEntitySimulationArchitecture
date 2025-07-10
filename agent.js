@@ -1,3 +1,81 @@
+// グローバルな自宅管理システム
+const homeManager = {
+    homes: new Map(), // 自宅名 -> 自宅データ
+    
+    // ユニークな自宅を生成
+    generateUniqueHome(agentName) {
+        const lastName = agentName.split(' ')[0] || agentName;
+        const homeName = lastName + "の家";
+        
+        // 既存の自宅の座標を取得
+        const existingHomes = Array.from(this.homes.values()).map(home => ({
+            x: home.x,
+            z: home.z
+        }));
+        
+        let attempts = 0;
+        const maxAttempts = 100;
+        
+        while (attempts < maxAttempts) {
+            const x = Math.floor(Math.random() * 41) - 20;
+            const z = Math.floor(Math.random() * 41) - 20;
+            
+            // 既存の自宅との距離をチェック（最低3マス離れる）
+            const isTooClose = existingHomes.some(home => {
+                const distance = Math.sqrt((home.x - x) ** 2 + (home.z - z) ** 2);
+                return distance < 3;
+            });
+            
+            if (!isTooClose) {
+                const homeData = {
+                    name: homeName,
+                    x: x,
+                    z: z,
+                    color: "0x" + Math.floor(Math.random()*16777215).toString(16)
+                };
+                
+                // 自宅を登録
+                this.homes.set(homeName, homeData);
+                console.log(`新しい自宅「${homeName}」を座標 (${x}, ${z}) に作成しました。`);
+                
+                return homeData;
+            }
+            
+            attempts++;
+        }
+        
+        // 最大試行回数に達した場合、最も離れた位置を選択
+        console.warn('ユニークな自宅位置の生成に失敗しました。最も離れた位置を選択します。');
+        const x = Math.floor(Math.random() * 41) - 20;
+        const z = Math.floor(Math.random() * 41) - 20;
+        
+        const homeData = {
+            name: homeName,
+            x: x,
+            z: z,
+            color: "0x" + Math.floor(Math.random()*16777215).toString(16)
+        };
+        
+        this.homes.set(homeName, homeData);
+        return homeData;
+    },
+    
+    // 自宅の存在確認
+    hasHome(homeName) {
+        return this.homes.has(homeName);
+    },
+    
+    // 自宅データを取得
+    getHome(homeName) {
+        return this.homes.get(homeName);
+    },
+    
+    // 全自宅データを取得
+    getAllHomes() {
+        return Array.from(this.homes.values());
+    }
+};
+
 // エージェントクラス（拡張版）
 class Agent {
     constructor(data, index) {
@@ -13,10 +91,22 @@ class Agent {
             // 自宅が見つからない場合は自宅を作成
             this.currentLocation = {
                 name: this.home.name,
-                position: { x: this.home.x, y: 0, z: this.home.z },
-                type: 'home'
+                position: new THREE.Vector3(this.home.x, 0, this.home.z),
+                activities: ["休憩する", "眠る", "読書する"],
+                atmosphere: "静かで落ち着いた雰囲気の家",
+                isHome: true,
+                owner: this.name
             };
             locations.push(this.currentLocation);
+        }
+        
+        // 確実に自宅の位置に初期化
+        if (this.characterInstance) {
+            this.characterInstance.setPosition(
+                this.home.x,
+                0,
+                this.home.z
+            );
         }
         this.targetLocation = this.currentLocation;
         
@@ -1042,6 +1132,19 @@ async function generateNewAgent() {
         alert('APIキーを入力してください');
         return;
     }
+
+    // 生成中のメッセージを表示
+    const generationStatus = document.getElementById('generationStatus');
+    const generationMessage = document.getElementById('generationMessage');
+    const generationProgress = document.getElementById('generationProgress');
+    const generateAgentBtn = document.getElementById('generateAgentBtn');
+    const generateMultipleAgentsBtn = document.getElementById('generateMultipleAgentsBtn');
+    
+    generationStatus.style.display = 'block';
+    generationMessage.textContent = 'エージェントを生成中...';
+    generationProgress.textContent = 'LLMにリクエスト中...';
+    generateAgentBtn.disabled = true;
+    generateMultipleAgentsBtn.disabled = true;
     // APIプロバイダーによってバリデーションを分岐
     const provider = window.getSelectedApiProvider ? window.getSelectedApiProvider() : 'openai';
     if (provider === 'openai' && !(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
@@ -1125,94 +1228,179 @@ async function generateNewAgent() {
         "color": "0x" + Math.floor(Math.random()*16777215).toString(16)
     }
 }`;
+        generationProgress.textContent = 'LLMにリクエスト中...';
         const content = await callLLM({
             prompt,
-            systemPrompt: "あなたは自律的なエージェントの性格生成システムです。必ず有効なJSON形式のみを出力し、余分な説明やテキストは含めないでください。",
+            systemPrompt: "あなたは自律的なエージェントの性格生成システムです。必ず有効なJSON形式のみを出力し、余分な説明やテキストは含めないでください。JSONの構文エラーを避けるため、以下の点に注意してください：1) すべての文字列はダブルクォートで囲む、2) 数値はクォートで囲まない、3) 配列の最後の要素の後にカンマを付けない、4) オブジェクトの最後のプロパティの後にカンマを付けない、5) 色コードは必ず'0x'で始まる6桁の16進数にする。",
             maxTokens: 1000,
             temperature: 0.7,
             responseFormat: provider === 'openai' ? { type: "json_object" } : null
         });
-        // レスポンスからJSONを抽出
+        generationProgress.textContent = 'JSONを解析中...';
+        // レスポンスからJSONを抽出（より確実な方法）
         let jsonStr = content;
-        const jsonStart = content.indexOf('{');
-        const jsonEnd = content.lastIndexOf('}') + 1;
-        if (jsonStart !== -1 && jsonEnd !== -1) {
-            jsonStr = content.substring(jsonStart, jsonEnd);
+        
+        console.log('元のレスポンス:', content);
+        
+        // 複数の抽出方法を試行
+        let extractionMethods = [
+            // 方法1: マークダウンブロックを除去してから抽出
+            () => {
+                let str = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+                str = str.replace(/```\s*/g, '').replace(/```\s*$/g, '');
+                const jsonStart = str.indexOf('{');
+                const jsonEnd = str.lastIndexOf('}') + 1;
+                if (jsonStart !== -1 && jsonEnd > jsonStart) {
+                    return str.substring(jsonStart, jsonEnd);
+                }
+                return null;
+            },
+            // 方法2: 直接JSONの開始と終了を探す
+            () => {
+                const jsonStart = content.indexOf('{');
+                const jsonEnd = content.lastIndexOf('}') + 1;
+                if (jsonStart !== -1 && jsonEnd > jsonStart) {
+                    return content.substring(jsonStart, jsonEnd);
+                }
+                return null;
+            },
+            // 方法3: 正規表現でJSONオブジェクトを抽出
+            () => {
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                return jsonMatch ? jsonMatch[0] : null;
+            },
+            // 方法4: 複数のJSONオブジェクトがある場合、最も長いものを選択
+            () => {
+                const jsonMatches = content.match(/\{[\s\S]*?\}/g);
+                if (jsonMatches && jsonMatches.length > 0) {
+                    return jsonMatches.reduce((longest, current) => 
+                        current.length > longest.length ? current : longest
+                    );
+                }
+                return null;
+            }
+        ];
+        
+        // 各抽出方法を試行
+        for (let i = 0; i < extractionMethods.length; i++) {
+            const extracted = extractionMethods[i]();
+            if (extracted) {
+                try {
+                    // 簡単な検証
+                    JSON.parse(extracted);
+                    jsonStr = extracted;
+                    console.log(`JSON抽出成功（方法${i + 1}）:`, jsonStr);
+                    break;
+                } catch (e) {
+                    console.log(`JSON抽出方法${i + 1}でパース失敗:`, e.message);
+                    if (i === extractionMethods.length - 1) {
+                        // 最後の方法でも失敗した場合、最初の抽出結果を使用
+                        jsonStr = extracted;
+                        console.log('最後の抽出結果を使用:', jsonStr);
+                    }
+                }
+            }
         }
         
-        // JSONの前処理
-        console.log('元のレスポンス:', content);
         console.log('抽出されたJSON文字列:', jsonStr);
         
-        // 不完全なJSONを修正
+        // 基本的なJSON修正
+        jsonStr = jsonStr.trim();
+        
+        // 末尾のカンマを除去
+        jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+        
+        // 不完全な色の値を修正
+        jsonStr = jsonStr.replace(/"color":\s*"0x"\s*([,}])/g, '"color": "0x' + Math.floor(Math.random()*16777215).toString(16) + '"$1');
+        
+        // 末尾の修正
         if (!jsonStr.endsWith('}')) {
             jsonStr += '}';
         }
         
-        // バッククォートやマークダウン記法を除去
-        jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
-        
-        // 末尾のカンマを除去
-        jsonStr = jsonStr.replace(/,(\s*})/g, '$1');
-        
-        // 不完全な色の値を修正
-        jsonStr = jsonStr.replace(/"color":\s*"0x"\s*}/g, '"color": "0x' + Math.floor(Math.random()*16777215).toString(16) + '"}');
-        jsonStr = jsonStr.replace(/"color":\s*"0x"\s*,/g, '"color": "0x' + Math.floor(Math.random()*16777215).toString(16) + '",');
-        
-        // 不完全な数値を修正
-        jsonStr = jsonStr.replace(/"x":\s*(\d+)\s*,/g, '"x": $1,');
-        jsonStr = jsonStr.replace(/"z":\s*(-\d+)\s*,/g, '"z": $1,');
-        jsonStr = jsonStr.replace(/"z":\s*(\d+)\s*,/g, '"z": $1,');
-        
-        // JSONの構造を修正
-        jsonStr = jsonStr.replace(/"color":\s*"([^"]+)"\s*}/g, '"color": "$1"}');
-        jsonStr = jsonStr.replace(/"color":\s*"([^"]+)"\s*,/g, '"color": "$1",');
-        
-        // 末尾の余分な文字を除去
-        jsonStr = jsonStr.replace(/\s*}\s*$/g, '}');
-        jsonStr = jsonStr.replace(/\s*}\s*}\s*$/g, '}}');
-        
-        // 不完全なJSONの修正
-        jsonStr = jsonStr.replace(/"color":\s*"([^"]+)"\s*}\s*$/g, '"color": "$1"}');
-        jsonStr = jsonStr.replace(/"color":\s*"([^"]+)"\s*}\s*}\s*$/g, '"color": "$1"}}');
-        
-        // 複数の閉じ括弧の正規化
+        // 複数の閉じ括弧を正規化
         jsonStr = jsonStr.replace(/\s*}\s*}\s*}\s*$/g, '}}}');
         jsonStr = jsonStr.replace(/\s*}\s*}\s*$/g, '}}');
         jsonStr = jsonStr.replace(/\s*}\s*$/g, '}');
         
-        // 末尾の余分な文字を完全に除去
-        jsonStr = jsonStr.replace(/\s*$/g, '');
-        jsonStr = jsonStr.replace(/\s*}\s*$/g, '}');
+        // 最終的なJSON検証と修正
+        let finalJson = jsonStr;
+        let parseSuccess = false;
         
-        // 不完全なJSONの最後の修正
-        if (jsonStr.endsWith('"')) {
-            jsonStr += '}';
-        }
-        if (!jsonStr.endsWith('}')) {
-            jsonStr += '}';
-        }
-        
-        // JSONの構造を完全に検証・修正
-        try {
-            // まず基本的な修正を試行
-            let testJson = jsonStr;
-            
-            // 色の値の修正
-            testJson = testJson.replace(/"color":\s*"([^"]+)"\s*}/g, '"color": "$1"}');
-            
-            // 末尾の修正
-            testJson = testJson.replace(/\s*$/g, '');
-            if (!testJson.endsWith('}')) {
-                testJson += '}';
+        // 最大5回まで修正を試行
+        for (let attempt = 1; attempt <= 5; attempt++) {
+            try {
+                JSON.parse(finalJson);
+                parseSuccess = true;
+                jsonStr = finalJson;
+                console.log(`JSON修正成功（試行${attempt}回目）`);
+                break;
+            } catch (parseError) {
+                console.log(`JSON修正試行${attempt}回目で失敗:`, parseError.message);
+                
+                if (attempt === 1) {
+                    // 1回目の修正：基本的な修正
+                    finalJson = jsonStr.replace(/"color":\s*"([^"]+)"\s*([,}])/g, '"color": "$1"$2');
+                    finalJson = finalJson.replace(/\s*$/g, '');
+                    if (!finalJson.endsWith('}')) finalJson += '}';
+                } else if (attempt === 2) {
+                    // 2回目の修正：末尾カンマの除去
+                    finalJson = jsonStr.replace(/"color":\s*"([^"]+)"\s*([,}])/g, '"color": "$1"$2');
+                    finalJson = finalJson.replace(/,(\s*[}\]])/g, '$1');
+                    finalJson = finalJson.replace(/\s*$/g, '');
+                    if (!finalJson.endsWith('}')) finalJson += '}';
+                } else if (attempt === 3) {
+                    // 3回目の修正：不完全な色コードの修正
+                    finalJson = jsonStr.replace(/"color":\s*"([^"]+)"\s*([,}])/g, '"color": "$1"$2');
+                    finalJson = finalJson.replace(/,(\s*[}\]])/g, '$1');
+                    finalJson = finalJson.replace(/"color":\s*"([^"]{1,5})"/g, '"color": "0x$1"');
+                    finalJson = finalJson.replace(/"color":\s*"([^"]{6})"/g, '"color": "0x$1"');
+                    finalJson = finalJson.replace(/\s*$/g, '');
+                    if (!finalJson.endsWith('}')) finalJson += '}';
+                } else if (attempt === 4) {
+                    // 4回目の修正：複数の閉じ括弧の正規化
+                    finalJson = jsonStr.replace(/"color":\s*"([^"]+)"\s*([,}])/g, '"color": "$1"$2');
+                    finalJson = finalJson.replace(/,(\s*[}\]])/g, '$1');
+                    finalJson = finalJson.replace(/"color":\s*"([^"]{1,5})"/g, '"color": "0x$1"');
+                    finalJson = finalJson.replace(/"color":\s*"([^"]{6})"/g, '"color": "0x$1"');
+                    finalJson = finalJson.replace(/\s*}\s*$/g, '}');
+                    finalJson = finalJson.replace(/\s*}\s*}\s*$/g, '}}');
+                    finalJson = finalJson.replace(/\s*}\s*}\s*}\s*$/g, '}}}');
+                    if (!finalJson.endsWith('}')) finalJson += '}';
+                } else {
+                    // 5回目の修正：最後の手段 - より積極的な修正
+                    finalJson = jsonStr.replace(/"color":\s*"([^"]+)"\s*([,}])/g, '"color": "$1"$2');
+                    finalJson = finalJson.replace(/,(\s*[}\]])/g, '$1');
+                    finalJson = finalJson.replace(/"color":\s*"([^"]{1,5})"/g, '"color": "0x$1"');
+                    finalJson = finalJson.replace(/"color":\s*"([^"]{6})"/g, '"color": "0x$1"');
+                    finalJson = finalJson.replace(/\s*}\s*$/g, '}');
+                    finalJson = finalJson.replace(/\s*}\s*}\s*$/g, '}}');
+                    finalJson = finalJson.replace(/\s*}\s*}\s*}\s*$/g, '}}}');
+                    // 不完全な文字列の修正
+                    finalJson = finalJson.replace(/"([^"]*?)\s*$/g, '"$1"');
+                    // 不完全な数値の修正
+                    finalJson = finalJson.replace(/:\s*(\d+\.?\d*)\s*([,}])/g, ': $1$2');
+                    // 不完全な配列の修正
+                    finalJson = finalJson.replace(/\[\s*([^\]]*?)\s*$/g, '[$1]');
+                    // 不完全なオブジェクトの修正
+                    finalJson = finalJson.replace(/\{\s*([^}]*?)\s*$/g, '{$1}');
+                    // エスケープされていない文字の修正
+                    finalJson = finalJson.replace(/\\/g, '\\\\');
+                    finalJson = finalJson.replace(/"/g, '\\"');
+                    finalJson = finalJson.replace(/\\"/g, '"');
+                    if (!finalJson.endsWith('}')) finalJson += '}';
+                }
             }
-            
-            // テストパース
-            JSON.parse(testJson);
-            jsonStr = testJson;
-        } catch (testError) {
-            console.log('基本的な修正で失敗、詳細な修正を試行');
         }
+        
+        if (!parseSuccess) {
+            console.error('修正前のJSON:', jsonStr);
+            console.error('修正後のJSON:', finalJson);
+            console.error('元のLLMレスポンス:', content);
+            throw new Error('JSONの修正に失敗しました。LLMの応答形式に問題があります。詳細はコンソールを確認してください。');
+        }
+        
+        generationProgress.textContent = 'エージェントを作成中...';
         
         let agentData;
         try {
@@ -1221,85 +1409,67 @@ async function generateNewAgent() {
         } catch (parseError) {
             console.error('JSONパースエラー:', parseError);
             console.error('パースしようとしたJSON:', jsonStr);
-            
-            // より詳細なエラー情報を提供
-            try {
-                // 部分的な修正を試行
-                let fixedJson = jsonStr;
-                
-                // 一般的なJSONエラーの修正
-                fixedJson = fixedJson.replace(/,\s*}/g, '}'); // 末尾のカンマを除去
-                fixedJson = fixedJson.replace(/,\s*]/g, ']'); // 配列の末尾カンマを除去
-                fixedJson = fixedJson.replace(/\\"/g, '"'); // エスケープされた引用符を修正
-                
-                // 不完全な色の値を修正
-                fixedJson = fixedJson.replace(/"color":\s*"0x"\s*}/g, '"color": "0x' + Math.floor(Math.random()*16777215).toString(16) + '"}');
-                fixedJson = fixedJson.replace(/"color":\s*"0x"\s*,/g, '"color": "0x' + Math.floor(Math.random()*16777215).toString(16) + '",');
-                
-                // 不完全な数値を修正
-                fixedJson = fixedJson.replace(/"x":\s*(\d+)\s*,/g, '"x": $1,');
-                fixedJson = fixedJson.replace(/"z":\s*(-\d+)\s*,/g, '"z": $1,');
-                fixedJson = fixedJson.replace(/"z":\s*(\d+)\s*,/g, '"z": $1,');
-                
-                // JSONの構造を修正
-                fixedJson = fixedJson.replace(/"color":\s*"([^"]+)"\s*}/g, '"color": "$1"}');
-                fixedJson = fixedJson.replace(/"color":\s*"([^"]+)"\s*,/g, '"color": "$1",');
-                
-                // 末尾の余分な文字を除去
-                fixedJson = fixedJson.replace(/\s*}\s*$/g, '}');
-                fixedJson = fixedJson.replace(/\s*}\s*}\s*$/g, '}}');
-                
-                // 不完全なJSONの修正
-                fixedJson = fixedJson.replace(/"color":\s*"([^"]+)"\s*}\s*$/g, '"color": "$1"}');
-                fixedJson = fixedJson.replace(/"color":\s*"([^"]+)"\s*}\s*}\s*$/g, '"color": "$1"}}');
-                
-                // 複数の閉じ括弧の正規化
-                fixedJson = fixedJson.replace(/\s*}\s*}\s*}\s*$/g, '}}}');
-                fixedJson = fixedJson.replace(/\s*}\s*}\s*$/g, '}}');
-                fixedJson = fixedJson.replace(/\s*}\s*$/g, '}');
-                
-                // 末尾の余分な文字を完全に除去
-                fixedJson = fixedJson.replace(/\s*$/g, '');
-                fixedJson = fixedJson.replace(/\s*}\s*$/g, '}');
-                
-                // 不完全なJSONの最後の修正
-                if (fixedJson.endsWith('"')) {
-                    fixedJson += '}';
-                }
-                if (!fixedJson.endsWith('}')) {
-                    fixedJson += '}';
-                }
-                
-                agentData = JSON.parse(fixedJson);
-                console.log('修正後のエージェントデータ:', agentData);
-            } catch (secondError) {
-                console.error('修正後もJSONパースエラー:', secondError);
-                throw new Error('生成されたデータの形式が不正です。JSONの構文エラーがあります。');
-            }
+            throw new Error('JSONの修正に失敗しました。LLMの応答形式に問題があります。');
         }
         
-        // home情報の追加
+        // home情報の追加（ユニークな自宅を生成）
         if (!agentData.home) {
-            const agentName = agentData.name || 'エージェント';
-            const lastName = agentName.split(' ')[0] || agentName;
-            agentData.home = {
-                name: lastName + "の家",
-                x: Math.floor(Math.random() * 41) - 20,
-                z: Math.floor(Math.random() * 41) - 20,
-                color: "0x" + Math.floor(Math.random()*16777215).toString(16)
-            };
+            agentData.home = homeManager.generateUniqueHome(agentData.name || 'エージェント');
+        } else {
+            // 既存のhome情報がある場合も、座標が重複していないかチェック
+            const existingHomes = homeManager.getAllHomes();
+            
+            const isTooClose = existingHomes.some(home => {
+                const distance = Math.sqrt((home.x - agentData.home.x) ** 2 + (home.z - agentData.home.z) ** 2);
+                return distance < 3;
+            });
+            
+            if (isTooClose) {
+                console.warn('既存のhome座標が重複しています。新しい座標を生成します。');
+                agentData.home = homeManager.generateUniqueHome(agentData.name || 'エージェント');
+            } else {
+                // 重複していない場合は自宅管理システムに登録
+                homeManager.homes.set(agentData.home.name, agentData.home);
+            }
         }
         if (!validateAgentData(agentData)) {
             throw new Error('生成されたデータが要件を満たしていません');
         }
+        // 先に自宅を作成
+        createAgentHome(agentData.home);
+        
+        // エージェントを作成（自宅が確実に存在する状態で）
         const agent = new Agent(agentData, agents.length);
         agents.push(agent);
         agent.initializeRelationships();
-        createAgentHome(agentData.home);
         updateAgentInfo();
         addLog(`👤 新しいエージェント「${agentData.name}」が生成されました`, 'info', `\n            <div class="log-detail-section">\n                <h4>エージェントの詳細</h4>\n                <p>名前: ${agentData.name}</p>\n                <p>年齢: ${agentData.age}歳</p>\n                <p>性格: ${agentData.personality.description}</p>\n                <p>性格特性:</p>\n                <ul>\n                    <li>社交性: ${(agentData.personality.traits.sociability * 100).toFixed(0)}%</li>\n                    <li>活動的さ: ${(agentData.personality.traits.energy * 100).toFixed(0)}%</li>\n                    <li>ルーチン重視: ${(agentData.personality.traits.routine * 100).toFixed(0)}%</li>\n                    <li>好奇心: ${(agentData.personality.traits.curiosity * 100).toFixed(0)}%</li>\n                    <li>共感性: ${(agentData.personality.traits.empathy * 100).toFixed(0)}%</li>\n                </ul>\n            </div>\n        `);
+        
+        // 生成完了メッセージを表示
+        generationMessage.textContent = `✅ エージェント「${agentData.name}」の生成が完了しました！`;
+        generationProgress.textContent = '';
+        
+        // 3秒後にメッセージを非表示
+        setTimeout(() => {
+            generationStatus.style.display = 'none';
+            generateAgentBtn.disabled = false;
+            generateMultipleAgentsBtn.disabled = false;
+        }, 3000);
+        
     } catch (error) {
         console.error('エージェント生成エラー:', error);
+        
+        // エラーメッセージを表示
+        generationMessage.textContent = '❌ エージェントの生成に失敗しました';
+        generationProgress.textContent = error.message;
+        
+        // 5秒後にメッセージを非表示
+        setTimeout(() => {
+            generationStatus.style.display = 'none';
+            generateAgentBtn.disabled = false;
+            generateMultipleAgentsBtn.disabled = false;
+        }, 5000);
+        
         alert('エージェントの生成に失敗しました: ' + error.message);
     }
 }
@@ -1312,19 +1482,26 @@ async function generateMultipleAgents(count) {
         return;
     }
 
+    // 生成中のメッセージを表示
+    const generationStatus = document.getElementById('generationStatus');
+    const generationMessage = document.getElementById('generationMessage');
+    const generationProgress = document.getElementById('generationProgress');
     const generateAgentBtn = document.getElementById('generateAgentBtn');
     const generateMultipleAgentsBtn = document.getElementById('generateMultipleAgentsBtn');
     
-    // ボタンを無効化
+    generationStatus.style.display = 'block';
+    generationMessage.textContent = `${count}人のエージェントを生成中...`;
+    generationProgress.textContent = `進捗: 0/${count}`;
     generateAgentBtn.disabled = true;
     generateMultipleAgentsBtn.disabled = true;
-    generateMultipleAgentsBtn.textContent = `生成中... (0/${count})`;
 
     try {
         for (let i = 0; i < count; i++) {
             try {
+                // 進捗を更新
+                generationProgress.textContent = `進捗: ${i + 1}/${count}`;
+                
                 await generateNewAgent();
-                generateMultipleAgentsBtn.textContent = `生成中... (${i + 1}/${count})`;
                 
                 // 少し待機してから次のエージェントを生成
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -1341,14 +1518,33 @@ async function generateMultipleAgents(count) {
                 <p>現在のエージェント総数: ${agents.length}人</p>
             </div>
         `);
+        
+        // 生成完了メッセージを表示
+        generationMessage.textContent = `✅ ${count}人のエージェントの生成が完了しました！`;
+        generationProgress.textContent = `現在のエージェント総数: ${agents.length}人`;
+        
+        // 3秒後にメッセージを非表示
+        setTimeout(() => {
+            generationStatus.style.display = 'none';
+            generateAgentBtn.disabled = false;
+            generateMultipleAgentsBtn.disabled = false;
+        }, 3000);
+        
     } catch (error) {
         console.error('一括エージェント生成エラー:', error);
+        
+        // エラーメッセージを表示
+        generationMessage.textContent = '❌ エージェントの一括生成に失敗しました';
+        generationProgress.textContent = error.message;
+        
+        // 5秒後にメッセージを非表示
+        setTimeout(() => {
+            generationStatus.style.display = 'none';
+            generateAgentBtn.disabled = false;
+            generateMultipleAgentsBtn.disabled = false;
+        }, 5000);
+        
         alert('エージェントの一括生成に失敗しました: ' + error.message);
-    } finally {
-        // ボタンを再有効化
-        generateAgentBtn.disabled = false;
-        generateMultipleAgentsBtn.disabled = false;
-        generateMultipleAgentsBtn.textContent = '新しいエージェントを5人作成';
     }
 }
 
@@ -1378,11 +1574,35 @@ function validateAgentData(data) {
         'name', 'x', 'z', 'color'
     ];
     
-    const validLocations = [
-        'カフェ', '公園', '図書館', 'スポーツジム', '町の広場', '自宅', '会社', 'オフィス', '学校', '大学', '病院', 'クリニック', 'スーパーマーケット', 'コンビニ', 'レストラン', '居酒屋', '美容院', '理容室', '銀行', '郵便局', '駅', 'バス停', '映画館', 'ゲームセンター', 'カラオケ', '温泉', '銭湯', '神社', '寺院', '教会', 'モール', 'ショッピングセンター', 'デパート', '書店', '花屋', 'パン屋', '肉屋', '魚屋', '八百屋', '薬局', 'ドラッグストア', 'ホームセンター', 'ガソリンスタンド', '洗車場', '駐車場', '駐輪場', 'ゴルフ場', 'テニスコート', 'プール', 'ジム', 'ヨガスタジオ', 'ダンススタジオ', '音楽教室', '英会話教室', '塾', '保育園', '幼稚園', '老人ホーム', 'デイサービス', '介護施設', 'リハビリセンター', '歯科医院', '眼科', '耳鼻科', '皮膚科', '内科', '外科', '小児科', '産婦人科', '精神科', '心療内科', '整形外科', '形成外科', '美容外科', '皮膚科', '泌尿器科', '循環器科', '呼吸器科', '消化器科', '神経内科', '脳外科', '心臓血管外科', '胸部外科', '乳腺外科', '甲状腺外科', '内分泌外科', '肝臓外科', '膵臓外科', '大腸外科', '肛門外科', '血管外科', '移植外科', '小児外科', '新生児外科', '胎児外科', '小児泌尿器科', '小児整形外科', '小児形成外科', '小児皮膚科', '小児眼科', '小児耳鼻科', '小児歯科', '小児精神科', '小児心療内科', '小児神経科', '小児循環器科', '小児呼吸器科', '小児消化器科', '小児内分泌科', '小児血液科', '小児腫瘍科', '小児感染症科', '小児アレルギー科', '小児免疫科', '小児腎臓科', '小児肝臓科', '小児膵臓科', '小児大腸科', '小児肛門科', '小児血管科', '小児移植科', '小児新生児科', '小児胎児科', '小児泌尿器科', '小児整形外科', '小児形成外科', '小児皮膚科', '小児眼科', '小児耳鼻科', '小児歯科', '小児精神科', '小児心療内科', '小児神経科', '小児循環器科', '小児呼吸器科', '小児消化器科', '小児内分泌科', '小児血液科', '小児腫瘍科', '小児感染症科', '小児アレルギー科', '小児免疫科', '小児腎臓科', '小児肝臓科', '小児膵臓科', '小児大腸科', '小児肛門科', '小児血管科', '小児移植科', '小児新生児科', '小児胎児科',
+    // 基本的な場所リスト（必須）
+    const basicLocations = [
+        'カフェ', '公園', '図書館', 'スポーツジム', '町の広場', '自宅', '会社', 'オフィス', '学校', '大学', '病院', 'クリニック', 'スーパーマーケット', 'コンビニ', 'レストラン', '居酒屋', '美容院', '理容室', '銀行', '郵便局', '駅', 'バス停', '映画館', 'ゲームセンター', 'カラオケ', '温泉', '銭湯', '神社', '寺院', '教会', 'モール', 'ショッピングセンター', 'デパート', '書店', '花屋', 'パン屋', '肉屋', '魚屋', '八百屋', '薬局', 'ドラッグストア', 'ホームセンター', 'ガソリンスタンド', '洗車場', '駐車場', '駐輪場', 'ゴルフ場', 'テニスコート', 'プール', 'ジム', 'ヨガスタジオ', 'ダンススタジオ', '音楽教室', '英会話教室', '塾', '保育園', '幼稚園', '老人ホーム', 'デイサービス', '介護施設', 'リハビリセンター', '歯科医院', '眼科', '耳鼻科', '皮膚科', '内科', '外科', '小児科', '産婦人科', '精神科', '心療内科', '整形外科', '形成外科', '美容外科', '皮膚科', '泌尿器科', '循環器科', '呼吸器科', '消化器科', '神経内科', '脳外科', '心臓血管外科', '胸部外科', '乳腺外科', '甲状腺外科', '内分泌外科', '肝臓外科', '膵臓外科', '大腸外科', '肛門外科', '血管外科', '移植外科', '小児外科', '新生児外科', '胎児外科', '小児泌尿器科', '小児整形外科', '小児形成外科', '小児皮膚科', '小児眼科', '小児耳鼻科', '小児歯科', '小児精神科', '小児心療内科', '小児神経科', '小児循環器科', '小児呼吸器科', '小児消化器科', '小児内分泌科', '小児血液科', '小児腫瘍科', '小児感染症科', '小児アレルギー科', '小児免疫科', '小児腎臓科', '小児肝臓科', '小児膵臓科', '小児大腸科', '小児肛門科', '小児血管科', '小児移植科', '小児新生児科', '小児胎児科',
         // 活動名も場所として許可
         'ジョギング', 'ランニング', 'ウォーキング', '散歩', '料理教室', '料理', '読書', '勉強', '仕事場', '職場', 'オフィス', '会議室', '打ち合わせ', 'ミーティング', 'プレゼンテーション', '研修', 'トレーニング', '練習', '稽古', 'レッスン', '授業', '講義', 'セミナー', 'ワークショップ', 'イベント', 'パーティー', '宴会', '飲み会', '食事会', 'ランチ', 'ディナー', '朝食', '昼食', '夕食', 'お茶', 'コーヒー', 'ティータイム', '休憩', 'リラックス', '瞑想', 'ヨガ', 'ストレッチ', '筋トレ', 'エクササイズ', 'スポーツ', 'テニス', 'ゴルフ', '野球', 'サッカー', 'バスケットボール', 'バレーボール', '卓球', 'バドミントン', 'スイミング', '水泳', 'マラソン', 'トライアスロン', 'サイクリング', '登山', 'ハイキング', 'キャンプ', '釣り', '狩猟', 'ガーデニング', '園芸', '家庭菜園', 'DIY', '手芸', '編み物', '刺繍', '陶芸', '絵画', '写真', 'カメラ', '映画鑑賞', 'テレビ', 'ラジオ', '音楽', '楽器', 'ピアノ', 'ギター', 'バイオリン', 'ドラム', '歌', 'カラオケ', 'ダンス', 'バレエ', 'ジャズダンス', 'ヒップホップ', '社交ダンス', 'ボールルームダンス', 'ラテンダンス', 'ベリーダンス', 'フラメンコ', 'タップダンス', 'コンテンポラリーダンス', 'モダンダンス', 'クラシックバレエ', 'ネオクラシックバレエ', 'ロマンティックバレエ', 'バロックダンス', 'ルネサンスダンス', '中世ダンス', '古代ダンス', '民族舞踊', 'アフリカンダンス', 'アジアンダンス', 'ヨーロッパンダンス', 'アメリカンダンス', '南米ダンス', 'オセアニアダンス', '北極圏ダンス', '砂漠ダンス', '山岳ダンス', '海洋ダンス', '森林ダンス', '草原ダンス', '都市ダンス', '農村ダンス', '漁村ダンス', '鉱山ダンス', '工場ダンス', 'オフィスダンス', '学校ダンス', '病院ダンス', '教会ダンス', '寺院ダンス', '神社ダンス', 'モスクダンス', 'シナゴーグダンス', '教会ダンス', '寺院ダンス', '神社ダンス', 'モスクダンス', 'シナゴーグダンス', '教会ダンス', '寺院ダンス', '神社ダンス', 'モスクダンス', 'シナゴーグダンス'
     ];
+    
+    // 場所の妥当性をチェックする関数（柔軟なバリデーション）
+    function isValidLocation(location) {
+        // 基本的な場所リストに含まれている場合はOK
+        if (basicLocations.includes(location)) {
+            return true;
+        }
+        
+        // 既知の場所パターンにマッチする場合はOK
+        const knownPatterns = [
+            /.*カフェ.*/, /.*レストラン.*/, /.*店.*/, /.*屋.*/, /.*センター.*/, /.*ジム.*/, /.*教室.*/, /.*学校.*/, /.*大学.*/, /.*病院.*/, /.*クリニック.*/, /.*オフィス.*/, /.*会社.*/, /.*公園.*/, /.*図書館.*/, /.*駅.*/, /.*バス.*/, /.*映画館.*/, /.*ゲーム.*/, /.*カラオケ.*/, /.*温泉.*/, /.*神社.*/, /.*寺院.*/, /.*教会.*/, /.*モール.*/, /.*デパート.*/, /.*スーパー.*/, /.*コンビニ.*/, /.*銀行.*/, /.*郵便局.*/, /.*美容院.*/, /.*理容室.*/, /.*薬局.*/, /.*書店.*/, /.*花屋.*/, /.*パン屋.*/, /.*肉屋.*/, /.*魚屋.*/, /.*八百屋.*/, /.*喫茶店.*/, /.*ラーメン屋.*/, /.*寿司屋.*/, /.*居酒屋.*/, /.*銭湯.*/, /.*ボーリング場.*/, /.*プール.*/, /.*テニス.*/, /.*ゴルフ.*/, /.*野球.*/, /.*サッカー.*/, /.*バスケット.*/, /.*バレーボール.*/, /.*卓球.*/, /.*バドミントン.*/, /.*スイミング.*/, /.*水泳.*/, /.*マラソン.*/, /.*サイクリング.*/, /.*登山.*/, /.*ハイキング.*/, /.*キャンプ.*/, /.*釣り.*/, /.*ガーデニング.*/, /.*園芸.*/, /.*DIY.*/, /.*手芸.*/, /.*編み物.*/, /.*刺繍.*/, /.*陶芸.*/, /.*絵画.*/, /.*写真.*/, /.*カメラ.*/, /.*音楽.*/, /.*楽器.*/, /.*ピアノ.*/, /.*ギター.*/, /.*バイオリン.*/, /.*ドラム.*/, /.*歌.*/, /.*ダンス.*/, /.*バレエ.*/, /.*ヨガ.*/, /.*ストレッチ.*/, /.*筋トレ.*/, /.*エクササイズ.*/, /.*スポーツ.*/, /.*トレーニング.*/, /.*練習.*/, /.*稽古.*/, /.*レッスン.*/, /.*授業.*/, /.*講義.*/, /.*セミナー.*/, /.*ワークショップ.*/, /.*イベント.*/, /.*パーティー.*/, /.*宴会.*/, /.*飲み会.*/, /.*食事会.*/, /.*ランチ.*/, /.*ディナー.*/, /.*朝食.*/, /.*昼食.*/, /.*夕食.*/, /.*お茶.*/, /.*コーヒー.*/, /.*ティータイム.*/, /.*休憩.*/, /.*リラックス.*/, /.*瞑想.*/, /.*読書.*/, /.*勉強.*/, /.*仕事場.*/, /.*職場.*/, /.*会議室.*/, /.*打ち合わせ.*/, /.*ミーティング.*/, /.*プレゼンテーション.*/, /.*研修.*/, /.*料理.*/, /.*料理教室.*/, /.*ジョギング.*/, /.*ランニング.*/, /.*ウォーキング.*/, /.*散歩.*/
+        ];
+        
+        for (const pattern of knownPatterns) {
+            if (pattern.test(location)) {
+                return true;
+            }
+        }
+        
+        // その他の場所も許可（柔軟性を重視）
+        console.log(`新しい場所「${location}」を自動的に許可しました`);
+        return true;
+    }
 
     // 必須フィールドのチェック
     for (const field of requiredFields) {
@@ -1443,9 +1663,9 @@ function validateAgentData(data) {
                 return false;
             }
             
-            // 場所の妥当性チェック
+            // 場所の妥当性チェック（柔軟なバリデーション）
             for (const location of data.dailyRoutine[routine]) {
-                if (!validLocations.includes(location)) {
+                if (!isValidLocation(location)) {
                     console.error(`不正な場所が指定されています: ${location}`);
                     return false;
                 }

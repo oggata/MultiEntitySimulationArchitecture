@@ -614,3 +614,25 @@ button:disabled {
     background: #666;
     cursor: not-allowed;
 }
+
+.message-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.message-buttons button {
+    flex: 1;
+    padding: 6px 12px;
+    font-size: 11px;
+}
+
+.message-content {
+    margin-bottom: 4px;
+}
+
+.message-time {
+    font-size: 10px;
+    color: #888;
+    text-align: right;
+}

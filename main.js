@@ -23,10 +23,7 @@ let targetFacility = null;
 let cameraFollowEnabled = false;
 let cameraMode = 'free'; // 'free', 'agent', 'facility'
 
-// コミュニケーション機能の変数
-let currentMessageAgent = null;
-let messageHistory = [];
-let isCallActive = false;
+// コミュニケーション機能の変数（新しい管理システムで置き換え）
 
 // 時間制御用の変数
 let lastTimeUpdate = 0;
@@ -816,6 +813,33 @@ function scrollToAgentInfo(targetAgent) {
     }
 }
 
+// エージェントごとのメッセージ履歴管理
+const messageHistories = new Map(); // エージェント名 -> メッセージ履歴
+let currentMessageAgent = null;
+let isCallActive = false;
+
+// エージェントのメッセージ履歴を取得または初期化
+function getMessageHistory(agentName) {
+    if (!messageHistories.has(agentName)) {
+        messageHistories.set(agentName, []);
+    }
+    return messageHistories.get(agentName);
+}
+
+    // エージェントのメッセージ履歴をクリア
+    function clearMessageHistory(agentName) {
+        messageHistories.set(agentName, []);
+        console.log(`${agentName}のメッセージ履歴をクリアしました`);
+    }
+    
+    // 現在のエージェントのメッセージ履歴をクリア
+    function clearCurrentMessageHistory() {
+        if (currentMessageAgent) {
+            clearMessageHistory(currentMessageAgent.name);
+            updateMessageHistory();
+        }
+    }
+
 // コミュニケーション機能の関数
 function updateCommunicationButtons() {
     const callAgentBtn = document.getElementById('callAgentBtn');
@@ -843,7 +867,9 @@ function startCall() {
     
     isCallActive = true;
     currentMessageAgent = targetAgent;
-    messageHistory = [];
+    
+    // エージェントの履歴を取得
+    const messageHistory = getMessageHistory(targetAgent.name);
     
     // 通話開始メッセージを追加
     addMessageToHistory('user', `📞 ${targetAgent.name}に電話をかけました`);
@@ -866,6 +892,11 @@ function openMessageModal() {
     
     currentMessageAgent = targetAgent;
     messageModalTitle.textContent = `${targetAgent.name}とのメッセージ`;
+    
+    // エージェントの履歴を初期化（初回の場合）
+    if (!messageHistories.has(targetAgent.name)) {
+        messageHistories.set(targetAgent.name, []);
+    }
     
     // メッセージ履歴を表示
     updateMessageHistory();
@@ -890,13 +921,15 @@ function endCall() {
     
     isCallActive = false;
     currentMessageAgent = null;
-    messageHistory = [];
     
     updateCommunicationButtons();
     addLog(`📞 通話を終了しました`, 'communication');
 }
 
 function addMessageToHistory(sender, message) {
+    if (!currentMessageAgent) return;
+    
+    const messageHistory = getMessageHistory(currentMessageAgent.name);
     messageHistory.push({
         sender: sender,
         message: message,
@@ -906,14 +939,28 @@ function addMessageToHistory(sender, message) {
 
 function updateMessageHistory() {
     const messageHistoryDiv = document.getElementById('messageHistory');
-    if (!messageHistoryDiv) return;
+    if (!messageHistoryDiv || !currentMessageAgent) return;
     
     messageHistoryDiv.innerHTML = '';
     
+    const messageHistory = getMessageHistory(currentMessageAgent.name);
     messageHistory.forEach(item => {
         const messageItem = document.createElement('div');
         messageItem.className = `message-item message-${item.sender}`;
-        messageItem.textContent = item.message;
+        
+        // タイムスタンプをフォーマット
+        const timestamp = new Date(item.timestamp);
+        const timeString = timestamp.toLocaleTimeString('ja-JP', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        // メッセージとタイムスタンプを表示
+        messageItem.innerHTML = `
+            <div class="message-content">${item.message}</div>
+            <div class="message-time">${timeString}</div>
+        `;
+        
         messageHistoryDiv.appendChild(messageItem);
     });
     

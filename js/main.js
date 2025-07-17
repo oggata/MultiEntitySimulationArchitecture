@@ -145,6 +145,9 @@ function init() {
     
     // パネルのドラッグ機能を設定
     setupPanelDrag();
+    
+    // エージェント詳細モーダルの初期化
+    setupAgentDetailModal();
 
     // localStorageからAPIキーを読み込み
     loadApiKeyFromStorage();
@@ -475,6 +478,7 @@ function updateAgentInfo() {
             <span class="agent-status status-active"></span>
             ${agent.name} (${agent.age}歳)
             ${agent.isThinking ? '<span class="thinking-indicator"></span>' : ''}
+            <button class="agent-detail-btn" onclick="showAgentDetailModal(${agents.indexOf(agent)})">詳細</button>
         `;
         agentCard.appendChild(nameDiv);
         
@@ -619,6 +623,11 @@ function startSimulation() {
 window.startSimulation = startSimulation;
 window.pauseSimulation = pauseSimulation;
 window.setTimeSpeed = setTimeSpeed;
+window.showAgentDetailModal = function(agentIndex) {
+    if (agents[agentIndex] && typeof window._showAgentDetailModal === 'function') {
+        window._showAgentDetailModal(agents[agentIndex]);
+    }
+};
 
 function pauseSimulation() {
     simulationPaused = !simulationPaused;
@@ -980,6 +989,9 @@ function updateSimulationButton() {
     }
 }
 
+// グローバルスコープに公開
+window.updateSimulationButton = updateSimulationButton;
+
 // コミュニケーション機能の関数
 function updateCommunicationButtons() {
     const callAgentBtn = document.getElementById('callAgentBtn');
@@ -1175,3 +1187,30 @@ async function generateAgentResponse(userMessage) {
         updateMessageHistory();
     }
 }
+
+// フリーカメラ時にWASDでカメラ移動
+window.addEventListener('keydown', function(e) {
+    if (cameraMode !== 'free') return;
+    const moveSpeed = 1.0;
+    // カメラの前方・右方向ベクトルを計算
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    forward.y = 0;
+    forward.normalize();
+
+    const right = new THREE.Vector3();
+    right.crossVectors(forward, camera.up).normalize();
+
+    if (e.key === 'w' || e.key === 'W') {
+        camera.position.add(forward.clone().multiplyScalar(moveSpeed));
+    }
+    if (e.key === 's' || e.key === 'S') {
+        camera.position.add(forward.clone().multiplyScalar(-moveSpeed));
+    }
+    if (e.key === 'a' || e.key === 'A') {
+        camera.position.add(right.clone().multiplyScalar(-moveSpeed));
+    }
+    if (e.key === 'd' || e.key === 'D') {
+        camera.position.add(right.clone().multiplyScalar(moveSpeed));
+    }
+});

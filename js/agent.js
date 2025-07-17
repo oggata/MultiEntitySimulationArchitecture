@@ -20,10 +20,10 @@ const homeManager = {
             const x = Math.floor(Math.random() * 41) - 20;
             const z = Math.floor(Math.random() * 41) - 20;
             
-            // 既存の自宅との距離をチェック（最低3マス離れる）
+            // 既存の自宅との距離をチェック（最低7マス離れる）
             const isTooClose = existingHomes.some(home => {
                 const distance = Math.sqrt((home.x - x) ** 2 + (home.z - z) ** 2);
-                return distance < 3;
+                return distance < 7;
             });
             
             if (!isTooClose) {
@@ -244,6 +244,21 @@ class Agent {
         this.movementTarget = null;
         this.lastMovingState = false; // 移動状態の変更を追跡するためのフラグ
         
+        // 街中での出会い関連
+        this.isInConversation = false;
+        this.conversationPartner = null;
+        this.pausedMovementTarget = null;
+        this.pausedTargetLocation = null;
+        this.pausedCurrentPath = null;
+        this.pausedCurrentPathIndex = 0;
+        
+        // 履歴記録
+        this.movementHistory = [];
+        this.actionHistory = [];
+        this.thoughtHistory = [];
+        this.moodHistory = [];
+        this.energyHistory = [];
+        
         // 他のエージェントとの関係を初期化
         this.initializeRelationships();
     }
@@ -368,6 +383,9 @@ class Agent {
             
             // 経路を視覚化（このエージェントの経路のみ）
             cityLayout.visualizePath(path, 0x00ff00);
+            
+            // 移動履歴を記録
+            this.recordMovement(this.currentLocation.name, location.name, '目的地への移動');
             
             addLog(`🚶 ${this.name}が${location.name}へ移動開始`, 'move', `
                 <div class="log-detail-section">
@@ -539,6 +557,16 @@ class Agent {
         if (Math.floor(clock.getElapsedTime()) % 1 === 0) {
             this.updateWaitingQueue();
         }
+        
+        // 気分とエネルギーの履歴を記録（10秒ごと）
+        if (Math.floor(clock.getElapsedTime()) % 10 === 0) {
+            this.recordMoodAndEnergy();
+        }
+        
+        // 街中での偶然の出会いをチェック（移動中のみ）
+        if (this.movementTarget && !this.isInConversation) {
+            this.checkForStreetEncounter();
+        }
     }
     
     async think() {
@@ -584,6 +612,9 @@ class Agent {
                 // パース失敗時は思考のみ
                 decision.thought = aiResponse;
             }
+            // 思考履歴を記録
+            this.recordThought(this.currentThought, `時間帯: ${timeOfDay}, 場所: ${this.currentLocation.name}`);
+            
             this.executeDecision(decision);
             logAgentAction(this, 'think', `
                 <div class="log-detail-section">
@@ -1082,11 +1113,17 @@ class Agent {
                 maxTokens: 100,
                 temperature: 0.7
             });
+            // 行動履歴を記録
+            this.recordAction('interaction', otherAgent.name, `${interactionType}: "${message}"`);
+            
             this.currentThought = message;
             addLog(`💬 ${this.name} → ${otherAgent.name}: "${message}"`, 'interaction');
             this.addMemory(`${otherAgent.name}と${interactionType}をした`, "interaction");
             // 相手の反応
             setTimeout(async () => {
+                // 一時停止中はLLM APIコールをスキップ
+                if (!simulationRunning || simulationPaused) return;
+                
                 if (otherAgent && !otherAgent.isThinking) {
                     // プロンプトテーマを取得
                     const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
@@ -1161,6 +1198,9 @@ class Agent {
                     maxTokens: 100,
                     temperature: 0.7
                 });
+                // 行動履歴を記録
+                this.recordAction('activity', this.currentActivity, `場所: ${this.currentLocation.name}, 思考: "${thought}"`);
+                
                 this.currentThought = thought;
                 addLog(`🎯 ${this.name}は${this.currentLocation.name}で${this.currentActivity}いる: "${thought}"`, 'activity', `\n                    <div class="log-detail-section">\n                        <h4>活動の詳細</h4>\n                        <p>場所: ${this.currentLocation.name}</p>\n                        <p>活動: ${this.currentActivity}</p>\n                        <p>思考: ${this.currentThought}</p>\n                    </div>\n                `);
                 this.addMemory(`${this.currentLocation.name}で${this.currentActivity}`, "activity");
@@ -1202,7 +1242,7 @@ class Agent {
     getNearbyAgents() {
         return agents.filter(agent => 
             agent !== this && 
-            agent.currentLocation === this.currentLocation &&
+            !agent.isInConversation && // 会話中でない
             this.mesh.position.distanceTo(agent.mesh.position) < 5
         );
     }
@@ -1249,11 +1289,312 @@ class Agent {
         }
         return "なし";
     }
+    
+    // 街中での偶然の出会いをチェック
+    checkForStreetEncounter() {
+        // 移動中の他のエージェントを検索
+        const nearbyMovingAgents = agents.filter(agent => 
+            agent !== this && 
+            agent.movementTarget && // 移動中
+            !agent.isInConversation && // 会話中でない
+            this.mesh.position.distanceTo(agent.mesh.position) < 3 // 3メートル以内
+        );
+        
+        if (nearbyMovingAgents.length > 0) {
+            // 最も近いエージェントを選択
+            const closestAgent = nearbyMovingAgents.reduce((closest, current) => {
+                const closestDistance = this.mesh.position.distanceTo(closest.mesh.position);
+                const currentDistance = this.mesh.position.distanceTo(current.mesh.position);
+                return currentDistance < closestDistance ? current : closest;
+            });
+            
+            // 相互作用の確率を計算
+            const interactionProbability = this.calculateStreetEncounterProbability(closestAgent);
+            
+            if (Math.random() < interactionProbability) {
+                this.startStreetConversation(closestAgent);
+            }
+        }
+    }
+    
+    // 街中での出会い確率を計算
+    calculateStreetEncounterProbability(otherAgent) {
+        let probability = 0.1; // 基本確率10%
+        
+        // 社交性による調整
+        probability += this.personality.traits.sociability * 0.2;
+        probability += otherAgent.personality.traits.sociability * 0.2;
+        
+        // 関係性による調整
+        const relationship = this.relationships.get(otherAgent.name);
+        if (relationship) {
+            probability += relationship.affinity * 0.3;
+            probability += relationship.familiarity * 0.2;
+        }
+        
+        // 時間帯による調整
+        const timeOfDay = this.getTimeOfDay();
+        if (timeOfDay === "morning" || timeOfDay === "afternoon") {
+            probability *= 1.2; // 昼間は出会いやすい
+        } else if (timeOfDay === "night") {
+            probability *= 0.5; // 夜間は出会いにくい
+        }
+        
+        // 気分による調整
+        if (this.mood === "良い" || this.mood === "楽しい") {
+            probability *= 1.3;
+        }
+        if (otherAgent.mood === "良い" || otherAgent.mood === "楽しい") {
+            probability *= 1.3;
+        }
+        
+        // 社交欲求による調整
+        probability += this.socialUrge * 0.2;
+        probability += otherAgent.socialUrge * 0.2;
+        
+        return Math.min(0.8, probability); // 最大80%に制限
+    }
+    
+    // 街中での会話を開始
+    startStreetConversation(otherAgent) {
+        // 両方のエージェントを会話状態にする
+        this.isInConversation = true;
+        this.conversationPartner = otherAgent;
+        otherAgent.isInConversation = true;
+        otherAgent.conversationPartner = this;
+        
+        // 移動を一時停止
+        this.pauseMovement();
+        otherAgent.pauseMovement();
+        
+        // お互いに向き合う
+        this.faceAgent(otherAgent);
+        otherAgent.faceAgent(this);
+        
+        // 会話を開始
+        this.performStreetInteraction(otherAgent);
+        
+        addLog(`🚶 ${this.name}と${otherAgent.name}が街中で偶然出会いました！`, 'encounter');
+    }
+    
+    // 移動を一時停止
+    pauseMovement() {
+        this.pausedMovementTarget = this.movementTarget;
+        this.pausedTargetLocation = this.targetLocation;
+        this.pausedCurrentPath = this.currentPath;
+        this.pausedCurrentPathIndex = this.currentPathIndex;
+        
+        this.movementTarget = null;
+        this.targetLocation = null;
+        this.currentPath = null;
+        this.currentPathIndex = 0;
+    }
+    
+    // 移動を再開
+    resumeMovement() {
+        if (this.pausedMovementTarget) {
+            this.movementTarget = this.pausedMovementTarget;
+            this.targetLocation = this.pausedTargetLocation;
+            this.currentPath = this.pausedCurrentPath;
+            this.currentPathIndex = this.pausedCurrentPathIndex;
+            
+            this.pausedMovementTarget = null;
+            this.pausedTargetLocation = null;
+            this.pausedCurrentPath = null;
+            this.pausedCurrentPathIndex = 0;
+        }
+    }
+    
+    // 他のエージェントに向き合う
+    faceAgent(otherAgent) {
+        const direction = new THREE.Vector3()
+            .subVectors(otherAgent.mesh.position, this.mesh.position)
+            .normalize();
+        this.mesh.rotation.y = Math.atan2(direction.x, direction.z);
+    }
+    
+    // 街中での相互作用を実行
+    async performStreetInteraction(otherAgent) {
+        // 一時停止中はLLM APIコールをスキップ
+        if (!simulationRunning || simulationPaused) return;
+        
+        try {
+            // プロンプトテーマを取得
+            const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
+            const themeContext = topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する話題についても話してください。` : '';
+            
+            const prompt = `\nあなたは${this.name}という${this.age}歳の${this.personality.description}です。\n街中で${otherAgent.name}さんと偶然出会いました。\n\nあなたの性格特性:\n- 社交性: ${this.personality.traits.sociability}\n- 活動的さ: ${this.personality.traits.energy}\n- ルーチン重視: ${this.personality.traits.routine}\n- 好奇心: ${this.personality.traits.curiosity}\n- 共感性: ${this.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${this.relationships.get(otherAgent.name).familiarity}\n- 好感度: ${this.relationships.get(otherAgent.name).affinity}${themeContext}\n\nこの状況で、自然な挨拶や会話を生成してください。1-2文程度の短い会話にしてください。\n`;
+            const message = await callLLM({
+                prompt,
+                systemPrompt: "あなたは自律的なエージェントの会話システムです。街中での偶然の出会いで、自然な挨拶や会話を生成してください。",
+                maxTokens: 100,
+                temperature: 0.7
+            });
+            this.currentThought = message;
+            addLog(`💬 ${this.name} → ${otherAgent.name}: "${message}"`, 'street-interaction');
+            this.addMemory(`街中で${otherAgent.name}と出会った`, "encounter");
+            
+            // 相手の反応
+            setTimeout(async () => {
+                // 一時停止中はLLM APIコールをスキップ
+                if (!simulationRunning || simulationPaused) return;
+                
+                if (otherAgent && !otherAgent.isThinking) {
+                    const responsePrompt = `\nあなたは${otherAgent.name}という${otherAgent.age}歳の${otherAgent.personality.description}です。\n街中で${this.name}さんと偶然出会い、「${message}」と言われました。\n\nあなたの性格特性:\n- 社交性: ${otherAgent.personality.traits.sociability}\n- 活動的さ: ${otherAgent.personality.traits.energy}\n- ルーチン重視: ${otherAgent.personality.traits.routine}\n- 好奇心: ${otherAgent.personality.traits.curiosity}\n- 共感性: ${otherAgent.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${otherAgent.relationships.get(this.name).familiarity}\n- 好感度: ${otherAgent.relationships.get(this.name).affinity}${themeContext}\n\nこの状況で、自然な返答を生成してください。1-2文程度の短い返答にしてください。\n`;
+                    try {
+                        const responseMessage = await callLLM({
+                            prompt: responsePrompt,
+                            systemPrompt: "あなたは自律的なエージェントの会話システムです。街中での偶然の出会いで、自然な返答を生成してください。",
+                            maxTokens: 100,
+                            temperature: 0.7
+                        });
+                        otherAgent.currentThought = responseMessage;
+                        addLog(`💬 ${otherAgent.name} → ${this.name}: "${responseMessage}"`, 'street-interaction');
+                        otherAgent.addMemory(`街中で${this.name}と出会った`, "encounter");
+                        
+                        // 会話終了後に移動を再開
+                        setTimeout(() => {
+                            this.endStreetConversation();
+                            otherAgent.endStreetConversation();
+                        }, 3000); // 3秒後に会話終了
+                        
+                    } catch (error) {
+                        console.error('LLM API呼び出しエラー:', error);
+                        const fallbackResponses = [
+                            `${this.name}さん、お久しぶりです！`,
+                            "こんにちは！偶然ですね。",
+                            "お元気ですか？",
+                            `${this.name}さんとお会いできて嬉しいです。`
+                        ];
+                        const fallbackResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+                        otherAgent.currentThought = fallbackResponse;
+                        addLog(`💬 ${otherAgent.name} → ${this.name}: "${fallbackResponse}"`, 'street-interaction');
+                        
+                        // 会話終了後に移動を再開
+                        setTimeout(() => {
+                            this.endStreetConversation();
+                            otherAgent.endStreetConversation();
+                        }, 3000);
+                    }
+                }
+            }, 2000);
+            
+        } catch (error) {
+            console.error('LLM API呼び出しエラー:', error);
+            const fallbackMessages = [
+                `${otherAgent.name}さん、こんにちは！`,
+                `やあ、${otherAgent.name}さん。偶然ですね。`,
+                `${otherAgent.name}さん、お久しぶりです！`,
+                "こんにちは！"
+            ];
+            
+            const message = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
+            this.currentThought = message;
+            addLog(`💬 ${this.name} → ${otherAgent.name}: "${message}"`, 'street-interaction');
+            
+            // 会話終了後に移動を再開
+            setTimeout(() => {
+                this.endStreetConversation();
+                otherAgent.endStreetConversation();
+            }, 3000);
+        }
+    }
+    
+    // 街中での会話を終了
+    endStreetConversation() {
+        this.isInConversation = false;
+        this.conversationPartner = null;
+        
+        // 移動を再開
+        this.resumeMovement();
+        
+        // 相互作用のクールダウンを設定
+        this.lastInteractionTime = Date.now();
+        this.interactionCooldown = 30000 + Math.random() * 60000; // 30秒〜90秒
+        
+        addLog(`🚶 ${this.name}が移動を再開しました`, 'move');
+    }
+    
+    // 移動履歴を記録
+    recordMovement(fromLocation, toLocation, reason = '') {
+        this.movementHistory.push({
+            timestamp: new Date(),
+            from: fromLocation,
+            to: toLocation,
+            reason: reason,
+            timeOfDay: this.getTimeOfDay()
+        });
+        
+        // 履歴を100件に制限
+        if (this.movementHistory.length > 100) {
+            this.movementHistory.shift();
+        }
+    }
+    
+    // 行動履歴を記録
+    recordAction(action, target = '', details = '') {
+        this.actionHistory.push({
+            timestamp: new Date(),
+            action: action,
+            target: target,
+            details: details,
+            location: this.currentLocation.name,
+            timeOfDay: this.getTimeOfDay()
+        });
+        
+        // 履歴を100件に制限
+        if (this.actionHistory.length > 100) {
+            this.actionHistory.shift();
+        }
+    }
+    
+    // 思考履歴を記録
+    recordThought(thought, context = '') {
+        this.thoughtHistory.push({
+            timestamp: new Date(),
+            thought: thought,
+            context: context,
+            location: this.currentLocation.name,
+            mood: this.mood,
+            energy: this.energy,
+            timeOfDay: this.getTimeOfDay()
+        });
+        
+        // 履歴を100件に制限
+        if (this.thoughtHistory.length > 100) {
+            this.thoughtHistory.shift();
+        }
+    }
+    
+    // 気分とエネルギーの履歴を記録
+    recordMoodAndEnergy() {
+        this.moodHistory.push({
+            timestamp: new Date(),
+            mood: this.mood,
+            timeOfDay: this.getTimeOfDay()
+        });
+        
+        this.energyHistory.push({
+            timestamp: new Date(),
+            energy: this.energy,
+            timeOfDay: this.getTimeOfDay()
+        });
+        
+        // 履歴を200件に制限
+        if (this.moodHistory.length > 200) {
+            this.moodHistory.shift();
+        }
+        if (this.energyHistory.length > 200) {
+            this.energyHistory.shift();
+        }
+    }
 }
 
 // エージェント生成関数
 async function generateNewAgent() {
-    // 一時停止中でもエージェント生成は許可（ユーザーの明示的な操作のため）
+    // シミュレーション開始前でもエージェント生成を許可（初期エージェント作成のため）
+    // ただし、APIキーは必要
+    
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) {
         alert('APIキーを入力してください');
@@ -1361,7 +1702,8 @@ async function generateNewAgent() {
             systemPrompt: "あなたは自律的なエージェントの性格生成システムです。必ず有効なJSON形式のみを出力し、余分な説明やテキストは含めないでください。JSONの構文エラーを避けるため、以下の点に注意してください：1) すべての文字列はダブルクォートで囲む、2) 数値はクォートで囲まない、3) 配列の最後の要素の後にカンマを付けない、4) オブジェクトの最後のプロパティの後にカンマを付けない、5) 色コードは必ず'0x'で始まる6桁の16進数にする。",
             maxTokens: 1000,
             temperature: 0.7,
-            responseFormat: provider === 'openai' ? { type: "json_object" } : null
+            responseFormat: provider === 'openai' ? { type: "json_object" } : null,
+            force: true
         });
         generationProgress.textContent = 'JSONを解析中...';
         // レスポンスからJSONを抽出（より確実な方法）
@@ -1593,8 +1935,8 @@ async function generateNewAgent() {
         updateStorageButtonText();
         
         // シミュレーション開始ボタンの状態を更新
-        if (typeof updateSimulationButton === 'function') {
-            updateSimulationButton();
+        if (typeof window.updateSimulationButton === 'function') {
+            window.updateSimulationButton();
         }
     } catch (error) {
         console.error('エージェント生成エラー:', error);
@@ -1624,8 +1966,8 @@ function loadSavedAgents() {
             // ボタンテキストを更新（読み込み後は0人になる）
             updateStorageButtonText();
             // シミュレーション開始ボタンの状態を更新
-            if (typeof updateSimulationButton === 'function') {
-                updateSimulationButton();
+            if (typeof window.updateSimulationButton === 'function') {
+                window.updateSimulationButton();
             }
         } else {
             addLog(`❌ エージェント情報の読み込みに失敗しました`, 'error');
@@ -1666,8 +2008,8 @@ function clearAllAgents() {
         // UIを更新
         updateAgentInfo();
         // シミュレーション開始ボタンの状態を更新
-        if (typeof updateSimulationButton === 'function') {
-            updateSimulationButton();
+        if (typeof window.updateSimulationButton === 'function') {
+            window.updateSimulationButton();
         }
         
         addLog(`🗑️ 全エージェント (${agents.length}人) を削除しました`, 'info');
@@ -1709,7 +2051,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 複数のエージェントを生成する関数
 async function generateMultipleAgents(count) {
-    // 一時停止中でもエージェント生成は許可（ユーザーの明示的な操作のため）
+    // シミュレーション開始前でもエージェント生成を許可（初期エージェント作成のため）
+    // ただし、APIキーは必要
+    
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) {
         alert('APIキーを入力してください');
@@ -1935,9 +2279,9 @@ function validateAgentData(data) {
 }
 
 // APIプロバイダーで切り替えてLLMに問い合わせる共通関数
-async function callLLM({ prompt, systemPrompt = '', maxTokens = 150, temperature = 0.7, responseFormat = null }) {
-    // 一時停止中はLLM APIコールをスキップ
-    if (!simulationRunning || simulationPaused) {
+async function callLLM({ prompt, systemPrompt = '', maxTokens = 150, temperature = 0.7, responseFormat = null, force = false }) {
+    // 一時停止中はLLM APIコールをスキップ（ただしforce指定時は許可）
+    if (!force && (!simulationRunning || simulationPaused)) {
         throw new Error('シミュレーションが一時停止中のため、LLM APIコールをスキップしました');
     }
     
@@ -1998,5 +2342,67 @@ async function callLLM({ prompt, systemPrompt = '', maxTokens = 150, temperature
     } else {
         throw new Error('不明なAPIプロバイダーです');
     }
+}
+
+// --- エージェント書き出し・読み込み機能 ---
+if (typeof window !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        const exportBtn = document.getElementById('exportAgentsBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                const data = JSON.stringify(agents, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'agents_export.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+        // 読み込み
+        const importBtn = document.getElementById('importAgentsBtn');
+        const importFile = document.getElementById('importAgentsFile');
+        if (importBtn && importFile) {
+            importBtn.addEventListener('click', () => {
+                importFile.value = '';
+                importFile.click();
+            });
+            importFile.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    try {
+                        const json = JSON.parse(ev.target.result);
+                        if (!Array.isArray(json)) throw new Error('不正なファイル形式です');
+                        // 既存エージェントをクリア
+                        if (typeof clearAllAgents === 'function') clearAllAgents();
+                        // 各エージェントを復元
+                        json.forEach((agentData, idx) => {
+                            // 自宅3Dオブジェクトを作成
+                            if (agentData.home && typeof createAgentHome === 'function') {
+                                createAgentHome(agentData.home);
+                            }
+                            // Agentクラスのインスタンス化
+                            const agent = new Agent(agentData, agents.length);
+                            agents.push(agent);
+                            agent.initializeRelationships();
+                        });
+                        // UI更新
+                        if (typeof updateAgentInfo === 'function') updateAgentInfo();
+                        if (typeof window.updateSimulationButton === 'function') window.updateSimulationButton();
+                        if (window.agentStorage && typeof window.agentStorage.saveAgents === 'function') window.agentStorage.saveAgents();
+                        alert('エージェント情報を読み込みました (' + agents.length + '人)');
+                    } catch (err) {
+                        alert('エージェント情報の読み込みに失敗しました: ' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+    });
 }
 

@@ -1045,7 +1045,7 @@ calculateMinDistanceToRoads(x, z) {
             const marker = new THREE.Mesh(markerGeometry, markerMaterial);
             marker.position.set(entrancePos.x, 0.3, entrancePos.z);
             scene.add(marker);
-            
+            /*
             // デバッグ用：建物から最も近い道路への接続線を表示
             if (building.nearestRoadIndex !== undefined) {
                 const nearestRoad = this.roads[building.nearestRoadIndex];
@@ -1062,6 +1062,7 @@ calculateMinDistanceToRoads(x, z) {
                     scene.add(line);
                 }
             }
+                */
             
             scene.add(mesh);
         });

@@ -669,3 +669,155 @@ button:disabled {
     background: rgba(244, 67, 54, 0.3);
     border-color: #f44336;
 }
+
+/* エージェント詳細モーダル */
+.agent-detail-modal {
+    width: 90%;
+    max-width: 1000px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.agent-detail-tabs {
+    display: flex;
+    border-bottom: 1px solid #fff;
+    margin-bottom: 15px;
+}
+
+.tab-button {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #fff;
+    border-bottom: none;
+    color: #fff;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 12px;
+    border-radius: 4px 4px 0 0;
+    margin-right: 2px;
+}
+
+.tab-button.active {
+    background: rgba(76, 175, 80, 0.3);
+    border-color: #4CAF50;
+}
+
+.tab-button:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.tab-content {
+    min-height: 400px;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+.agent-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.agent-basic-info, .agent-stats, .agent-relationships {
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #fff;
+}
+
+.agent-basic-info h4, .agent-stats h4, .agent-relationships h4 {
+    margin: 0 0 10px 0;
+    color: #4CAF50;
+    font-size: 14px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.info-label {
+    font-weight: bold;
+    color: #ccc;
+}
+
+.info-value {
+    color: #fff;
+}
+
+.movement-history, .action-history, .thought-history {
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #fff;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.history-item {
+    background: rgba(255,255,255,0.05);
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    border-left: 3px solid #4CAF50;
+    font-size: 12px;
+}
+
+.history-time {
+    color: #888;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.history-content {
+    color: #fff;
+}
+
+.charts-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.chart-section {
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #fff;
+}
+
+.chart-section h4 {
+    margin: 0 0 10px 0;
+    color: #4CAF50;
+    font-size: 14px;
+}
+
+.chart-section canvas {
+    width: 100%;
+    height: auto;
+    background: rgba(0,0,0,0.2);
+    border-radius: 4px;
+}
+
+/* 詳細ボタン */
+.agent-detail-btn {
+    background: rgba(76, 175, 80, 0.3);
+    border: 1px solid #4CAF50;
+    color: #fff;
+    padding: 2px 6px;
+    font-size: 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-left: 8px;
+}
+
+.agent-detail-btn:hover {
+    background: rgba(76, 175, 80, 0.5);
+}

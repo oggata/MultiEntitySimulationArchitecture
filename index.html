@@ -35,6 +35,9 @@
         <div class="agent-storage-controls">
             <button onclick="loadSavedAgents()" id="loadAgentsBtn">保存されたエージェントを読み込み</button>
             <button onclick="clearAllAgents()" id="clearAgentsBtn">全エージェントを削除</button>
+            <button id="exportAgentsBtn">エージェント書き出し</button>
+            <button id="importAgentsBtn">エージェント読み込み</button>
+            <input type="file" id="importAgentsFile" accept="application/json" style="display:none">
         </div>
         <div id="generationStatus" style="display: none; margin-top: 10px; padding: 10px; background-color: #f0f8ff; border: 1px solid #007acc; border-radius: 5px; text-align: center;">
             <div id="generationMessage">エージェントを生成中...</div>
@@ -91,6 +94,91 @@
                     <div class="message-buttons">
                         <button id="sendMessageBtn">送信</button>
                         <button id="clearMessageBtn" onclick="clearCurrentMessageHistory()">履歴クリア</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- エージェント詳細モーダル -->
+    <div id="agentDetailModal" class="modal" style="display: none;">
+        <div class="modal-content agent-detail-modal">
+            <div class="modal-header">
+                <h3 id="agentDetailModalTitle">エージェント詳細</h3>
+                <span class="close" id="closeAgentDetailModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="agent-detail-tabs">
+                    <button class="tab-button active" data-tab="summary">サマリ</button>
+                    <button class="tab-button" data-tab="movement">移動履歴</button>
+                    <button class="tab-button" data-tab="actions">行動履歴</button>
+                    <button class="tab-button" data-tab="thoughts">思考履歴</button>
+                    <button class="tab-button" data-tab="charts">チャート</button>
+                </div>
+                
+                <div class="tab-content">
+                    <!-- サマリタブ -->
+                    <div id="summary-tab" class="tab-pane active">
+                        <div class="agent-summary">
+                            <div class="agent-basic-info">
+                                <h4>基本情報</h4>
+                                <div id="agentBasicInfo"></div>
+                            </div>
+                            <div class="agent-stats">
+                                <h4>統計情報</h4>
+                                <div id="agentStats"></div>
+                            </div>
+                            <div class="agent-relationships">
+                                <h4>関係性</h4>
+                                <div id="agentRelationships"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 移動履歴タブ -->
+                    <div id="movement-tab" class="tab-pane">
+                        <div class="movement-history">
+                            <h4>移動履歴</h4>
+                            <div id="movementHistory"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 行動履歴タブ -->
+                    <div id="actions-tab" class="tab-pane">
+                        <div class="action-history">
+                            <h4>行動履歴</h4>
+                            <div id="actionHistory"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 思考履歴タブ -->
+                    <div id="thoughts-tab" class="tab-pane">
+                        <div class="thought-history">
+                            <h4>思考履歴</h4>
+                            <div id="thoughtHistory"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- チャートタブ -->
+                    <div id="charts-tab" class="tab-pane">
+                        <div class="charts-container">
+                            <div class="chart-section">
+                                <h4>移動パターン</h4>
+                                <canvas id="movementChart" width="400" height="200"></canvas>
+                            </div>
+                            <div class="chart-section">
+                                <h4>行動分布</h4>
+                                <canvas id="actionChart" width="400" height="200"></canvas>
+                            </div>
+                            <div class="chart-section">
+                                <h4>気分変化</h4>
+                                <canvas id="moodChart" width="400" height="200"></canvas>
+                            </div>
+                            <div class="chart-section">
+                                <h4>エネルギー変化</h4>
+                                <canvas id="energyChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

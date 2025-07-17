@@ -138,3 +138,17 @@ Feel free to contribute to this project by:
 - Three.js community for 3D graphics capabilities
 - OpenAI and Google for AI language model APIs
 - The open-source community for various algorithms and techniques used in this simulation
+
+## Electronでの起動方法
+
+1. 依存パッケージのインストール
+
+```
+npm install
+```
+
+2. Electronアプリの起動
+
+```
+npx electron .
+```

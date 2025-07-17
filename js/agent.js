@@ -1067,6 +1067,9 @@ class Agent {
     }
     
     async performInteraction(otherAgent, interactionType) {
+        // 一時停止中はLLM APIコールをスキップ
+        if (!simulationRunning || simulationPaused) return;
+        
         try {
             // プロンプトテーマを取得
             const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
@@ -1142,6 +1145,9 @@ class Agent {
     }
     
     async performActivity() {
+        // 一時停止中はLLM APIコールをスキップ
+        if (!simulationRunning || simulationPaused) return;
+        
         if (this.currentActivity) {
             try {
                 // プロンプトテーマを取得
@@ -1247,6 +1253,7 @@ class Agent {
 
 // エージェント生成関数
 async function generateNewAgent() {
+    // 一時停止中でもエージェント生成は許可（ユーザーの明示的な操作のため）
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) {
         alert('APIキーを入力してください');
@@ -1702,6 +1709,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 複数のエージェントを生成する関数
 async function generateMultipleAgents(count) {
+    // 一時停止中でもエージェント生成は許可（ユーザーの明示的な操作のため）
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) {
         alert('APIキーを入力してください');
@@ -1928,6 +1936,11 @@ function validateAgentData(data) {
 
 // APIプロバイダーで切り替えてLLMに問い合わせる共通関数
 async function callLLM({ prompt, systemPrompt = '', maxTokens = 150, temperature = 0.7, responseFormat = null }) {
+    // 一時停止中はLLM APIコールをスキップ
+    if (!simulationRunning || simulationPaused) {
+        throw new Error('シミュレーションが一時停止中のため、LLM APIコールをスキップしました');
+    }
+    
     const provider = window.getSelectedApiProvider ? window.getSelectedApiProvider() : 'openai';
     const apiKey = document.getElementById('apiKey') ? document.getElementById('apiKey').value.trim() : '';
     if (!apiKey) throw new Error('APIキーが入力されていません');

@@ -1129,6 +1129,14 @@ async function sendMessage() {
 }
 
 async function generateAgentResponse(userMessage) {
+    // 一時停止中はLLM APIコールをスキップ
+    if (!simulationRunning || simulationPaused) {
+        const fallbackResponse = `${currentMessageAgent.name}: シミュレーションが一時停止中のため、返答できません。`;
+        addMessageToHistory('agent', fallbackResponse);
+        updateMessageHistory();
+        return;
+    }
+    
     if (!currentMessageAgent) return;
     
     try {

@@ -2,7 +2,6 @@
 
 A 3D autonomous agent simulation that creates a virtual city where AI-powered residents live their daily lives with realistic behaviors, interactions, and decision-making processes.
 
-
 [![](https://img.youtube.com/vi/5NguBippS0c/0.jpg)](https://www.youtube.com/watch?v=5NguBippS0c)
 
 ## Overview
@@ -17,6 +16,7 @@ This application simulates a small city populated with autonomous agents (reside
 - **Memory System**: Short-term and long-term memory systems that influence future decisions
 - **Relationship Dynamics**: Agents build relationships with each other through interactions
 - **Daily Routines**: Each agent follows personalized daily schedules with different activities for morning, afternoon, evening, and night
+- **Communication System**: Agents can make phone calls and send emails to each other, enhancing social interactions
 
 ### 🏙️ Virtual City Environment
 - **Procedural City Generation**: Automatically generates roads, buildings, and facilities
@@ -39,6 +39,7 @@ This application simulates a small city populated with autonomous agents (reside
 - **Activity Log**: Detailed log of all agent activities and interactions
 - **Agent Information Panel**: View current status, thoughts, and relationships of each agent
 - **Live Updates**: Real-time display of agent locations, moods, and activities
+- **Communication Log**: Track phone calls and email exchanges between agents
 
 ## Getting Started
 
@@ -47,6 +48,8 @@ This application simulates a small city populated with autonomous agents (reside
 - OpenAI API key or Google Gemini API access
 
 ### Installation
+
+#### Web Browser Version
 1. Clone or download this repository
 2. Open a terminal in the project directory
 3. Start a local HTTP server:
@@ -54,6 +57,18 @@ This application simulates a small city populated with autonomous agents (reside
    python3 -m http.server
    ```
 4. Open your browser and navigate to `http://localhost:8000`
+
+#### Electron App Version
+1. Clone or download this repository
+2. Open a terminal in the project directory
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Launch the Electron app:
+   ```bash
+   npx electron .
+   ```
 
 ### Setup
 1. Enter your OpenAI API key in the control panel
@@ -67,8 +82,14 @@ Each agent continuously:
 1. **Observes** their environment and nearby agents
 2. **Thinks** about their current situation using AI language models
 3. **Decides** on actions based on personality, memory, and relationships
-4. **Executes** decisions (moving, interacting, performing activities)
+4. **Executes** decisions (moving, interacting, performing activities, communicating)
 5. **Updates** their memory and relationships
+
+### Communication System
+Agents can communicate through:
+- **Phone Calls**: Direct voice communication between agents
+- **Email**: Written communication for longer messages and formal interactions
+- **Social Media**: Digital interactions through simulated social platforms
 
 ### City Layout
 The city is procedurally generated with:
@@ -91,6 +112,7 @@ The simulation features a realistic time system:
 - **AI Integration**: OpenAI GPT and Google Gemini APIs
 - **Pathfinding**: A* algorithm for navigation
 - **Memory Management**: Custom memory system for agent persistence
+- **Communication**: Simulated phone and email systems
 
 ### Key Components
 - `agent.js`: Core agent logic and AI decision making
@@ -98,6 +120,7 @@ The simulation features a realistic time system:
 - `main.js`: Main simulation loop and controls
 - `config.js`: Agent personalities and city configuration
 - `character.js`: 3D character models and animations
+- `communication.js`: Phone and email communication systems
 
 ## Customization
 
@@ -115,6 +138,7 @@ Enhance agent capabilities by modifying:
 - Personality traits and their effects
 - Interaction types and outcomes
 - Memory system and relationship dynamics
+- Communication patterns and preferences
 
 ## API Usage
 
@@ -132,23 +156,28 @@ Feel free to contribute to this project by:
 - Improving the pathfinding algorithm
 - Enhancing the 3D visualization
 - Adding new interaction types between agents
+- Expanding communication features
+
+## TODO
+
+### Planned Features
+- **MCP (Model Context Protocol) Integration**: Connect to multiple applications and services through MCP
+  - Calendar integration for scheduling
+  - Weather API integration for realistic environmental effects
+  - News API for current events affecting agent behavior
+  - Social media API integration for digital interactions
+  - Email service integration for external communication
+- **Enhanced Communication**: 
+  - Video calling capabilities
+  - Group chat functionality
+  - Voice message system
+- **Advanced AI Features**:
+  - Multi-modal AI (text, voice, image understanding)
+  - Emotion recognition and response
+  - Learning and adaptation over time
 
 ## Acknowledgments
 
 - Three.js community for 3D graphics capabilities
 - OpenAI and Google for AI language model APIs
 - The open-source community for various algorithms and techniques used in this simulation
-
-## Electronでの起動方法
-
-1. 依存パッケージのインストール
-
-```
-npm install
-```
-
-2. Electronアプリの起動
-
-```
-npx electron .
-```

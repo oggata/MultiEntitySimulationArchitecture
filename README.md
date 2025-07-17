@@ -1,4 +1,4 @@
-# Resident Behavior Agent
+# MESA (Multi-Entity Simulation Architecture)
 
 A 3D autonomous agent simulation that creates a virtual city where AI-powered residents live their daily lives with realistic behaviors, interactions, and decision-making processes.
 

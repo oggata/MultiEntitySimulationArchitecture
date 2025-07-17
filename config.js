@@ -286,3 +286,58 @@ const locationData = [
     }
     */
 ];
+
+// エージェントの人格データ
+const agentPersonalities = [
+    {
+        name: "Alice",
+        age: 28,
+        background: {
+            birthplace: "東京",
+            education: "大学卒業",
+            career: "会社員",
+            hobbies: ["読書", "映画鑑賞"],
+            religion: "無宗教",
+            family: "独身"
+        },
+        personality: {
+            description: "真面目で責任感が強い",
+            values: "誠実さと努力を重視",
+            goals: "仕事で成果を上げる"
+        }
+    },
+    {
+        name: "Bob",
+        age: 25,
+        background: {
+            birthplace: "大阪",
+            education: "専門学校卒業",
+            career: "デザイナー",
+            hobbies: ["絵を描く", "カフェ巡り"],
+            religion: "無宗教",
+            family: "独身"
+        },
+        personality: {
+            description: "創造的で好奇心旺盛",
+            values: "美しさと個性を重視",
+            goals: "自分の作品で人を感動させる"
+        }
+    },
+    {
+        name: "Charlie",
+        age: 35,
+        background: {
+            birthplace: "福岡",
+            education: "高校卒業",
+            career: "自営業",
+            hobbies: ["釣り", "料理"],
+            religion: "無宗教",
+            family: "既婚"
+        },
+        personality: {
+            description: "面倒見が良く、リーダーシップがある",
+            values: "家族と地域社会を重視",
+            goals: "安定した生活を築く"
+        }
+    }
+];

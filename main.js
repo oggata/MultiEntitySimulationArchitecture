@@ -183,6 +183,35 @@ function init() {
         }
     }
 
+    // シミュレーション制御ボタンのイベント登録
+    const startBtn = document.getElementById('startSimulationBtn');
+    if (startBtn) {
+        console.log('Setting up start button listener in init');
+        startBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Start button clicked in init');
+            startSimulation();
+        });
+    } else {
+        console.log('Start button not found in init');
+    }
+    
+    const pauseBtn = document.getElementById('pauseBtn');
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            pauseSimulation();
+        });
+    }
+    
+    const speedBtn = document.getElementById('timeSpeedBtn');
+    if (speedBtn) {
+        speedBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            setTimeSpeed();
+        });
+    }
+    
     // カメラ制御ボタンのイベント登録
     const personBtn = document.getElementById('personViewBtn');
     const facilityBtn = document.getElementById('facilityViewBtn');
@@ -338,12 +367,22 @@ function setupMouseControls() {
 
 // エージェントの作成
 function createAgents() {
+    console.log('createAgents called');
+    console.log('agentPersonalities:', agentPersonalities);
+    
     // すでに初期エージェントが存在する場合は何もしない
-    if (agents.length > 0) return;
+    if (agents.length > 0) {
+        console.log('Agents already exist, skipping creation');
+        return;
+    }
+    
     agentPersonalities.forEach((data, index) => {
+        console.log('Creating agent:', data.name);
         const agent = new Agent(data, index);
         agents.push(agent);
     });
+    
+    console.log('Created agents:', agents.length);
     updateAgentInfo();
 }
 
@@ -535,10 +574,19 @@ function updateAgentInfo() {
 
 // シミュレーション制御
 function startSimulation() {
+    console.log('startSimulation called');
+    console.log('Current agents:', agents.length);
+    
     // エージェントの存在チェック
     if (agents.length === 0) {
-        alert('エージェントが一人もいません。先にエージェントを生成してください。');
-        return;
+        console.log('No agents found, creating agents...');
+        createAgents();
+        
+        // エージェント作成後も空の場合はエラー
+        if (agents.length === 0) {
+            alert('エージェントの生成に失敗しました。');
+            return;
+        }
     }
     
     apiKey = document.getElementById('apiKey').value.trim();
@@ -553,14 +601,24 @@ function startSimulation() {
         return;
     }
     
+    console.log('Starting simulation...');
     simulationRunning = true;
-    document.getElementById('pauseBtn').disabled = false;
+    simulationPaused = false;
     
-    // エージェントの作成
-    createAgents();
+    // 一時停止ボタンを有効化
+    const pauseBtn = document.getElementById('pauseBtn');
+    if (pauseBtn) {
+        pauseBtn.disabled = false;
+    }
     
     addLog('<span style="color: #4CAF50;">🎬 シミュレーション開始</span>');
+    console.log('Simulation started successfully');
 }
+
+// グローバルスコープに関数を公開
+window.startSimulation = startSimulation;
+window.pauseSimulation = pauseSimulation;
+window.setTimeSpeed = setTimeSpeed;
 
 function pauseSimulation() {
     simulationPaused = !simulationPaused;
@@ -638,8 +696,41 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// 初期化
-init();
+    // 初期化
+    init();
+    
+    // ボタンのイベントリスナーを設定
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, setting up button listeners');
+        
+        const startButton = document.getElementById('startSimulationBtn');
+        if (startButton) {
+            console.log('Found start button, adding event listener');
+            startButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Start button clicked via event listener');
+                startSimulation();
+            });
+        } else {
+            console.log('Start button not found');
+        }
+        
+        const pauseButton = document.getElementById('pauseBtn');
+        if (pauseButton) {
+            pauseButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                pauseSimulation();
+            });
+        }
+        
+        const speedButton = document.getElementById('timeSpeedBtn');
+        if (speedButton) {
+            speedButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                setTimeSpeed();
+            });
+        }
+    });
 
 // APIプロバイダー選択値を取得
 function getSelectedApiProvider() {

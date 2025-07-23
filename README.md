@@ -12,11 +12,28 @@ This application simulates a small city populated with autonomous agents (reside
 
 ### 🤖 Autonomous Agents
 - **AI-Powered Decision Making**: Each agent uses OpenAI or Gemini API to make realistic decisions based on their personality and current situation
+
+![1](./images/1.GIF)
+
 - **Unique Personalities**: Agents have distinct traits including sociability, energy levels, routine preferences, curiosity, and empathy
+
+![1](./images/2.GIF)
+
 - **Memory System**: Short-term and long-term memory systems that influence future decisions
+
+![1](./images/3.GIF)
+
 - **Relationship Dynamics**: Agents build relationships with each other through interactions
+
+![1](./images/4.GIF)
+
 - **Daily Routines**: Each agent follows personalized daily schedules with different activities for morning, afternoon, evening, and night
+
+![1](./images/5.GIF)
+
 - **Communication System**: Agents can make phone calls and send emails to each other, enhancing social interactions
+
+![1](./images/6.GIF)
 
 ### 🏙️ Virtual City Environment
 - **Procedural City Generation**: Automatically generates roads, buildings, and facilities

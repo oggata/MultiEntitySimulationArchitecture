@@ -122,6 +122,20 @@ function init() {
     // 場所の作成
     createLocations();
     
+    // 自宅の初期化
+    if (typeof homeManager !== 'undefined') {
+        homeManager.initializeHomes();
+        
+        // 自宅の3Dオブジェクトを作成
+        if (typeof createAgentHome === 'function') {
+            const allHomes = homeManager.getAllHomes();
+            allHomes.forEach(home => {
+                createAgentHome(home);
+            });
+            console.log(`${allHomes.length}軒の自宅の3Dオブジェクトを作成しました`);
+        }
+    }
+    
     // マウスコントロール
     setupMouseControls();
     
@@ -175,16 +189,14 @@ function init() {
         });
     }
 
-    // 保存されたエージェントを自動読み込み
-    if (typeof agentStorage !== 'undefined' && agentStorage.hasSavedAgents()) {
-        console.log('保存されたエージェント情報を自動読み込み中...');
-        const success = agentStorage.loadAgents();
-        if (success) {
-            addLog(`📂 保存されたエージェント情報を自動読み込みしました (${agents.length}人)`, 'info');
-        } else {
-            addLog(`❌ エージェント情報の自動読み込みに失敗しました`, 'error');
-        }
-    }
+    // タブ機能の初期化
+    setupTabNavigation();
+    
+    // APIアクセス回数の表示を初期化
+    updateLlmCallCountDisplay();
+
+    // 保存されたエージェントの自動読み込みは無効化
+    // 手動で「保存されたエージェントを読み込み」ボタンを押してから読み込む
 
     // シミュレーション制御ボタンのイベント登録
     const startBtn = document.getElementById('startSimulationBtn');
@@ -381,6 +393,17 @@ function createAgents() {
     
     agentPersonalities.forEach((data, index) => {
         console.log('Creating agent:', data.name);
+        
+        // エージェントにランダムで自宅を割り当て
+        const home = homeManager.getRandomAvailableHome();
+        if (home) {
+            data.home = home;
+            home.occupant = data.name;
+        } else {
+            console.error(`エージェント「${data.name}」に自宅を割り当てできませんでした。`);
+            return;
+        }
+        
         const agent = new Agent(data, index);
         agents.push(agent);
     });
@@ -588,7 +611,7 @@ function startSimulation() {
         
         // エージェント作成後も空の場合はエラー
         if (agents.length === 0) {
-            alert('エージェントの生成に失敗しました。');
+            addLog('❌ エージェントの生成に失敗しました。', 'error');
             return;
         }
     }
@@ -599,10 +622,19 @@ function startSimulation() {
         return;
     }
 
-    // APIキーの形式を検証
-    if (!(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
-        alert('無効なAPIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
-        return;
+    // APIキーの形式を検証（プロバイダーによって分岐）
+    const provider = getSelectedApiProvider();
+    if (provider === 'openai') {
+        if (!(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
+            alert('無効なOpenAI APIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
+            return;
+        }
+    } else if (provider === 'gemini') {
+        // GeminiのAPIキーは任意の形式を許可
+        if (!apiKey || apiKey.trim() === '') {
+            alert('Gemini APIキーを入力してください。');
+            return;
+        }
     }
     
     console.log('Starting simulation...');
@@ -617,6 +649,30 @@ function startSimulation() {
     
     addLog('<span style="color: #4CAF50;">🎬 シミュレーション開始</span>');
     console.log('Simulation started successfully');
+}
+
+// タブ機能の設定
+function setupTabNavigation() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetTab = button.getAttribute('data-tab');
+            
+            // すべてのタブボタンからactiveクラスを削除
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            // すべてのタブペインからactiveクラスを削除
+            tabPanes.forEach(pane => pane.classList.remove('active'));
+            
+            // クリックされたボタンと対応するペインにactiveクラスを追加
+            button.classList.add('active');
+            const targetPane = document.getElementById(targetTab);
+            if (targetPane) {
+                targetPane.classList.add('active');
+            }
+        });
+    });
 }
 
 // グローバルスコープに関数を公開

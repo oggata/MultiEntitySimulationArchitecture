@@ -116,7 +116,7 @@ function updatePanelHTML() {
 function setupAgentDetailModal() {
     const modal = document.getElementById('agentDetailModal');
     const closeBtn = document.getElementById('closeAgentDetailModal');
-    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabButtons = modal.querySelectorAll('.tab-button');
     
     // モーダルを閉じる
     closeBtn.addEventListener('click', () => {
@@ -140,10 +140,15 @@ function setupAgentDetailModal() {
             button.classList.add('active');
             
             // タブコンテンツを更新
-            document.querySelectorAll('.tab-pane').forEach(pane => {
+            modal.querySelectorAll('.tab-pane').forEach(pane => {
                 pane.classList.remove('active');
             });
-            document.getElementById(`${tabName}-tab`).classList.add('active');
+            const targetTab = document.getElementById(`${tabName}-tab`);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            } else {
+                console.error(`Tab element with id '${tabName}-tab' not found`);
+            }
         });
     });
 }

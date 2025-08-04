@@ -292,6 +292,7 @@ const agentPersonalities = [
     {
         name: "Alice",
         age: 28,
+        color: 0xFF6B6B,
         background: {
             birthplace: "東京",
             education: "大学卒業",
@@ -303,12 +304,25 @@ const agentPersonalities = [
         personality: {
             description: "真面目で責任感が強い",
             values: "誠実さと努力を重視",
-            goals: "仕事で成果を上げる"
+            goals: "仕事で成果を上げる",
+            traits: {
+                energy: 0.7,
+                sociability: 0.6,
+                creativity: 0.5,
+                responsibility: 0.9
+            }
+        },
+        dailyRoutine: {
+            morning: "自宅",
+            afternoon: "オフィス",
+            evening: "自宅",
+            night: "自宅"
         }
     },
     {
         name: "Bob",
         age: 25,
+        color: 0x4ECDC4,
         background: {
             birthplace: "大阪",
             education: "専門学校卒業",
@@ -320,12 +334,25 @@ const agentPersonalities = [
         personality: {
             description: "創造的で好奇心旺盛",
             values: "美しさと個性を重視",
-            goals: "自分の作品で人を感動させる"
+            goals: "自分の作品で人を感動させる",
+            traits: {
+                energy: 0.8,
+                sociability: 0.7,
+                creativity: 0.9,
+                responsibility: 0.6
+            }
+        },
+        dailyRoutine: {
+            morning: "自宅",
+            afternoon: "デザイン事務所",
+            evening: "カフェ",
+            night: "自宅"
         }
     },
     {
         name: "Charlie",
         age: 35,
+        color: 0x45B7D1,
         background: {
             birthplace: "福岡",
             education: "高校卒業",
@@ -337,7 +364,19 @@ const agentPersonalities = [
         personality: {
             description: "面倒見が良く、リーダーシップがある",
             values: "家族と地域社会を重視",
-            goals: "安定した生活を築く"
+            goals: "安定した生活を築く",
+            traits: {
+                energy: 0.6,
+                sociability: 0.8,
+                creativity: 0.4,
+                responsibility: 0.8
+            }
+        },
+        dailyRoutine: {
+            morning: "自宅",
+            afternoon: "店舗",
+            evening: "自宅",
+            night: "自宅"
         }
     }
 ];

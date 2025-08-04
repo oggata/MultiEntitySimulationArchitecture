@@ -1,63 +1,194 @@
 // グローバルな自宅管理システム
 const homeManager = {
     homes: new Map(), // 自宅名 -> 自宅データ
+    availableHomes: [], // 利用可能な自宅のリスト
     
-    // ユニークな自宅を生成
-    generateUniqueHome(agentName) {
-        const lastName = agentName.split(' ')[0] || agentName;
-        const homeName = lastName + "の家";
+    // 事前に自宅を作成（施設と同じ配置ロジックを使用）
+    initializeHomes() {
+        // 既存の自宅をクリア
+        this.homes.clear();
+        this.availableHomes = [];
         
-        // 既存の自宅の座標を取得
-        const existingHomes = Array.from(this.homes.values()).map(home => ({
-            x: home.x,
-            z: home.z
-        }));
+        // 自宅の名前パターン
+        const homeNames = [
+            "田中家", "佐藤家", "鈴木家", "高橋家", "渡辺家", "伊藤家", "山本家", "中村家",
+            "小林家", "加藤家", "吉田家", "山田家", "佐々木家", "山口家", "松本家", "井上家",
+            "木村家", "林家", "斎藤家", "清水家", "山崎家", "森家", "池田家", "橋本家",
+            "阿部家", "石川家", "山下家", "中島家", "石井家", "小川家", "前田家", "岡田家",
+            "長谷川家", "藤田家", "近藤家", "坂本家", "福田家", "松井家", "桜井家", "青木家",
+            "本田家", "原田家", "岡本家", "野村家", "高田家", "河野家", "荒木家", "石田家"
+        ];
         
-        let attempts = 0;
-        const maxAttempts = 100;
+        // 自宅のサイズを定義（施設より少し小さい）
+        const homeSize = cityLayoutConfig.buildingSize * 0.8;
         
-        while (attempts < maxAttempts) {
-            const x = Math.floor(Math.random() * 41) - 20;
-            const z = Math.floor(Math.random() * 41) - 20;
+        // 自宅データを作成（施設と同じ配置ロジックを使用）
+        homeNames.forEach((name, index) => {
+            let attempts = 0;
+            let homeX, homeZ;
+            let placed = false;
             
-            // 既存の自宅との距離をチェック（最低7マス離れる）
-            const isTooClose = existingHomes.some(home => {
-                const distance = Math.sqrt((home.x - x) ** 2 + (home.z - z) ** 2);
-                return distance < 7;
-            });
-            
-            if (!isTooClose) {
-                const homeData = {
-                    name: homeName,
-                    x: x,
-                    z: z,
-                    color: "0x" + Math.floor(Math.random()*16777215).toString(16)
-                };
+            while (attempts < 500 && !placed) {
+                // ランダムな座標を生成（範囲を拡大）
+                homeX = (Math.random() - 0.5) * cityLayoutConfig.gridSize * 0.9;
+                homeZ = (Math.random() - 0.5) * cityLayoutConfig.gridSize * 0.9;
                 
-                // 自宅を登録
-                this.homes.set(homeName, homeData);
-                console.log(`新しい自宅「${homeName}」を座標 (${x}, ${z}) に作成しました。`);
-                
-                return homeData;
+                // 建物や他の施設との重複をチェック
+                if (!cityLayout.isBuildingOverlapping(homeX, homeZ, homeSize) && 
+                    !this.isHomeOverlapping(homeX, homeZ, this.availableHomes)) {
+                    
+                    // 道路距離チェック関数を使用して自宅の位置を検証
+                    if (cityLayout.isValidBuildingPositionWithRoadDistance(homeX, homeZ, homeSize)) {
+                        // 最も近い道路を見つける
+                        const nearestRoad = cityLayout.findNearestRoad(homeX, homeZ);
+                        if (nearestRoad) {
+                            const roadIndex = cityLayout.roads.indexOf(nearestRoad);
+                            
+                            // 自宅の向きを最も近い道路の方向に計算
+                            const homeRotation = cityLayout.calculateBuildingRotation(homeX, homeZ, nearestRoad);
+                            
+                            const homeData = {
+                                name: name,
+                                x: homeX,
+                                z: homeZ,
+                                type: 'home',
+                                size: homeSize,
+                                rotation: homeRotation,
+                                roadIndex: roadIndex,
+                                distanceToRoad: cityLayout.calculateMinDistanceToRoads(homeX, homeZ),
+                                nearestRoadIndex: roadIndex,
+                                color: "0x" + Math.floor(Math.random()*16777215).toString(16),
+                                isOccupied: false,
+                                occupant: null
+                            };
+                            
+                            this.homes.set(name, homeData);
+                            this.availableHomes.push(homeData);
+                            
+                            console.log(`自宅配置成功: ${name} (${homeX.toFixed(1)}, ${homeZ.toFixed(1)}) サイズ:${homeSize} 道路距離:${cityLayout.calculateMinDistanceToRoads(homeX, homeZ).toFixed(2)}`);
+                            placed = true;
+                        }
+                    }
+                }
+                attempts++;
             }
             
-            attempts++;
+            if (!placed) {
+                console.log(`自宅配置失敗: ${name} (試行回数: ${attempts})`);
+                
+                // フォールバック: より緩い条件で配置を試行
+                console.log(`フォールバック配置を試行: ${name}`);
+                let fallbackAttempts = 0;
+                const maxFallbackAttempts = 100;
+                
+                while (fallbackAttempts < maxFallbackAttempts && !placed) {
+                    homeX = (Math.random() - 0.5) * cityLayoutConfig.gridSize * 0.95;
+                    homeZ = (Math.random() - 0.5) * cityLayoutConfig.gridSize * 0.95;
+                    
+                    // フォールバック用の自宅サイズを定義
+                    const fallbackHomeSize = homeSize * 0.8;
+                    
+                    // より緩い条件でチェック
+                    if (!cityLayout.isBuildingOverlapping(homeX, homeZ, fallbackHomeSize) && 
+                        !this.isHomeOverlapping(homeX, homeZ, this.availableHomes)) {
+                        
+                        const nearestRoad = cityLayout.findNearestRoad(homeX, homeZ);
+                        if (nearestRoad) {
+                            const roadIndex = cityLayout.roads.indexOf(nearestRoad);
+                            const homeRotation = cityLayout.calculateBuildingRotation(homeX, homeZ, nearestRoad);
+                            
+                            const homeData = {
+                                name: name,
+                                x: homeX,
+                                z: homeZ,
+                                type: 'home',
+                                size: fallbackHomeSize,
+                                rotation: homeRotation,
+                                roadIndex: roadIndex,
+                                distanceToRoad: cityLayout.calculateMinDistanceToRoads(homeX, homeZ),
+                                nearestRoadIndex: roadIndex,
+                                color: "0x" + Math.floor(Math.random()*16777215).toString(16),
+                                isOccupied: false,
+                                occupant: null
+                            };
+                            
+                            this.homes.set(name, homeData);
+                            this.availableHomes.push(homeData);
+                            
+                            console.log(`フォールバック自宅配置成功: ${name} (${homeX.toFixed(1)}, ${homeZ.toFixed(1)})`);
+                            placed = true;
+                        }
+                    }
+                    fallbackAttempts++;
+                }
+                
+                if (!placed) {
+                    console.log(`フォールバック自宅配置も失敗: ${name}`);
+                }
+            }
+        });
+        
+        console.log(`${this.homes.size}軒の自宅を事前に作成しました。`);
+    },
+    
+    // 自宅の重複チェック
+    isHomeOverlapping(x, z, homes) {
+        for (const home of homes) {
+            const distance = Math.sqrt(
+                Math.pow(x - home.x, 2) + 
+                Math.pow(z - home.z, 2)
+            );
+            if (distance < cityLayoutConfig.buildingSize * 1.2) { // 自宅間の間隔
+                return true;
+            }
+        }
+        return false;
+    },
+    
+    // 利用可能な自宅をランダムで取得
+    getRandomAvailableHome() {
+        const availableHomes = this.availableHomes.filter(home => !home.isOccupied);
+        
+        if (availableHomes.length === 0) {
+            console.warn('利用可能な自宅がありません。新しい自宅を生成します。');
+            return this.generateFallbackHome();
         }
         
-        // 最大試行回数に達した場合、最も離れた位置を選択
-        console.warn('ユニークな自宅位置の生成に失敗しました。最も離れた位置を選択します。');
+        const randomIndex = Math.floor(Math.random() * availableHomes.length);
+        const selectedHome = availableHomes[randomIndex];
+        
+        // 居住者フラグを設定
+        selectedHome.isOccupied = true;
+        
+        return selectedHome;
+    },
+    
+    // フォールバック用の自宅生成（利用可能な自宅がない場合）
+    generateFallbackHome() {
         const x = Math.floor(Math.random() * 41) - 20;
         const z = Math.floor(Math.random() * 41) - 20;
         
         const homeData = {
-            name: homeName,
+            name: "臨時住宅",
             x: x,
             z: z,
-            color: "0x" + Math.floor(Math.random()*16777215).toString(16)
+            color: "0x" + Math.floor(Math.random()*16777215).toString(16),
+            isOccupied: true,
+            occupant: null
         };
         
-        this.homes.set(homeName, homeData);
+        this.homes.set(homeData.name, homeData);
         return homeData;
+    },
+    
+    // 自宅を解放（エージェント削除時など）
+    releaseHome(homeName) {
+        const home = this.homes.get(homeName);
+        if (home) {
+            home.isOccupied = false;
+            home.occupant = null;
+            console.log(`自宅「${homeName}」を解放しました。`);
+        }
     },
     
     // 自宅の存在確認
@@ -73,6 +204,11 @@ const homeManager = {
     // 全自宅データを取得
     getAllHomes() {
         return Array.from(this.homes.values());
+    },
+    
+    // 利用可能な自宅数を取得
+    getAvailableHomeCount() {
+        return this.availableHomes.filter(home => !home.isOccupied).length;
     }
 };
 
@@ -87,7 +223,7 @@ const agentStorage = {
                 background: agent.background,
                 personality: agent.personality,
                 dailyRoutine: agent.dailyRoutine,
-                home: agent.home,
+                // home情報は削除（事前作成された自宅に割り当てるため）
                 color: agent.characterInstance ? agent.characterInstance.color : null,
                 // 関係性情報も保存
                 relationships: Array.from(agent.relationships.entries()),
@@ -119,21 +255,30 @@ const agentStorage = {
             agents.length = 0;
             
             // 保存されたエージェントを復元
-            agentsData.forEach((agentData, index) => {
+            for (let index = 0; index < agentsData.length; index++) {
+                const agentData = agentsData[index];
+                
                 // 関係性をMapに変換
                 if (agentData.relationships) {
                     agentData.relationships = new Map(agentData.relationships);
                 }
                 
-                // 自宅を先に復元（エージェント作成前に自宅の場所を確実に作成）
-                if (agentData.home) {
-                    homeManager.homes.set(agentData.home.name, agentData.home);
-                    createAgentHome(agentData.home);
+                // ランダムで自宅を割り当て
+                const assignedHome = homeManager.getRandomAvailableHome();
+                if (!assignedHome) {
+                    console.error(`エージェント「${agentData.name}」に自宅を割り当てできませんでした。`);
+                    continue; // このエージェントをスキップ
                 }
+                
+                agentData.home = assignedHome;
+                assignedHome.occupant = agentData.name;
+                
+                // 自宅の3Dオブジェクトは既に初期化時に作成済みのため、ここでは作成しない
+                // 必要に応じて自宅の状態を更新
                 
                 const agent = new Agent(agentData, index);
                 agents.push(agent);
-            });
+            }
             
             // エージェント情報を更新
             updateAgentInfo();
@@ -184,6 +329,15 @@ class Agent {
         this.personality = data.personality;
         this.dailyRoutine = data.dailyRoutine;
         this.home = data.home;
+        
+        // homeが未定義の場合はエラーハンドリング
+        if (!this.home) {
+            console.error('Home is undefined for agent:', data.name);
+            // ランダムで自宅を割り当て
+            this.home = homeManager.getRandomAvailableHome();
+            this.home.occupant = this.name;
+        }
+        
         // 自宅から出発するように設定
         this.currentLocation = locations.find(loc => loc.name === this.home.name);
         if (!this.currentLocation) {
@@ -1615,9 +1769,17 @@ async function generateNewAgent() {
     generateMultipleAgentsBtn.disabled = true;
     // APIプロバイダーによってバリデーションを分岐
     const provider = window.getSelectedApiProvider ? window.getSelectedApiProvider() : 'openai';
-    if (provider === 'openai' && !(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
-        alert('無効なOpenAI APIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
-        return;
+    if (provider === 'openai') {
+        if (!(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
+            alert('無効なOpenAI APIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
+            return;
+        }
+    } else if (provider === 'gemini') {
+        // GeminiのAPIキーは任意の形式を許可
+        if (!apiKey || apiKey.trim() === '') {
+            alert('Gemini APIキーを入力してください。');
+            return;
+        }
     }
     try {
         const prompt = `あなたは自律的なエージェントの詳細なペルソナ生成システムです。
@@ -1646,7 +1808,6 @@ async function generateNewAgent() {
 11. 価値観・信念（人生観や大切にしている価値観）
 12. 目標・夢（将来の目標や夢）
 13. 日課（各時間帯で2つまでの場所）
-14. 自宅の位置（x, z座標は-20から20の範囲の整数）
 
 有効な場所：
 - カフェ
@@ -1688,12 +1849,6 @@ async function generateNewAgent() {
         "afternoon": ["場所1", "場所2"],
         "evening": ["場所1", "場所2"],
         "night": ["自宅"]
-    },
-    "home": {
-        "name": "苗字の家",
-        "x": 整数,
-        "z": 整数,
-        "color": "0x" + Math.floor(Math.random()*16777215).toString(16)
     }
 }`;
         generationProgress.textContent = 'LLMにリクエスト中...';
@@ -1709,7 +1864,12 @@ async function generateNewAgent() {
         // レスポンスからJSONを抽出（より確実な方法）
         let jsonStr = content;
         
+        console.log('=== LLMレスポンスの詳細 ===');
         console.log('元のレスポンス:', content);
+        console.log('レスポンスの長さ:', content.length);
+        console.log('JSONの開始位置:', content.indexOf('{'));
+        console.log('JSONの終了位置:', content.lastIndexOf('}'));
+        console.log('========================');
         
         // 複数の抽出方法を試行
         let extractionMethods = [
@@ -1881,31 +2041,34 @@ async function generateNewAgent() {
             throw new Error('JSONの修正に失敗しました。LLMの応答形式に問題があります。');
         }
         
-        // home情報の追加（ユニークな自宅を生成）
-        if (!agentData.home) {
-            agentData.home = homeManager.generateUniqueHome(agentData.name || 'エージェント');
-        } else {
-            // 既存のhome情報がある場合も、座標が重複していないかチェック
-            const existingHomes = homeManager.getAllHomes();
-            
-            const isTooClose = existingHomes.some(home => {
-                const distance = Math.sqrt((home.x - agentData.home.x) ** 2 + (home.z - agentData.home.z) ** 2);
-                return distance < 3;
-            });
-            
-            if (isTooClose) {
-                console.warn('既存のhome座標が重複しています。新しい座標を生成します。');
-                agentData.home = homeManager.generateUniqueHome(agentData.name || 'エージェント');
-            } else {
-                // 重複していない場合は自宅管理システムに登録
-                homeManager.homes.set(agentData.home.name, agentData.home);
-            }
+        // ランダムで自宅を割り当て
+        const assignedHome = homeManager.getRandomAvailableHome();
+        
+        // 座標が範囲外の場合は修正
+        if (assignedHome.x < -200 || assignedHome.x > 200 || 
+            assignedHome.z < -200 || assignedHome.z > 200) {
+            console.warn('自宅の座標が範囲外です。修正します。');
+            assignedHome.x = Math.floor(Math.random() * 41) - 20;
+            assignedHome.z = Math.floor(Math.random() * 41) - 20;
         }
+        
+        agentData.home = assignedHome;
+        assignedHome.occupant = agentData.name;
+        // デバッグ用：生成されたデータを詳細にログ出力
+        console.log('=== 生成されたエージェントデータの詳細 ===');
+        console.log('名前:', agentData.name);
+        console.log('年齢:', agentData.age);
+        console.log('背景:', agentData.background);
+        console.log('性格:', agentData.personality);
+        console.log('日課:', agentData.dailyRoutine);
+        console.log('自宅:', agentData.home);
+        console.log('=====================================');
+        
         if (!validateAgentData(agentData)) {
+            console.error('バリデーション失敗の詳細は上記のログを確認してください');
             throw new Error('生成されたデータが要件を満たしていません');
         }
-        // 先に自宅を作成
-        createAgentHome(agentData.home);
+        // 自宅の3Dオブジェクトは既に初期化時に作成済みのため、ここでは作成しない
         
         // エージェントを作成（自宅が確実に存在する状態で）
         const agent = new Agent(agentData, agents.length);
@@ -1945,14 +2108,15 @@ async function generateNewAgent() {
         generationMessage.textContent = '❌ エージェントの生成に失敗しました';
         generationProgress.textContent = error.message;
         
+        // 活動ログにエラーを記録
+        addLog(`❌ エージェントの生成に失敗しました: ${error.message}`, 'error');
+        
         // 5秒後にメッセージを非表示
         setTimeout(() => {
             generationStatus.style.display = 'none';
             generateAgentBtn.disabled = false;
             generateMultipleAgentsBtn.disabled = false;
         }, 5000);
-        
-        alert('エージェントの生成に失敗しました: ' + error.message);
     }
 }
 
@@ -1962,7 +2126,6 @@ function loadSavedAgents() {
         const success = agentStorage.loadAgents();
         if (success) {
             addLog(`📂 保存されたエージェント情報を読み込みました (${agents.length}人)`, 'info');
-            alert(`保存されたエージェント情報を読み込みました (${agents.length}人)`);
             // ボタンテキストを更新（読み込み後は0人になる）
             updateStorageButtonText();
             // シミュレーション開始ボタンの状態を更新
@@ -1971,11 +2134,9 @@ function loadSavedAgents() {
             }
         } else {
             addLog(`❌ エージェント情報の読み込みに失敗しました`, 'error');
-            alert('エージェント情報の読み込みに失敗しました');
         }
     } else {
         addLog(`ℹ️ 保存されたエージェント情報が見つかりません`, 'info');
-        alert('保存されたエージェント情報が見つかりません');
     }
 }
 
@@ -1987,11 +2148,17 @@ function clearAllAgents() {
     }
     
     if (confirm(`本当に全エージェント (${agents.length}人) を削除しますか？\nこの操作は元に戻せません。`)) {
+        // 自宅を解放
+        if (typeof homeManager !== 'undefined') {
+            agents.forEach(agent => {
+                if (agent.home && agent.home.name) {
+                    homeManager.releaseHome(agent.home.name);
+                }
+            });
+        }
+        
         // エージェントをクリア
         agents.length = 0;
-        
-        // 自宅管理システムもクリア
-        homeManager.homes.clear();
         
         // シーンから自宅を削除（簡易的な方法）
         const homeObjects = scene.children.filter(child => 
@@ -2192,6 +2359,7 @@ function validateAgentData(data) {
     for (const field of requiredFields) {
         if (!data[field]) {
             console.error(`必須フィールドが不足しています: ${field}`);
+            console.error('データ全体:', data);
             return false;
         }
     }
@@ -2266,11 +2434,12 @@ function validateAgentData(data) {
             }
         }
 
-        // 座標の範囲チェック
+        // 座標の範囲チェック（より広い範囲を許可）
         if (typeof data.home.x !== 'number' || typeof data.home.z !== 'number' ||
-            data.home.x < -20 || data.home.x > 20 ||
-            data.home.z < -20 || data.home.z > 20) {
+            data.home.x < -200 || data.home.x > 200 ||
+            data.home.z < -200 || data.home.z > 200) {
             console.error('自宅の座標が不正です');
+            console.error('座標値:', { x: data.home.x, z: data.home.z });
             return false;
         }
     }
@@ -2322,22 +2491,37 @@ async function callLLM({ prompt, systemPrompt = '', maxTokens = 150, temperature
         return data.choices[0].message.content;
     } else if (provider === 'gemini') {
         // Gemini API
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+        
+        // systemPromptとpromptを組み合わせてGemini用のプロンプトを作成
+        const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
+        
         const body = {
             contents: [
-                { role: "user", parts: [{ text: prompt }] }
-            ]
+                { role: "user", parts: [{ text: fullPrompt }] }
+            ],
+            generationConfig: {
+                temperature: temperature,
+                maxOutputTokens: maxTokens
+            }
         };
+        
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
+        
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message || 'Gemini API呼び出しに失敗しました');
+        if (!response.ok) {
+            console.error('Gemini API エラー:', data);
+            throw new Error(data.error?.message || 'Gemini API呼び出しに失敗しました');
+        }
+        
         if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts[0].text) {
             throw new Error('Gemini APIからの応答が不正です');
         }
+        
         return data.candidates[0].content.parts[0].text;
     } else {
         throw new Error('不明なAPIプロバイダーです');

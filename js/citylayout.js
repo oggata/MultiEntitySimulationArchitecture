@@ -25,6 +25,8 @@ class CityLayout {
         // サブストリート（小道）
         const subStreets = this.generateSubStreets(mainStreets);
         
+        console.log(`道路生成完了: メインストリート=${mainStreets.length}本, サブストリート=${subStreets.length}本`);
+        
         this.roads = [...mainStreets, ...subStreets];
         this.findIntersections();
         // 短い道路を追加
@@ -42,6 +44,8 @@ class CityLayout {
         const mainStreets = [];
         const numMainStreets = cityLayoutConfig.numMainStreets; // configから読み込み
         const spacing = this.gridSize / (numMainStreets + 1);
+        
+        console.log(`メインストリート生成開始: numMainStreets=${numMainStreets}, spacing=${spacing.toFixed(1)}`);
 
         // 東西方向のメインストリート
         for (let i = 1; i <= numMainStreets; i++) {
@@ -52,6 +56,7 @@ class CityLayout {
                 type: 'main',
                 isMain: Math.random() < 0.2 // 20%の確率で主要道路
             });
+            console.log(`東西方向メインストリート${i}: z=${z.toFixed(1)}`);
         }
 
         // 南北方向のメインストリート
@@ -63,8 +68,10 @@ class CityLayout {
                 type: 'main',
                 isMain: Math.random() < 0.2
             });
+            console.log(`南北方向メインストリート${i}: x=${x.toFixed(1)}`);
         }
-
+        
+        console.log(`メインストリート生成完了: ${mainStreets.length}本`);
         return mainStreets;
     }
 
@@ -72,6 +79,8 @@ class CityLayout {
     generateSubStreets(mainStreets) {
         const subStreets = [];
         const blockSize = this.blockSize;
+        
+        console.log(`サブストリート生成開始: メインストリート数=${mainStreets.length}, ブロックサイズ=${blockSize}`);
 
         // メインストリートで区切られた各ブロック内にサブストリートを生成
         for (let i = 0; i < mainStreets.length; i++) {
@@ -80,18 +89,29 @@ class CityLayout {
                 const street2 = mainStreets[j];
 
                 // 同じ方向の道路はスキップ
-                if (this.isParallel(street1, street2)) continue;
+                if (this.isParallel(street1, street2)) {
+                    console.log(`平行な道路をスキップ: street${i}とstreet${j}`);
+                    continue;
+                }
 
                 // 交差点を計算
                 const intersection = this.findRoadIntersection(street1, street2);
-                if (!intersection) continue;
+                if (!intersection) {
+                    console.log(`交差点が見つからない: street${i}とstreet${j}`);
+                    continue;
+                }
 
                 // ブロックの範囲を計算
                 const blockBounds = this.calculateBlockBounds(street1, street2, intersection, mainStreets);
-                if (!blockBounds) continue;
+                if (!blockBounds) {
+                    console.log(`ブロック境界が計算できない: street${i}とstreet${j}`);
+                    continue;
+                }
 
                 // ブロック内にサブストリートを生成
                 const blockSubStreets = this.generateBlockSubStreets(blockBounds);
+                console.log(`ブロック内サブストリート生成: ${blockSubStreets.length}本`);
+                
                 // サブストリートも20%で主要道路に
                 blockSubStreets.forEach(street => {
                     street.isMain = Math.random() < 0.2;
@@ -99,7 +119,8 @@ class CityLayout {
                 subStreets.push(...blockSubStreets);
             }
         }
-
+        
+        console.log(`サブストリート生成完了: ${subStreets.length}本`);
         return subStreets;
     }
 
@@ -148,11 +169,14 @@ class CityLayout {
         const { minX, maxX, minZ, maxZ } = blockBounds;
         const blockWidth = maxX - minX;
         const blockDepth = maxZ - minZ;
+        
+        console.log(`ブロックサイズ: ${blockWidth.toFixed(1)} x ${blockDepth.toFixed(1)}, 最小サイズ: ${this.blockSize}`);
 
         // ブロックが十分な大きさの場合のみサブストリートを生成
         if (blockWidth > this.blockSize && blockDepth > this.blockSize) {
             // 東西方向のサブストリート
             const numEastWest = Math.floor(blockDepth / this.blockSize);
+            console.log(`東西方向サブストリート数: ${numEastWest}`);
             for (let i = 1; i < numEastWest; i++) {
                 const z = minZ + (blockDepth * i / numEastWest);
                 subStreets.push({
@@ -164,6 +188,7 @@ class CityLayout {
 
             // 南北方向のサブストリート
             const numNorthSouth = Math.floor(blockWidth / this.blockSize);
+            console.log(`南北方向サブストリート数: ${numNorthSouth}`);
             for (let i = 1; i < numNorthSouth; i++) {
                 const x = minX + (blockWidth * i / numNorthSouth);
                 subStreets.push({
@@ -172,6 +197,8 @@ class CityLayout {
                     type: 'sub'
                 });
             }
+        } else {
+            console.log(`ブロックが小さすぎるためサブストリートを生成しません`);
         }
 
         return subStreets;

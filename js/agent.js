@@ -212,6 +212,117 @@ const homeManager = {
     }
 };
 
+// 共通ユーティリティ関数
+const AgentUtils = {
+    // LLM呼び出しの共通化
+    async callLLMWithFallback(prompt, systemPrompt, maxTokens = 100, temperature = 0.7) {
+        try {
+            return await callLLM({
+                prompt,
+                systemPrompt,
+                maxTokens,
+                temperature
+            });
+        } catch (error) {
+            console.error('LLM API呼び出しエラー:', error);
+            return null;
+        }
+    },
+    
+    // ログ記録の共通化
+    logAgentAction(agent, actionType, message, details = '') {
+        addLog(message, actionType, details);
+        if (window.logAgentAction) {
+            window.logAgentAction(agent, actionType, details);
+        }
+    },
+    
+    // 履歴記録の共通化
+    recordHistory(historyArray, data, maxLength = 100) {
+        historyArray.push({
+            timestamp: new Date(),
+            ...data
+        });
+        
+        if (historyArray.length > maxLength) {
+            historyArray.shift();
+        }
+    },
+    
+    // 関係性更新の共通化
+    updateRelationship(agent, otherAgent, interactionType, affinityChange = 0) {
+        const relationship = agent.relationships.get(otherAgent.name);
+        if (!relationship) return;
+        
+        const oldAffinity = relationship.affinity;
+        relationship.familiarity = Math.min(1, relationship.familiarity + 0.1);
+        relationship.affinity = Math.min(1, Math.max(0, relationship.affinity + affinityChange));
+        relationship.lastInteraction = new Date();
+        relationship.interactionCount++;
+        
+        // 相手側の関係性も更新
+        const otherRelationship = otherAgent.relationships.get(agent.name);
+        if (otherRelationship) {
+            otherRelationship.familiarity = relationship.familiarity;
+            otherRelationship.affinity = relationship.affinity;
+            otherRelationship.lastInteraction = relationship.lastInteraction;
+            otherRelationship.interactionCount++;
+        }
+        
+        // 大きな変化があった場合のみログ出力
+        if (Math.abs(relationship.affinity - oldAffinity) > 0.1) {
+            if (window.logRelationshipChange) {
+                window.logRelationshipChange(agent, otherAgent, interactionType);
+            }
+        }
+    },
+    
+    // フォールバックメッセージの生成
+    getFallbackMessage(interactionType, agentName, otherAgentName) {
+        const fallbackMessages = {
+            "挨拶": [
+                `${otherAgentName}さん、こんにちは！`,
+                `やあ、${otherAgentName}さん。元気？`,
+                `${otherAgentName}さん、お久しぶり！`
+            ],
+            "自己紹介": [
+                `初めまして、${agentName}と申します。`,
+                `${agentName}です。よろしくお願いします！`,
+                `よろしくお願いします！`
+            ],
+            "天気の話": [
+                "今日はいい天気ですね。",
+                "最近、過ごしやすい気候ですね。",
+                "こんな日は外にいると気持ちいいですね。"
+            ],
+            "street-interaction": [
+                `${otherAgentName}さん、こんにちは！`,
+                `やあ、${otherAgentName}さん。偶然ですね。`,
+                `${otherAgentName}さん、お久しぶりです！`,
+                "こんにちは！"
+            ]
+        };
+        
+        const messages = fallbackMessages[interactionType] || ["..."];
+        return messages[Math.floor(Math.random() * messages.length)];
+    },
+    
+    // プロンプトテーマの取得
+    getTopicPrompt() {
+        const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
+        return topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する話題についても話してください。` : '';
+    },
+    
+    // 時間帯の取得
+    getTimeOfDay(currentTime) {
+        const hour = Math.floor(currentTime / 60);
+        if (hour < 6 || hour >= 22) return "night";
+        if (hour < 12) return "morning";
+        if (hour < 18) return "afternoon";
+        return "evening";
+    }
+};
+
 // エージェント情報のlocalStorage管理
 const agentStorage = {
     // エージェント情報をlocalStorageに保存
@@ -1209,26 +1320,9 @@ class Agent {
         // 相互作用を実行
         this.performInteraction(otherAgent, interaction);
         
-        // 関係性の更新
-        const oldAffinity = relationship.affinity;
-        relationship.familiarity = Math.min(1, relationship.familiarity + 0.1);
-        relationship.affinity = Math.min(1, Math.max(0, relationship.affinity + (Math.random() - 0.3) * 0.2));
-        
-        if (Math.abs(relationship.affinity - oldAffinity) > 0.1) {
-            logRelationshipChange(this, otherAgent, 'interaction');
-        }
-        
-        relationship.lastInteraction = new Date();
-        relationship.interactionCount++;
-        
-        // 相手側の関係性も更新
-        const otherRelationship = otherAgent.relationships.get(this.name);
-        if (otherRelationship) {
-            otherRelationship.familiarity = relationship.familiarity;
-            otherRelationship.affinity = relationship.affinity;
-            otherRelationship.lastInteraction = relationship.lastInteraction;
-            otherRelationship.interactionCount++;
-        }
+        // 関係性の更新（共通化）
+        const affinityChange = (Math.random() - 0.3) * 0.2;
+        AgentUtils.updateRelationship(this, otherAgent, 'interaction', affinityChange);
     }
     
     getInteractionTypes(relationship) {
@@ -1256,82 +1350,60 @@ class Agent {
         if (!simulationRunning || simulationPaused) return;
         
         try {
-            // プロンプトテーマを取得
-            const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
-            const themeContext = topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する話題についても話してください。` : '';
+            const themeContext = AgentUtils.getTopicPrompt();
             
             const prompt = `\nあなたは${this.name}という${this.age}歳の${this.personality.description}です。\n現在${this.currentLocation.name}にいて、${otherAgent.name}さんと${interactionType}をしています。\n\nあなたの性格特性:\n- 社交性: ${this.personality.traits.sociability}\n- 活動的さ: ${this.personality.traits.energy}\n- ルーチン重視: ${this.personality.traits.routine}\n- 好奇心: ${this.personality.traits.curiosity}\n- 共感性: ${this.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${this.relationships.get(otherAgent.name).familiarity}\n- 好感度: ${this.relationships.get(otherAgent.name).affinity}${themeContext}\n\nこの状況で、自然な会話を生成してください。1-2文程度の短い会話にしてください。\n`;
-            const message = await callLLM({
-                prompt,
-                systemPrompt: "あなたは自律的なエージェントの会話システムです。与えられた状況に基づいて、自然な会話を生成してください。",
-                maxTokens: 100,
-                temperature: 0.7
-            });
-            // 行動履歴を記録
-            this.recordAction('interaction', otherAgent.name, `${interactionType}: "${message}"`);
             
-            this.currentThought = message;
-            addLog(`💬 ${this.name} → ${otherAgent.name}: "${message}"`, 'interaction');
-            this.addMemory(`${otherAgent.name}と${interactionType}をした`, "interaction");
-            // 相手の反応
-            setTimeout(async () => {
-                // 一時停止中はLLM APIコールをスキップ
-                if (!simulationRunning || simulationPaused) return;
+            const message = await AgentUtils.callLLMWithFallback(
+                prompt,
+                "あなたは自律的なエージェントの会話システムです。与えられた状況に基づいて、自然な会話を生成してください。",
+                100,
+                0.7
+            );
+            
+            if (message) {
+                // 行動履歴を記録
+                this.recordAction('interaction', otherAgent.name, `${interactionType}: "${message}"`);
                 
-                if (otherAgent && !otherAgent.isThinking) {
-                    // プロンプトテーマを取得
-                    const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
-                    const themeContext = topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する話題についても話してください。` : '';
+                this.currentThought = message;
+                AgentUtils.logAgentAction(this, 'interaction', `💬 ${this.name} → ${otherAgent.name}: "${message}"`);
+                this.addMemory(`${otherAgent.name}と${interactionType}をした`, "interaction");
+                
+                // 相手の反応
+                setTimeout(async () => {
+                    if (!simulationRunning || simulationPaused) return;
                     
-                    const responsePrompt = `\nあなたは${otherAgent.name}という${otherAgent.age}歳の${otherAgent.personality.description}です。\n${this.name}さんから「${message}」と言われました。\n\nあなたの性格特性:\n- 社交性: ${otherAgent.personality.traits.sociability}\n- 活動的さ: ${otherAgent.personality.traits.energy}\n- ルーチン重視: ${otherAgent.personality.traits.routine}\n- 好奇心: ${otherAgent.personality.traits.curiosity}\n- 共感性: ${otherAgent.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${otherAgent.relationships.get(this.name).familiarity}\n- 好感度: ${otherAgent.relationships.get(this.name).affinity}${themeContext}\n\nこの状況で、自然な返答を生成してください。1-2文程度の短い返答にしてください。\n`;
-                    try {
-                        const responseMessage = await callLLM({
-                            prompt: responsePrompt,
-                            systemPrompt: "あなたは自律的なエージェントの会話システムです。与えられた状況に基づいて、自然な返答を生成してください。",
-                            maxTokens: 100,
-                            temperature: 0.7
-                        });
-                        otherAgent.currentThought = responseMessage;
-                        addLog(`💬 ${otherAgent.name} → ${this.name}: "${responseMessage}"`, 'interaction');
-                    } catch (error) {
-                        console.error('LLM API呼び出しエラー:', error);
-                        const fallbackResponses = [
-                            `${this.name}さん、私も同じように思います！`,
-                            "なるほど、そうですね。",
-                            "それは興味深い話ですね。",
-                            `${this.name}さんとお話しできて嬉しいです。`
-                        ];
-                        const fallbackResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-                        otherAgent.currentThought = fallbackResponse;
-                        addLog(`💬 ${otherAgent.name} → ${this.name}: "${fallbackResponse}"`, 'interaction');
+                    if (otherAgent && !otherAgent.isThinking) {
+                        const responsePrompt = `\nあなたは${otherAgent.name}という${otherAgent.age}歳の${otherAgent.personality.description}です。\n${this.name}さんから「${message}」と言われました。\n\nあなたの性格特性:\n- 社交性: ${otherAgent.personality.traits.sociability}\n- 活動的さ: ${otherAgent.personality.traits.energy}\n- ルーチン重視: ${otherAgent.personality.traits.routine}\n- 好奇心: ${otherAgent.personality.traits.curiosity}\n- 共感性: ${otherAgent.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${otherAgent.relationships.get(this.name).familiarity}\n- 好感度: ${otherAgent.relationships.get(this.name).affinity}${themeContext}\n\nこの状況で、自然な返答を生成してください。1-2文程度の短い返答にしてください。\n`;
+                        
+                        const responseMessage = await AgentUtils.callLLMWithFallback(
+                            responsePrompt,
+                            "あなたは自律的なエージェントの会話システムです。与えられた状況に基づいて、自然な返答を生成してください。",
+                            100,
+                            0.7
+                        );
+                        
+                        if (responseMessage) {
+                            otherAgent.currentThought = responseMessage;
+                            AgentUtils.logAgentAction(otherAgent, 'interaction', `💬 ${otherAgent.name} → ${this.name}: "${responseMessage}"`);
+                        } else {
+                            const fallbackResponse = AgentUtils.getFallbackMessage('response', otherAgent.name, this.name);
+                            otherAgent.currentThought = fallbackResponse;
+                            AgentUtils.logAgentAction(otherAgent, 'interaction', `💬 ${otherAgent.name} → ${this.name}: "${fallbackResponse}"`);
+                        }
                     }
-                }
-            }, 2000);
+                }, 2000);
+            } else {
+                // LLM呼び出し失敗時のフォールバック
+                const message = AgentUtils.getFallbackMessage(interactionType, this.name, otherAgent.name);
+                this.currentThought = message;
+                AgentUtils.logAgentAction(this, 'interaction', `💬 ${this.name} → ${otherAgent.name}: "${message}"`);
+            }
         } catch (error) {
             console.error('LLM API呼び出しエラー:', error);
-            const fallbackMessages = {
-                "挨拶": [
-                    `${otherAgent.name}さん、こんにちは！`,
-                    `やあ、${otherAgent.name}さん。元気？`,
-                    `${otherAgent.name}さん、お久しぶり！`
-                ],
-                "自己紹介": [
-                    `初めまして、${this.name}と申します。`,
-                    `${this.personality.description.split('。')[0]}です。`,
-                    `よろしくお願いします！`
-                ],
-                "天気の話": [
-                    "今日はいい天気ですね。",
-                    "最近、過ごしやすい気候ですね。",
-                    "こんな日は外にいると気持ちいいですね。"
-                ]
-            };
-            
-            const messageList = fallbackMessages[interactionType] || ["..."];
-            const message = messageList[Math.floor(Math.random() * messageList.length)];
-            
+            const message = AgentUtils.getFallbackMessage(interactionType, this.name, otherAgent.name);
             this.currentThought = message;
-            addLog(`💬 ${this.name} → ${otherAgent.name}: "${message}"`, 'interaction');
+            AgentUtils.logAgentAction(this, 'interaction', `💬 ${this.name} → ${otherAgent.name}: "${message}"`);
         }
     }
     
@@ -1341,27 +1413,41 @@ class Agent {
         
         if (this.currentActivity) {
             try {
-                // プロンプトテーマを取得
-                const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
-                const themeContext = topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する考えや関心事についても表現してください。` : '';
+                const themeContext = AgentUtils.getTopicPrompt();
                 
                 const prompt = `\nあなたは${this.name}という${this.age}歳の${this.personality.description}です。\n現在${this.currentLocation.name}で${this.currentActivity}しています。\n\nあなたの性格特性:\n- 社交性: ${this.personality.traits.sociability}\n- 活動的さ: ${this.personality.traits.energy}\n- ルーチン重視: ${this.personality.traits.routine}\n- 好奇心: ${this.personality.traits.curiosity}\n- 共感性: ${this.personality.traits.empathy}${themeContext}\n\nこの状況で、あなたが感じていることや考えていることを自然な形で表現してください。\n1-2文程度の短い思考にしてください。\n`;
-                const thought = await callLLM({
-                    prompt,
-                    systemPrompt: "あなたは自律的なエージェントの思考システムです。与えられた状況に基づいて、自然な思考を生成してください。",
-                    maxTokens: 100,
-                    temperature: 0.7
-                });
-                // 行動履歴を記録
-                this.recordAction('activity', this.currentActivity, `場所: ${this.currentLocation.name}, 思考: "${thought}"`);
                 
-                this.currentThought = thought;
-                addLog(`🎯 ${this.name}は${this.currentLocation.name}で${this.currentActivity}いる: "${thought}"`, 'activity', `\n                    <div class="log-detail-section">\n                        <h4>活動の詳細</h4>\n                        <p>場所: ${this.currentLocation.name}</p>\n                        <p>活動: ${this.currentActivity}</p>\n                        <p>思考: ${this.currentThought}</p>\n                    </div>\n                `);
-                this.addMemory(`${this.currentLocation.name}で${this.currentActivity}`, "activity");
+                const thought = await AgentUtils.callLLMWithFallback(
+                    prompt,
+                    "あなたは自律的なエージェントの思考システムです。与えられた状況に基づいて、自然な思考を生成してください。",
+                    100,
+                    0.7
+                );
+                
+                if (thought) {
+                    // 行動履歴を記録
+                    this.recordAction('activity', this.currentActivity, `場所: ${this.currentLocation.name}, 思考: "${thought}"`);
+                    
+                    this.currentThought = thought;
+                    AgentUtils.logAgentAction(this, 'activity', `🎯 ${this.name}は${this.currentLocation.name}で${this.currentActivity}いる: "${thought}"`, `
+                        <div class="log-detail-section">
+                            <h4>活動の詳細</h4>
+                            <p>場所: ${this.currentLocation.name}</p>
+                            <p>活動: ${this.currentActivity}</p>
+                            <p>思考: ${this.currentThought}</p>
+                        </div>
+                    `);
+                    this.addMemory(`${this.currentLocation.name}で${this.currentActivity}`, "activity");
+                } else {
+                    // LLM呼び出し失敗時のフォールバック
+                    this.currentThought = `${this.currentActivity}いる`;
+                    AgentUtils.logAgentAction(this, 'activity', `🎯 ${this.name}は${this.currentLocation.name}で${this.currentActivity}いる`);
+                    this.addMemory(`${this.currentLocation.name}で${this.currentActivity}`, "activity");
+                }
             } catch (error) {
                 console.error('LLM API呼び出しエラー:', error);
                 this.currentThought = `${this.currentActivity}いる`;
-                addLog(`🎯 ${this.name}は${this.currentLocation.name}で${this.currentActivity}いる`, 'activity');
+                AgentUtils.logAgentAction(this, 'activity', `🎯 ${this.name}は${this.currentLocation.name}で${this.currentActivity}いる`);
                 this.addMemory(`${this.currentLocation.name}で${this.currentActivity}`, "activity");
             }
         }
@@ -1402,11 +1488,7 @@ class Agent {
     }
     
     getTimeOfDay() {
-        const hour = Math.floor(currentTime / 60);
-        if (hour < 6 || hour >= 22) return "night";
-        if (hour < 12) return "morning";
-        if (hour < 18) return "afternoon";
-        return "evening";
+        return AgentUtils.getTimeOfDay(currentTime);
     }
     
     getRoutineLocation(timeOfDay) {
@@ -1573,78 +1655,72 @@ class Agent {
         if (!simulationRunning || simulationPaused) return;
         
         try {
-            // プロンプトテーマを取得
-            const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
-            const themeContext = topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する話題についても話してください。` : '';
+            const themeContext = AgentUtils.getTopicPrompt();
             
             const prompt = `\nあなたは${this.name}という${this.age}歳の${this.personality.description}です。\n街中で${otherAgent.name}さんと偶然出会いました。\n\nあなたの性格特性:\n- 社交性: ${this.personality.traits.sociability}\n- 活動的さ: ${this.personality.traits.energy}\n- ルーチン重視: ${this.personality.traits.routine}\n- 好奇心: ${this.personality.traits.curiosity}\n- 共感性: ${this.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${this.relationships.get(otherAgent.name).familiarity}\n- 好感度: ${this.relationships.get(otherAgent.name).affinity}${themeContext}\n\nこの状況で、自然な挨拶や会話を生成してください。1-2文程度の短い会話にしてください。\n`;
-            const message = await callLLM({
-                prompt,
-                systemPrompt: "あなたは自律的なエージェントの会話システムです。街中での偶然の出会いで、自然な挨拶や会話を生成してください。",
-                maxTokens: 100,
-                temperature: 0.7
-            });
-            this.currentThought = message;
-            addLog(`💬 ${this.name} → ${otherAgent.name}: "${message}"`, 'street-interaction');
-            this.addMemory(`街中で${otherAgent.name}と出会った`, "encounter");
             
-            // 相手の反応
-            setTimeout(async () => {
-                // 一時停止中はLLM APIコールをスキップ
-                if (!simulationRunning || simulationPaused) return;
+            const message = await AgentUtils.callLLMWithFallback(
+                prompt,
+                "あなたは自律的なエージェントの会話システムです。街中での偶然の出会いで、自然な挨拶や会話を生成してください。",
+                100,
+                0.7
+            );
+            
+            if (message) {
+                this.currentThought = message;
+                AgentUtils.logAgentAction(this, 'street-interaction', `💬 ${this.name} → ${otherAgent.name}: "${message}"`);
+                this.addMemory(`街中で${otherAgent.name}と出会った`, "encounter");
                 
-                if (otherAgent && !otherAgent.isThinking) {
-                    const responsePrompt = `\nあなたは${otherAgent.name}という${otherAgent.age}歳の${otherAgent.personality.description}です。\n街中で${this.name}さんと偶然出会い、「${message}」と言われました。\n\nあなたの性格特性:\n- 社交性: ${otherAgent.personality.traits.sociability}\n- 活動的さ: ${otherAgent.personality.traits.energy}\n- ルーチン重視: ${otherAgent.personality.traits.routine}\n- 好奇心: ${otherAgent.personality.traits.curiosity}\n- 共感性: ${otherAgent.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${otherAgent.relationships.get(this.name).familiarity}\n- 好感度: ${otherAgent.relationships.get(this.name).affinity}${themeContext}\n\nこの状況で、自然な返答を生成してください。1-2文程度の短い返答にしてください。\n`;
-                    try {
-                        const responseMessage = await callLLM({
-                            prompt: responsePrompt,
-                            systemPrompt: "あなたは自律的なエージェントの会話システムです。街中での偶然の出会いで、自然な返答を生成してください。",
-                            maxTokens: 100,
-                            temperature: 0.7
-                        });
-                        otherAgent.currentThought = responseMessage;
-                        addLog(`💬 ${otherAgent.name} → ${this.name}: "${responseMessage}"`, 'street-interaction');
-                        otherAgent.addMemory(`街中で${this.name}と出会った`, "encounter");
+                // 相手の反応
+                setTimeout(async () => {
+                    if (!simulationRunning || simulationPaused) return;
+                    
+                    if (otherAgent && !otherAgent.isThinking) {
+                        const responsePrompt = `\nあなたは${otherAgent.name}という${otherAgent.age}歳の${otherAgent.personality.description}です。\n街中で${this.name}さんと偶然出会い、「${message}」と言われました。\n\nあなたの性格特性:\n- 社交性: ${otherAgent.personality.traits.sociability}\n- 活動的さ: ${otherAgent.personality.traits.energy}\n- ルーチン重視: ${otherAgent.personality.traits.routine}\n- 好奇心: ${otherAgent.personality.traits.curiosity}\n- 共感性: ${otherAgent.personality.traits.empathy}\n\n相手との関係:\n- 親密度: ${otherAgent.relationships.get(this.name).familiarity}\n- 好感度: ${otherAgent.relationships.get(this.name).affinity}${themeContext}\n\nこの状況で、自然な返答を生成してください。1-2文程度の短い返答にしてください。\n`;
+                        
+                        const responseMessage = await AgentUtils.callLLMWithFallback(
+                            responsePrompt,
+                            "あなたは自律的なエージェントの会話システムです。街中での偶然の出会いで、自然な返答を生成してください。",
+                            100,
+                            0.7
+                        );
+                        
+                        if (responseMessage) {
+                            otherAgent.currentThought = responseMessage;
+                            AgentUtils.logAgentAction(otherAgent, 'street-interaction', `💬 ${otherAgent.name} → ${this.name}: "${responseMessage}"`);
+                            otherAgent.addMemory(`街中で${this.name}と出会った`, "encounter");
+                        } else {
+                            const fallbackResponse = AgentUtils.getFallbackMessage('street-interaction', otherAgent.name, this.name);
+                            otherAgent.currentThought = fallbackResponse;
+                            AgentUtils.logAgentAction(otherAgent, 'street-interaction', `💬 ${otherAgent.name} → ${this.name}: "${fallbackResponse}"`);
+                            otherAgent.addMemory(`街中で${this.name}と出会った`, "encounter");
+                        }
                         
                         // 会話終了後に移動を再開
                         setTimeout(() => {
                             this.endStreetConversation();
                             otherAgent.endStreetConversation();
                         }, 3000); // 3秒後に会話終了
-                        
-                    } catch (error) {
-                        console.error('LLM API呼び出しエラー:', error);
-                        const fallbackResponses = [
-                            `${this.name}さん、お久しぶりです！`,
-                            "こんにちは！偶然ですね。",
-                            "お元気ですか？",
-                            `${this.name}さんとお会いできて嬉しいです。`
-                        ];
-                        const fallbackResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-                        otherAgent.currentThought = fallbackResponse;
-                        addLog(`💬 ${otherAgent.name} → ${this.name}: "${fallbackResponse}"`, 'street-interaction');
-                        
-                        // 会話終了後に移動を再開
-                        setTimeout(() => {
-                            this.endStreetConversation();
-                            otherAgent.endStreetConversation();
-                        }, 3000);
                     }
-                }
-            }, 2000);
+                }, 2000);
+            } else {
+                // LLM呼び出し失敗時のフォールバック
+                const message = AgentUtils.getFallbackMessage('street-interaction', this.name, otherAgent.name);
+                this.currentThought = message;
+                AgentUtils.logAgentAction(this, 'street-interaction', `💬 ${this.name} → ${otherAgent.name}: "${message}"`);
+                
+                // 会話終了後に移動を再開
+                setTimeout(() => {
+                    this.endStreetConversation();
+                    otherAgent.endStreetConversation();
+                }, 3000);
+            }
             
         } catch (error) {
             console.error('LLM API呼び出しエラー:', error);
-            const fallbackMessages = [
-                `${otherAgent.name}さん、こんにちは！`,
-                `やあ、${otherAgent.name}さん。偶然ですね。`,
-                `${otherAgent.name}さん、お久しぶりです！`,
-                "こんにちは！"
-            ];
-            
-            const message = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
+            const message = AgentUtils.getFallbackMessage('street-interaction', this.name, otherAgent.name);
             this.currentThought = message;
-            addLog(`💬 ${this.name} → ${otherAgent.name}: "${message}"`, 'street-interaction');
+            AgentUtils.logAgentAction(this, 'street-interaction', `💬 ${this.name} → ${otherAgent.name}: "${message}"`);
             
             // 会話終了後に移動を再開
             setTimeout(() => {
@@ -1671,41 +1747,28 @@ class Agent {
     
     // 移動履歴を記録
     recordMovement(fromLocation, toLocation, reason = '') {
-        this.movementHistory.push({
-            timestamp: new Date(),
+        AgentUtils.recordHistory(this.movementHistory, {
             from: fromLocation,
             to: toLocation,
             reason: reason,
             timeOfDay: this.getTimeOfDay()
         });
-        
-        // 履歴を100件に制限
-        if (this.movementHistory.length > 100) {
-            this.movementHistory.shift();
-        }
     }
     
     // 行動履歴を記録
     recordAction(action, target = '', details = '') {
-        this.actionHistory.push({
-            timestamp: new Date(),
+        AgentUtils.recordHistory(this.actionHistory, {
             action: action,
             target: target,
             details: details,
             location: this.currentLocation.name,
             timeOfDay: this.getTimeOfDay()
         });
-        
-        // 履歴を100件に制限
-        if (this.actionHistory.length > 100) {
-            this.actionHistory.shift();
-        }
     }
     
     // 思考履歴を記録
     recordThought(thought, context = '') {
-        this.thoughtHistory.push({
-            timestamp: new Date(),
+        AgentUtils.recordHistory(this.thoughtHistory, {
             thought: thought,
             context: context,
             location: this.currentLocation.name,
@@ -1713,34 +1776,19 @@ class Agent {
             energy: this.energy,
             timeOfDay: this.getTimeOfDay()
         });
-        
-        // 履歴を100件に制限
-        if (this.thoughtHistory.length > 100) {
-            this.thoughtHistory.shift();
-        }
     }
     
     // 気分とエネルギーの履歴を記録
     recordMoodAndEnergy() {
-        this.moodHistory.push({
-            timestamp: new Date(),
+        AgentUtils.recordHistory(this.moodHistory, {
             mood: this.mood,
             timeOfDay: this.getTimeOfDay()
-        });
+        }, 200);
         
-        this.energyHistory.push({
-            timestamp: new Date(),
+        AgentUtils.recordHistory(this.energyHistory, {
             energy: this.energy,
             timeOfDay: this.getTimeOfDay()
-        });
-        
-        // 履歴を200件に制限
-        if (this.moodHistory.length > 200) {
-            this.moodHistory.shift();
-        }
-        if (this.energyHistory.length > 200) {
-            this.energyHistory.shift();
-        }
+        }, 200);
     }
 }
 

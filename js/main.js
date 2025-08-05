@@ -108,7 +108,17 @@ function init() {
     // 街のレイアウトを生成
     cityLayout = new CityLayout();
     cityLayout.generateRoads();
-    //cityLayout.placeBuildings();
+    
+    // 自宅を先に生成（建物生成時の重複チェックのため）
+    if (typeof homeManager !== 'undefined') {
+        homeManager.initializeHomes();
+        console.log('自宅の初期化が完了しました');
+    }
+    
+    // 建物と施設を生成（自宅との重複チェックを含む）
+    cityLayout.generateBuildings();
+    cityLayout.generateFacilities();
+    console.log('建物と施設の生成が完了しました');
 
     // 地面（塗りつぶし）
     const groundSize = cityLayout.gridSize;
@@ -164,18 +174,13 @@ function init() {
     // 場所の作成
     createLocations();
     
-    // 自宅の初期化
-    if (typeof homeManager !== 'undefined') {
-        homeManager.initializeHomes();
-        
-        // 自宅の3Dオブジェクトを作成
-        if (typeof createAgentHome === 'function') {
-            const allHomes = homeManager.getAllHomes();
-            allHomes.forEach(home => {
-                createAgentHome(home);
-            });
-            console.log(`${allHomes.length}軒の自宅の3Dオブジェクトを作成しました`);
-        }
+    // 自宅の3Dオブジェクトを作成
+    if (typeof homeManager !== 'undefined' && typeof createAgentHome === 'function') {
+        const allHomes = homeManager.getAllHomes();
+        allHomes.forEach(home => {
+            createAgentHome(home);
+        });
+        console.log(`${allHomes.length}軒の自宅の3Dオブジェクトを作成しました`);
     }
     
     // マウスコントロール

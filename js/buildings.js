@@ -1411,20 +1411,43 @@ function createAgentHome(homeData) {
     const homeSize = cityLayout.buildingSizes.small;
     const homeHeight = homeSize * 0.8;
     
-    // 家の基本構造
+    // 家の基本構造（透過した壁）
     const houseGeometry = new THREE.BoxGeometry(homeSize, homeHeight, homeSize);
-    const houseEdges = new THREE.EdgesGeometry(houseGeometry);
-    const house = new THREE.LineSegments(houseEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
+    const houseMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xff00ff, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const house = new THREE.Mesh(houseGeometry, houseMaterial);
     house.position.set(0, homeHeight/2, 0);
     homeGroup.add(house);
+    
+    // 家の境界線
+    const houseEdges = new THREE.EdgesGeometry(houseGeometry);
+    const houseEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff });
+    const houseEdge = new THREE.LineSegments(houseEdges, houseEdgeMaterial);
+    houseEdge.position.copy(house.position);
+    homeGroup.add(houseEdge);
 
-    // 屋根（三角屋根）
+    // 屋根（三角屋根、透過した色）
     const roofGeometry = new THREE.ConeGeometry(homeSize * 0.75, homeSize * 0.5, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, homeHeight + homeSize * 0.25, 0);
     roof.rotation.y = Math.PI / 4;
     homeGroup.add(roof);
+    
+    // 屋根の境界線
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roofEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x8B4513 });
+    const roofEdge = new THREE.LineSegments(roofEdges, roofEdgeMaterial);
+    roofEdge.position.copy(roof.position);
+    roofEdge.rotation.copy(roof.rotation);
+    homeGroup.add(roofEdge);
 
     // 窓（正面）
     for(let i = 0; i < 2; i++) {

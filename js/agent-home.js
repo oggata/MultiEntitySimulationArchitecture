@@ -35,7 +35,8 @@ const homeManager = {
                 
                 // 建物や他の施設との重複をチェック
                 if (!cityLayout.isBuildingOverlapping(homeX, homeZ, homeSize) && 
-                    !this.isHomeOverlapping(homeX, homeZ, this.availableHomes)) {
+                    !this.isHomeOverlapping(homeX, homeZ, this.availableHomes) &&
+                    !cityLayout.isFacilityOverlapping(homeX, homeZ, cityLayout.facilities || [])) {
                     
                     // 道路距離チェック関数を使用して自宅の位置を検証
                     if (cityLayout.isValidBuildingPositionWithRoadDistance(homeX, homeZ, homeSize)) {
@@ -90,7 +91,8 @@ const homeManager = {
                     
                     // より緩い条件でチェック
                     if (!cityLayout.isBuildingOverlapping(homeX, homeZ, fallbackHomeSize) && 
-                        !this.isHomeOverlapping(homeX, homeZ, this.availableHomes)) {
+                        !this.isHomeOverlapping(homeX, homeZ, this.availableHomes) &&
+                        !cityLayout.isFacilityOverlapping(homeX, homeZ, cityLayout.facilities || [])) {
                         
                         const nearestRoad = cityLayout.findNearestRoad(homeX, homeZ);
                         if (nearestRoad) {

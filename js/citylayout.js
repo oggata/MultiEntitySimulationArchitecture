@@ -25,7 +25,7 @@ class CityLayout {
         // サブストリート（小道）
         const subStreets = this.generateSubStreets(mainStreets);
         
-        console.log(`道路生成完了: メインストリート=${mainStreets.length}本, サブストリート=${subStreets.length}本`);
+        // console.log(`道路生成完了: メインストリート=${mainStreets.length}本, サブストリート=${subStreets.length}本`);
         
         this.roads = [...mainStreets, ...subStreets];
         this.findIntersections();
@@ -45,7 +45,7 @@ class CityLayout {
         const numMainStreets = cityLayoutConfig.numMainStreets; // configから読み込み
         const spacing = this.gridSize / (numMainStreets + 1);
         
-        console.log(`メインストリート生成開始: numMainStreets=${numMainStreets}, spacing=${spacing.toFixed(1)}`);
+        // console.log(`メインストリート生成開始: numMainStreets=${numMainStreets}, spacing=${spacing.toFixed(1)}`);
 
         // 東西方向のメインストリート
         for (let i = 1; i <= numMainStreets; i++) {
@@ -57,7 +57,7 @@ class CityLayout {
                 type: 'main',
                 isMain: isMainStreet
             });
-            console.log(`東西方向メインストリート${i}: z=${z.toFixed(1)}, isMain=${isMainStreet}`);
+            // console.log(`東西方向メインストリート${i}: z=${z.toFixed(1)}, isMain=${isMainStreet}`);
         }
 
         // 南北方向のメインストリート
@@ -70,10 +70,10 @@ class CityLayout {
                 type: 'main',
                 isMain: isMainStreet
             });
-            console.log(`南北方向メインストリート${i}: x=${x.toFixed(1)}, isMain=${isMainStreet}`);
+            // console.log(`南北方向メインストリート${i}: x=${x.toFixed(1)}, isMain=${isMainStreet}`);
         }
         
-        console.log(`メインストリート生成完了: ${mainStreets.length}本`);
+        // console.log(`メインストリート生成完了: ${mainStreets.length}本`);
         return mainStreets;
     }
 
@@ -82,7 +82,7 @@ class CityLayout {
         const subStreets = [];
         const blockSize = this.blockSize;
         
-        console.log(`サブストリート生成開始: メインストリート数=${mainStreets.length}, ブロックサイズ=${blockSize}`);
+        // console.log(`サブストリート生成開始: メインストリート数=${mainStreets.length}, ブロックサイズ=${blockSize}`);
 
         // メインストリートで区切られた各ブロック内にサブストリートを生成
         for (let i = 0; i < mainStreets.length; i++) {
@@ -92,27 +92,27 @@ class CityLayout {
 
                 // 同じ方向の道路はスキップ
                 if (this.isParallel(street1, street2)) {
-                    console.log(`平行な道路をスキップ: street${i}とstreet${j}`);
+                    // console.log(`平行な道路をスキップ: street${i}とstreet${j}`);
                     continue;
                 }
 
                 // 交差点を計算
                 const intersection = this.findRoadIntersection(street1, street2);
                 if (!intersection) {
-                    console.log(`交差点が見つからない: street${i}とstreet${j}`);
+                    // console.log(`交差点が見つからない: street${i}とstreet${j}`);
                     continue;
                 }
 
                 // ブロックの範囲を計算
                 const blockBounds = this.calculateBlockBounds(street1, street2, intersection, mainStreets);
                 if (!blockBounds) {
-                    console.log(`ブロック境界が計算できない: street${i}とstreet${j}`);
+                    // console.log(`ブロック境界が計算できない: street${i}とstreet${j}`);
                     continue;
                 }
 
                 // ブロック内にサブストリートを生成
                 const blockSubStreets = this.generateBlockSubStreets(blockBounds);
-                console.log(`ブロック内サブストリート生成: ${blockSubStreets.length}本`);
+                // console.log(`ブロック内サブストリート生成: ${blockSubStreets.length}本`);
                 
                 // サブストリートは通常道路として設定（主要道路はメインストリートのみ）
                 blockSubStreets.forEach(street => {
@@ -122,7 +122,7 @@ class CityLayout {
             }
         }
         
-        console.log(`サブストリート生成完了: ${subStreets.length}本`);
+        // console.log(`サブストリート生成完了: ${subStreets.length}本`);
         return subStreets;
     }
 
@@ -172,13 +172,13 @@ class CityLayout {
         const blockWidth = maxX - minX;
         const blockDepth = maxZ - minZ;
         
-        console.log(`ブロックサイズ: ${blockWidth.toFixed(1)} x ${blockDepth.toFixed(1)}, 最小サイズ: ${this.blockSize}`);
+        // console.log(`ブロックサイズ: ${blockWidth.toFixed(1)} x ${blockDepth.toFixed(1)}, 最小サイズ: ${this.blockSize}`);
 
         // ブロックが十分な大きさの場合のみサブストリートを生成
         if (blockWidth > this.blockSize && blockDepth > this.blockSize) {
             // 東西方向のサブストリート
             const numEastWest = Math.floor(blockDepth / this.blockSize);
-            console.log(`東西方向サブストリート数: ${numEastWest}`);
+            // console.log(`東西方向サブストリート数: ${numEastWest}`);
             for (let i = 1; i < numEastWest; i++) {
                 const z = minZ + (blockDepth * i / numEastWest);
                 subStreets.push({
@@ -190,7 +190,7 @@ class CityLayout {
 
             // 南北方向のサブストリート
             const numNorthSouth = Math.floor(blockWidth / this.blockSize);
-            console.log(`南北方向サブストリート数: ${numNorthSouth}`);
+            // console.log(`南北方向サブストリート数: ${numNorthSouth}`);
             for (let i = 1; i < numNorthSouth; i++) {
                 const x = minX + (blockWidth * i / numNorthSouth);
                 subStreets.push({
@@ -200,7 +200,7 @@ class CityLayout {
                 });
             }
         } else {
-            console.log(`ブロックが小さすぎるためサブストリートを生成しません`);
+            // console.log(`ブロックが小さすぎるためサブストリートを生成しません`);
         }
 
         return subStreets;
@@ -486,11 +486,11 @@ class CityLayout {
         const shortWidth = this.roadWidth * 0.25;
         const shortLength = this.gridSize * 0.08; // 短い道路の長さをさらに短縮
         
-        console.log(`短い道路生成開始: 元の道路数 = ${this.roads.length}`);
+        // console.log(`短い道路生成開始: 元の道路数 = ${this.roads.length}`);
         
         // すべての道路から短い道路を生やす
         this.roads.forEach((road, index) => {
-            console.log(`道路 ${index}: ${road.type}, 長さ = ${Math.sqrt(Math.pow(road.end.x - road.start.x, 2) + Math.pow(road.end.z - road.start.z, 2))}`);
+            // console.log(`道路 ${index}: ${road.type}, 長さ = ${Math.sqrt(Math.pow(road.end.x - road.start.x, 2) + Math.pow(road.end.z - road.start.z, 2))}`);
             
             // 道路の方向を計算
             const roadDirX = road.end.x - road.start.x;
@@ -517,10 +517,10 @@ class CityLayout {
                 directions.forEach((dir, dirIndex) => {
                     // 確率を上げて短い道路を生成
                     const randomValue = Math.random();
-                    console.log(`  ポイント ${i}, 方向 ${dirIndex}: 乱数 = ${randomValue.toFixed(3)}, 閾値 = ${this.shortRoadRatio}`);
+                    // console.log(`  ポイント ${i}, 方向 ${dirIndex}: 乱数 = ${randomValue.toFixed(3)}, 閾値 = ${this.shortRoadRatio}`);
                     
                     if (randomValue < this.shortRoadRatio) {
-                        console.log(`    短い道路生成試行`);
+                        // console.log(`    短い道路生成試行`);
                         
                         // フィールドの境界をチェック
                         const boundaryX = this.gridSize / 2;
@@ -548,7 +548,7 @@ class CityLayout {
                                 const dist = this.pointToLineDistance(testX, testZ, other);
                                 if (dist < this.roadWidth * 2.5) {
                                     tooClose = true;
-                                    console.log(`      他の道路と近すぎる: 距離 = ${dist.toFixed(2)}`);
+                                    // console.log(`      他の道路と近すぎる: 距離 = ${dist.toFixed(2)}`);
                                     break;
                                 }
                             }
@@ -563,7 +563,7 @@ class CityLayout {
                         // 安全な長さが確保できない場合は、最小限の長さで強制的に生成
                         if (safeLength === 0) {
                             safeLength = this.roadWidth * 2; // 最小限の長さ
-                            console.log(`      強制的に最小長さで生成: ${safeLength}`);
+                            // console.log(`      強制的に最小長さで生成: ${safeLength}`);
                         }
                         
                         // 終点を設定
@@ -573,7 +573,7 @@ class CityLayout {
                         // 最低限の長さがある場合のみ追加
                         const actualLength = Math.sqrt(Math.pow(endX - pointX, 2) + Math.pow(endZ - pointZ, 2));
                         const minLength = this.roadWidth * 1.5; // 最小長さを道路幅の1.5倍に設定
-                        console.log(`      実際の長さ = ${actualLength.toFixed(2)}, 最小長さ = ${minLength.toFixed(2)}`);
+                        // console.log(`      実際の長さ = ${actualLength.toFixed(2)}, 最小長さ = ${minLength.toFixed(2)}`);
                         
                         if (actualLength > minLength) {
                             shortRoads.push({
@@ -584,9 +584,9 @@ class CityLayout {
                                 isShort: true,
                                 width: shortWidth
                             });
-                            console.log(`      短い道路追加成功`);
+                            // console.log(`      短い道路追加成功`);
                         } else {
-                            console.log(`      短すぎるため除外`);
+                            // console.log(`      短すぎるため除外`);
                         }
                     }
                 });
@@ -595,7 +595,7 @@ class CityLayout {
         
         // 短い道路を追加
         this.roads.push(...shortRoads);
-        console.log(`短い道路を ${shortRoads.length} 本生成しました`);
+        // console.log(`短い道路を ${shortRoads.length} 本生成しました`);
     }
 
     // 道路の描画を修正
@@ -658,7 +658,7 @@ class CityLayout {
             }
         });
         
-        console.log(`道路描画完了: 主要道路=${mainRoadCount}本, 通常道路=${normalRoadCount}本, 短い道路=${shortRoadCount}本`);
+        // console.log(`道路描画完了: 主要道路=${mainRoadCount}本, 通常道路=${normalRoadCount}本, 短い道路=${shortRoadCount}本`);
         
         // 入り口接続を通常の道路として描画
         this.drawEntranceConnectionsAsRoads();
@@ -752,14 +752,14 @@ generateBuildings() {
     this.buildings = [];
     const intersectionBuffer = this.buildingSize * 3; // 交差点からの最小距離を増加
     
-    console.log(`建物生成開始: 道路数 = ${this.roads.length}`);
+            // console.log(`建物生成開始: 道路数 = ${this.roads.length}`);
     
     // まず、locationDataの施設を優先的に配置
     const placedFacilities = new Set();
     
     // 各道路に沿って建物を配置
     this.roads.forEach((road, roadIndex) => {
-        console.log(`道路 ${roadIndex} に沿って建物を配置`);
+        // console.log(`道路 ${roadIndex} に沿って建物を配置`);
         
         // 道路の方向を計算
         const roadDirX = road.end.x - road.start.x;
@@ -801,7 +801,7 @@ generateBuildings() {
                 }
                 
                 if (tooCloseToIntersection) {
-                    console.log(`  交差点に近すぎるため除外: (${roadX.toFixed(1)}, ${roadZ.toFixed(1)})`);
+                    // console.log(`  交差点に近すぎるため除外: (${roadX.toFixed(1)}, ${roadZ.toFixed(1)})`);
                     continue;
                 }
                 
@@ -815,7 +815,7 @@ generateBuildings() {
                     buildingType = selectedFacility.name;
                     buildingSize = this.getBuildingSizeByType(buildingType);
                     placedFacilities.add(selectedFacility.name);
-                    console.log(`  locationData施設を選択: ${buildingType} サイズ: ${buildingSize}`);
+                    // console.log(`  locationData施設を選択: ${buildingType} サイズ: ${buildingSize}`);
                 } else {
                     buildingType = this.getRandomBuildingType();
                     buildingSize = this.getBuildingSizeByType(buildingType);
@@ -850,48 +850,81 @@ generateBuildings() {
                         attempts++;
                     }
                     
-                    console.log(`  建物配置試行: ${buildingType} 位置:(${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)}) サイズ:${buildingSize} 道路からの距離:${totalDistance.toFixed(2)} 安全マージン:${safetyMargin.toFixed(2)}`);
+                    // console.log(`  建物配置試行: ${buildingType} 位置:(${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)}) サイズ:${buildingSize} 道路からの距離:${totalDistance.toFixed(2)} 安全マージン:${safetyMargin.toFixed(2)}`);
                     
                     // 位置調整の試行回数をチェック
                     if (attempts >= maxAttempts) {
-                        console.log(`  位置調整失敗: 最大試行回数に達しました (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)})`);
+                        // console.log(`  位置調整失敗: 最大試行回数に達しました (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)})`);
                         continue;
                     }
                     
                     // 新しい道路距離チェック関数を使用
                     if (!this.isValidBuildingPositionWithRoadDistance(buildingX, buildingZ, buildingSize)) {
-                        console.log(`  道路距離チェックで除外: (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)})`);
+                        // console.log(`  道路距離チェックで除外: (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)})`);
                         continue;
                     }
                 
                                     // 他の建物との重複をチェック
                     if (!this.isBuildingOverlapping(buildingX, buildingZ, buildingSize)) {
-                        // 最も近い道路の方向を計算して建物の向きを決定
-                        const nearestRoad = this.findNearestRoad(buildingX, buildingZ);
-                        const buildingRotation = this.calculateBuildingRotation(buildingX, buildingZ, nearestRoad);
+                        // 自宅との重複もチェック（新規追加）
+                        if (!this.isHomeOverlapping(buildingX, buildingZ, buildingSize)) {
+                            // 最も近い道路の方向を計算して建物の向きを決定
+                            const nearestRoad = this.findNearestRoad(buildingX, buildingZ);
+                            const buildingRotation = this.calculateBuildingRotation(buildingX, buildingZ, nearestRoad);
+                            
+                            this.buildings.push({
+                                x: buildingX,
+                                z: buildingZ,
+                                type: buildingType,
+                                size: buildingSize,
+                                rotation: buildingRotation,
+                                roadIndex: roadIndex,
+                                side: sideIndex,
+                                distanceToRoad: this.calculateMinDistanceToRoads(buildingX, buildingZ), // 実際の距離を記録
+                                nearestRoadIndex: this.roads.indexOf(nearestRoad) // 最も近い道路のインデックスを記録
+                            });
                         
-                        this.buildings.push({
-                            x: buildingX,
-                            z: buildingZ,
-                            type: buildingType,
-                            size: buildingSize,
-                            rotation: buildingRotation,
-                            roadIndex: roadIndex,
-                            side: sideIndex,
-                            distanceToRoad: this.calculateMinDistanceToRoads(buildingX, buildingZ), // 実際の距離を記録
-                            nearestRoadIndex: this.roads.indexOf(nearestRoad) // 最も近い道路のインデックスを記録
-                        });
-                    
-                    console.log(`  建物配置成功: ${buildingType} (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)}) サイズ:${buildingSize} 実際の道路距離:${this.calculateMinDistanceToRoads(buildingX, buildingZ).toFixed(2)}`);
+                        // console.log(`  建物配置成功: ${buildingType} (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)}) サイズ:${buildingSize} 実際の道路距離:${this.calculateMinDistanceToRoads(buildingX, buildingZ).toFixed(2)}`);
+                    } else {
+                        // console.log(`  建物重複のため除外: (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)})`);
+                    }
                 } else {
-                    console.log(`  建物重複のため除外: (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)})`);
+                    // console.log(`  自宅との重複のため除外: (${buildingX.toFixed(1)}, ${buildingZ.toFixed(1)})`);
                 }
             }
         });
     });
     
-    console.log(`建物生成完了: ${this.buildings.length} 棟配置 (locationData施設: ${placedFacilities.size}個)`);
+    // console.log(`建物生成完了: ${this.buildings.length} 棟配置 (locationData施設: ${placedFacilities.size}個)`);
 }
+
+    // 自宅との重複チェック（新規追加）
+    isHomeOverlapping(x, z, buildingSize) {
+        // homeManagerが存在する場合のみチェック
+        if (typeof homeManager !== 'undefined' && homeManager.getAllHomes) {
+            const allHomes = homeManager.getAllHomes();
+            for (const home of allHomes) {
+                const distance = Math.sqrt(
+                    Math.pow(x - home.x, 2) + 
+                    Math.pow(z - home.z, 2)
+                );
+                
+                // 建物サイズと自宅サイズを考慮した重複チェック
+                const homeSize = home.size || cityLayoutConfig.buildingSize * 0.8;
+                const combinedRadius = (buildingSize + homeSize) / 2;
+                
+                // 建物サイズに応じて重複チェックの距離を調整
+                const overlapMargin = this.getOverlapMarginByBuildingSize(buildingSize, homeSize);
+                const requiredDistance = combinedRadius + overlapMargin;
+                
+                if (distance < requiredDistance) {
+                    // console.log(`    自宅との重複検出: 距離=${distance.toFixed(2)}, 必要距離=${requiredDistance.toFixed(2)}, 自宅=${home.name}`);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     // 道路を関数として扱い、建物の位置が安全かチェックする新しい関数
     isValidBuildingPositionWithRoadDistance(x, z, buildingSize) {
@@ -1239,7 +1272,8 @@ calculateMinDistanceToRoads(x, z) {
                 
                 // 建物や他の施設との重複をチェック（条件を緩和）
                 if (!this.isBuildingOverlapping(facilityX, facilityZ, facilitySize) && 
-                    !this.isFacilityOverlapping(facilityX, facilityZ, facilities)) {
+                    !this.isFacilityOverlapping(facilityX, facilityZ, facilities) &&
+                    !this.isHomeOverlapping(facilityX, facilityZ, facilitySize)) {
                     
                     // 新しい道路距離チェック関数を使用して施設の位置を検証
                     if (this.isValidBuildingPositionWithRoadDistance(facilityX, facilityZ, facilitySize)) {
@@ -1263,7 +1297,7 @@ calculateMinDistanceToRoads(x, z) {
                                 nearestRoadIndex: roadIndex
                             });
                             
-                            console.log(`  施設配置成功: ${loc.name} (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)}) サイズ:${facilitySize} 道路距離:${this.calculateMinDistanceToRoads(facilityX, facilityZ).toFixed(2)}`);
+                            // console.log(`  施設配置成功: ${loc.name} (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)}) サイズ:${facilitySize} 道路距離:${this.calculateMinDistanceToRoads(facilityX, facilityZ).toFixed(2)}`);
                             placed = true;
                         }
                     } else {
@@ -1274,10 +1308,10 @@ calculateMinDistanceToRoads(x, z) {
             }
             
             if (!placed) {
-                console.log(`  施設配置失敗: ${loc.name} (試行回数: ${attempts})`);
+                // console.log(`  施設配置失敗: ${loc.name} (試行回数: ${attempts})`);
                 
                 // フォールバック: より緩い条件で配置を試行
-                console.log(`  フォールバック配置を試行: ${loc.name}`);
+                // console.log(`  フォールバック配置を試行: ${loc.name}`);
                 let fallbackAttempts = 0;
                 const maxFallbackAttempts = 100;
                 
@@ -1290,7 +1324,8 @@ calculateMinDistanceToRoads(x, z) {
                     
                     // より緩い条件でチェック
                     if (!this.isBuildingOverlapping(facilityX, facilityZ, fallbackFacilitySize) && 
-                        !this.isFacilityOverlapping(facilityX, facilityZ, facilities)) {
+                        !this.isFacilityOverlapping(facilityX, facilityZ, facilities) &&
+                        !this.isHomeOverlapping(facilityX, facilityZ, fallbackFacilitySize)) {
                         
                         const nearestRoad = this.findNearestRoad(facilityX, facilityZ);
                         if (nearestRoad) {
@@ -1309,7 +1344,7 @@ calculateMinDistanceToRoads(x, z) {
                                 nearestRoadIndex: roadIndex
                             });
                             
-                            console.log(`  フォールバック配置成功: ${loc.name} (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)})`);
+                            // console.log(`  フォールバック配置成功: ${loc.name} (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)})`);
                             placed = true;
                         }
                     }
@@ -1317,12 +1352,12 @@ calculateMinDistanceToRoads(x, z) {
                 }
                 
                 if (!placed) {
-                    console.log(`  フォールバック配置も失敗: ${loc.name}`);
+                    // console.log(`  フォールバック配置も失敗: ${loc.name}`);
                 }
             }
         });
         
-        console.log(`施設生成完了: ${facilities.length} 施設配置`);
+        // console.log(`施設生成完了: ${facilities.length} 施設配置`);
         return facilities;
     }
     
@@ -1337,6 +1372,45 @@ calculateMinDistanceToRoads(x, z) {
                 return true;
             }
         }
+        return false;
+    }
+    
+    // 施設と建物の重複チェック（新規追加）
+    isFacilityBuildingOverlapping(x, z, buildingSize) {
+        // 建物との重複チェック
+        for (const building of this.buildings) {
+            const distance = Math.sqrt(
+                Math.pow(x - building.x, 2) + 
+                Math.pow(z - building.z, 2)
+            );
+            
+            // 建物サイズと施設サイズを考慮した重複チェック
+            const combinedRadius = (buildingSize + building.size) / 2;
+            const overlapMargin = this.getOverlapMarginByBuildingSize(buildingSize, building.size);
+            const requiredDistance = combinedRadius + overlapMargin;
+            
+            if (distance < requiredDistance) {
+                return true;
+            }
+        }
+        
+        // 施設との重複チェック
+        for (const facility of this.facilities || []) {
+            const distance = Math.sqrt(
+                Math.pow(x - facility.x, 2) + 
+                Math.pow(z - facility.z, 2)
+            );
+            
+            const facilitySize = facility.size || this.buildingSize * cityLayoutConfig.facilitySizeMultiplier;
+            const combinedRadius = (buildingSize + facilitySize) / 2;
+            const overlapMargin = this.getOverlapMarginByBuildingSize(buildingSize, facilitySize);
+            const requiredDistance = combinedRadius + overlapMargin;
+            
+            if (distance < requiredDistance) {
+                return true;
+            }
+        }
+        
         return false;
     }
 

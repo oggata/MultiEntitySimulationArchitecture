@@ -391,3 +391,171 @@ const agentPersonalities = [
         }
     }
 ];
+
+// フィールド色に合わせた道路色の設定
+const roadColorByField = {
+    green: 0x666666,    // グリーンフィールド → グレーの道路
+    purple: 0xFFFF00,   // パープルフィールド → 黄色の道路
+    black: 0x808080,    // ブラックフィールド → グレーの道路
+    blue: 0xFF0000,     // ブルーフィールド → 赤色の道路
+    orange: 0x0000FF,   // オレンジフィールド → 青色の道路
+    pink: 0x00FF00,     // ピンクフィールド → 緑色の道路
+    gray: 0x333333,     // グレーフィールド → 濃いグレーの道路
+    brown: 0xFFFFFF     // ブラウンフィールド → 白色の道路
+};
+
+// フィールド色に合わせた建物色の設定
+const buildingColorByField = {
+    green: {
+        // グリーンフィールド → 自然系の建物色
+        cafe: 0x8B4513,        // カフェ: 茶色
+        park: 0x228B22,        // 公園: 緑
+        library: 0x4682B4,     // 図書館: 青
+        gym: 0xFF6347,         // スポーツジム: 赤
+        plaza: 0x90EE90,       // 町の広場: 薄緑
+        school: 0x87CEEB,      // 学校: 空色
+        hospital: 0xFFFFFF,    // 病院: 白
+        supermarket: 0xFFD700, // スーパーマーケット: 金色
+        familyRestaurant: 0xFF69B4, // ファミレス: ピンク
+        postOffice: 0x4169E1,  // 郵便局: ロイヤルブルー
+        bank: 0x32CD32,        // 銀行: ライムグリーン
+        beautySalon: 0xFF1493, // 美容院: ディープピンク
+        cleaning: 0x20B2AA,    // クリーニング店: ライトシーグリーン
+        pharmacy: 0x00CED1,    // 薬局: ダークターコイズ
+        bookstore: 0x8B4513,   // 本屋: 茶色
+        convenience: 0xFF4500  // コンビニ: オレンジレッド
+    },
+    purple: {
+        // パープルフィールド → 紫系の建物色
+        cafe: 0x9370DB,        // カフェ: 紫
+        park: 0x8A2BE2,        // 公園: 青紫
+        library: 0x9932CC,     // 図書館: ダークオーキッド
+        gym: 0xDA70D6,         // スポーツジム: オーキッド
+        plaza: 0xDDA0DD,       // 町の広場: プラム
+        school: 0xBA55D3,      // 学校: ミディアムオーキッド
+        hospital: 0xE6E6FA,    // 病院: ラベンダー
+        supermarket: 0xFF00FF, // スーパーマーケット: マゼンタ
+        familyRestaurant: 0xEE82EE, // ファミレス: バイオレット
+        postOffice: 0x8B008B,  // 郵便局: ダークマゼンタ
+        bank: 0x9400D3,        // 銀行: ダークバイオレット
+        beautySalon: 0xFF69B4, // 美容院: ホットピンク
+        cleaning: 0x9370DB,    // クリーニング店: ミディアムスレートブルー
+        pharmacy: 0x8A2BE2,    // 薬局: ブルーバイオレット
+        bookstore: 0x9932CC,   // 本屋: ダークオーキッド
+        convenience: 0xDA70D6  // コンビニ: オーキッド
+    },
+    black: {
+        // ブラックフィールド → モノクロ系の建物色
+        cafe: 0x696969,        // カフェ: ディムグレー
+        park: 0x808080,        // 公園: グレー
+        library: 0x2F4F4F,     // 図書館: ダークスレートグレー
+        gym: 0x708090,         // スポーツジム: スレートグレー
+        plaza: 0x778899,       // 町の広場: ライトスレートグレー
+        school: 0xB0C4DE,      // 学校: ライトスチールブルー
+        hospital: 0xF5F5F5,    // 病院: ホワイトスモーク
+        supermarket: 0xD3D3D3, // スーパーマーケット: ライトグレー
+        familyRestaurant: 0xC0C0C0, // ファミレス: シルバー
+        postOffice: 0x4682B4,  // 郵便局: スチールブルー
+        bank: 0x556B2F,        // 銀行: ダークオリーブグリーン
+        beautySalon: 0xDC143C, // 美容院: クリムゾン
+        cleaning: 0x20B2AA,    // クリーニング店: ライトシーグリーン
+        pharmacy: 0x00CED1,    // 薬局: ダークターコイズ
+        bookstore: 0x8B4513,   // 本屋: サドルブラウン
+        convenience: 0xFF4500  // コンビニ: オレンジレッド
+    },
+    blue: {
+        // ブルーフィールド → 青系の建物色
+        cafe: 0x4169E1,        // カフェ: ロイヤルブルー
+        park: 0x00CED1,        // 公園: ダークターコイズ
+        library: 0x1E90FF,     // 図書館: ドジャースブルー
+        gym: 0x00BFFF,         // スポーツジム: ディープスカイブルー
+        plaza: 0x87CEEB,       // 町の広場: スカイブルー
+        school: 0x4682B4,      // 学校: スチールブルー
+        hospital: 0xF0F8FF,    // 病院: アリスブルー
+        supermarket: 0x0000CD, // スーパーマーケット: ミディアムブルー
+        familyRestaurant: 0x191970, // ファミレス: ミッドナイトブルー
+        postOffice: 0x000080,  // 郵便局: ネイビー
+        bank: 0x0066CC,        // 銀行: ブルー
+        beautySalon: 0x9370DB, // 美容院: ミディアムスレートブルー
+        cleaning: 0x20B2AA,    // クリーニング店: ライトシーグリーン
+        pharmacy: 0x00CED1,    // 薬局: ダークターコイズ
+        bookstore: 0x483D8B,   // 本屋: ダークスレートブルー
+        convenience: 0x6495ED  // コンビニ: コーンフラワーブルー
+    },
+    orange: {
+        // オレンジフィールド → 暖色系の建物色
+        cafe: 0xD2691E,        // カフェ: チョコレート
+        park: 0x228B22,        // 公園: フォレストグリーン
+        library: 0x8B4513,     // 図書館: サドルブラウン
+        gym: 0xFF4500,         // スポーツジム: オレンジレッド
+        plaza: 0xFFA500,       // 町の広場: オレンジ
+        school: 0xFF8C00,      // 学校: ダークオレンジ
+        hospital: 0xFFFAFA,    // 病院: スノー
+        supermarket: 0xFFD700, // スーパーマーケット: ゴールド
+        familyRestaurant: 0xFF6347, // ファミレス: トマト
+        postOffice: 0xCD853F,  // 郵便局: ペルー
+        bank: 0xDAA520,        // 銀行: ゴールデンロッド
+        beautySalon: 0xFF69B4, // 美容院: ホットピンク
+        cleaning: 0x20B2AA,    // クリーニング店: ライトシーグリーン
+        pharmacy: 0x00CED1,    // 薬局: ダークターコイズ
+        bookstore: 0x8B4513,   // 本屋: サドルブラウン
+        convenience: 0xFF7F50  // コンビニ: コーラル
+    },
+    pink: {
+        // ピンクフィールド → ピンク系の建物色
+        cafe: 0xFFB6C1,        // カフェ: ライトピンク
+        park: 0x98FB98,        // 公園: ペールグリーン
+        library: 0xE6E6FA,     // 図書館: ラベンダー
+        gym: 0xFF69B4,         // スポーツジム: ホットピンク
+        plaza: 0xFFC0CB,       // 町の広場: ピンク
+        school: 0xDDA0DD,      // 学校: プラム
+        hospital: 0xFFF0F5,    // 病院: ラベンダーブラッシュ
+        supermarket: 0xFF1493, // スーパーマーケット: ディープピンク
+        familyRestaurant: 0xDB7093, // ファミレス: ペールバイオレットレッド
+        postOffice: 0xC71585,  // 郵便局: ミディアムバイオレットレッド
+        bank: 0xFF69B4,        // 銀行: ホットピンク
+        beautySalon: 0xFF1493, // 美容院: ディープピンク
+        cleaning: 0x20B2AA,    // クリーニング店: ライトシーグリーン
+        pharmacy: 0x00CED1,    // 薬局: ダークターコイズ
+        bookstore: 0xDDA0DD,   // 本屋: プラム
+        convenience: 0xFF69B4  // コンビニ: ホットピンク
+    },
+    gray: {
+        // グレーフィールド → グレー系の建物色
+        cafe: 0x696969,        // カフェ: ディムグレー
+        park: 0x808080,        // 公園: グレー
+        library: 0x2F4F4F,     // 図書館: ダークスレートグレー
+        gym: 0x708090,         // スポーツジム: スレートグレー
+        plaza: 0x778899,       // 町の広場: ライトスレートグレー
+        school: 0xB0C4DE,      // 学校: ライトスチールブルー
+        hospital: 0xF5F5F5,    // 病院: ホワイトスモーク
+        supermarket: 0xD3D3D3, // スーパーマーケット: ライトグレー
+        familyRestaurant: 0xC0C0C0, // ファミレス: シルバー
+        postOffice: 0x4682B4,  // 郵便局: スチールブルー
+        bank: 0x556B2F,        // 銀行: ダークオリーブグリーン
+        beautySalon: 0xDC143C, // 美容院: クリムゾン
+        cleaning: 0x20B2AA,    // クリーニング店: ライトシーグリーン
+        pharmacy: 0x00CED1,    // 薬局: ダークターコイズ
+        bookstore: 0x8B4513,   // 本屋: サドルブラウン
+        convenience: 0xFF4500  // コンビニ: オレンジレッド
+    },
+    brown: {
+        // ブラウンフィールド → 茶色系の建物色
+        cafe: 0x8B4513,        // カフェ: サドルブラウン
+        park: 0x228B22,        // 公園: フォレストグリーン
+        library: 0xCD853F,     // 図書館: ペルー
+        gym: 0xD2691E,         // スポーツジム: チョコレート
+        plaza: 0xDAA520,       // 町の広場: ゴールデンロッド
+        school: 0xBC8F8F,      // 学校: ローズブラウン
+        hospital: 0xFFFAFA,    // 病院: スノー
+        supermarket: 0xFFD700, // スーパーマーケット: ゴールド
+        familyRestaurant: 0xCD853F, // ファミレス: ペルー
+        postOffice: 0x8B4513,  // 郵便局: サドルブラウン
+        bank: 0xDAA520,        // 銀行: ゴールデンロッド
+        beautySalon: 0xFF69B4, // 美容院: ホットピンク
+        cleaning: 0x20B2AA,    // クリーニング店: ライトシーグリーン
+        pharmacy: 0x00CED1,    // 薬局: ダークターコイズ
+        bookstore: 0x8B4513,   // 本屋: サドルブラウン
+        convenience: 0xFF7F50  // コンビニ: コーラル
+    }
+};

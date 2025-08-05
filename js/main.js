@@ -113,35 +113,127 @@ function updateRoadColorsByField(fieldColorHex) {
     
     // 既存の道路の色を更新
     updateExistingRoadColors(roadColor);
+    
+    // 建物色も更新
+    updateBuildingColorsByField(fieldPreset);
 }
 
-// 既存の道路の色を更新する関数
-function updateExistingRoadColors(roadColor) {
-    // シーン内の全ての道路メッシュを更新
-    scene.children.forEach(child => {
-        if (child.material && child.material.color) {
-            // 現在の道路色と比較して、道路メッシュかどうかを判定
-            const currentColor = child.material.color.getHex();
-            if (currentColor === cityLayoutConfig.roadColors.mainRoad ||
-                currentColor === cityLayoutConfig.roadColors.normalRoad ||
-                currentColor === cityLayoutConfig.roadColors.entranceRoad ||
-                currentColor === cityLayoutConfig.roadColors.homeRoad ||
-                // 以前の色設定も含める
-                currentColor === 0x444444 ||
-                currentColor === 0x666666 ||
-                currentColor === 0x808080 ||
-                currentColor === 0x333333) {
-                child.material.color.setHex(roadColor);
-                console.log(`道路の色を更新: ${currentColor.toString(16)} → ${roadColor.toString(16)}`);
-            }
+// フィールド色に合わせて建物色を更新する関数
+function updateBuildingColorsByField(fieldPreset) {
+    const buildingColors = buildingColorByField[fieldPreset];
+    if (!buildingColors) {
+        console.log(`フィールドプリセット "${fieldPreset}" の建物色設定が見つかりません`);
+        return;
+    }
+    
+    console.log(`建物色を更新: ${fieldPreset} フィールド`);
+    
+    // locationDataの色を更新
+    locationData.forEach(location => {
+        const buildingType = getBuildingTypeFromName(location.name);
+        if (buildingType && buildingColors[buildingType]) {
+            location.color = buildingColors[buildingType];
+            console.log(`${location.name}の色を更新: ${buildingColors[buildingType].toString(16)}`);
         }
     });
     
-    // 設定ファイルの道路色も更新
-    cityLayoutConfig.roadColors.mainRoad = roadColor;
-    cityLayoutConfig.roadColors.normalRoad = roadColor;
-    cityLayoutConfig.roadColors.entranceRoad = roadColor;
-    cityLayoutConfig.roadColors.homeRoad = roadColor;
+    // 既存の建物の色を更新
+    updateExistingBuildingColors(buildingColors);
+}
+
+// 建物名から建物タイプを取得する関数
+function getBuildingTypeFromName(buildingName) {
+    const nameToType = {
+        'カフェ': 'cafe',
+        '公園': 'park',
+        '図書館': 'library',
+        'スポーツジム': 'gym',
+        '町の広場': 'plaza',
+        '学校': 'school',
+        '病院': 'hospital',
+        'スーパーマーケット': 'supermarket',
+        'ファミレス': 'familyRestaurant',
+        '郵便局': 'postOffice',
+        '銀行': 'bank',
+        '美容院': 'beautySalon',
+        'クリーニング店': 'cleaning',
+        '薬局': 'pharmacy',
+        '本屋': 'bookstore',
+        'コンビニ': 'convenience'
+    };
+    
+    return nameToType[buildingName] || null;
+}
+
+// 既存の建物の色を更新する関数
+function updateExistingBuildingColors(buildingColors) {
+    // シーン内の全ての建物メッシュを更新
+    scene.children.forEach(child => {
+        if (child.material && child.material.color) {
+            const currentColor = child.material.color.getHex();
+            
+            // 建物メッシュかどうかを判定（建物の色の範囲をチェック）
+            if (isBuildingMesh(child)) {
+                // 建物タイプを特定して色を更新
+                const buildingType = identifyBuildingType(child);
+                if (buildingType && buildingColors[buildingType]) {
+                    child.material.color.setHex(buildingColors[buildingType]);
+                    console.log(`建物の色を更新: ${currentColor.toString(16)} → ${buildingColors[buildingType].toString(16)}`);
+                }
+            }
+        }
+    });
+}
+
+// メッシュが建物かどうかを判定する関数
+function isBuildingMesh(mesh) {
+    // 建物の特徴的な色やプロパティで判定
+    if (mesh.material && mesh.material.color) {
+        const color = mesh.material.color.getHex();
+        // 建物で使用される色の範囲をチェック
+        const buildingColors = [
+            0x8B4513, 0x228B22, 0x4682B4, 0xFF6347, 0x90EE90, 0x87CEEB, 0xFFFFFF, 0xFFD700,
+            0xFF69B4, 0x4169E1, 0x32CD32, 0xFF1493, 0x20B2AA, 0x00CED1, 0xFF4500,
+            0x9370DB, 0x8A2BE2, 0x9932CC, 0xDA70D6, 0xDDA0DD, 0xBA55D3, 0xE6E6FA, 0xFF00FF,
+            0xEE82EE, 0x8B008B, 0x9400D3, 0x696969, 0x808080, 0x2F4F4F, 0x708090, 0x778899,
+            0xB0C4DE, 0xF5F5F5, 0xD3D3D3, 0xC0C0C0, 0x556B2F, 0xDC143C, 0x00CED1, 0xFF4500,
+            0x4169E1, 0x1E90FF, 0x00BFFF, 0x0000CD, 0x191970, 0x000080, 0x0066CC, 0x483D8B,
+            0x6495ED, 0xD2691E, 0xFFA500, 0xFF8C00, 0xFF6347, 0xCD853F, 0xDAA520, 0xFF7F50,
+            0xFFB6C1, 0x98FB98, 0xE6E6FA, 0xFFC0CB, 0xDDA0DD, 0xFFF0F5, 0xDB7093, 0xC71585,
+            0xBC8F8F
+        ];
+        
+        return buildingColors.includes(color);
+    }
+    return false;
+}
+
+// 建物タイプを特定する関数
+function identifyBuildingType(mesh) {
+    // 位置や色から建物タイプを推測
+    // 実際の実装では、より詳細な判定ロジックが必要
+    const color = mesh.material.color.getHex();
+    
+    // 色から建物タイプを推測
+    const colorToType = {
+        0x8B4513: 'cafe',      // 茶色 → カフェ
+        0x228B22: 'park',      // 緑 → 公園
+        0x4682B4: 'library',   // 青 → 図書館
+        0xFF6347: 'gym',       // 赤 → スポーツジム
+        0x90EE90: 'plaza',     // 薄緑 → 町の広場
+        0x87CEEB: 'school',    // 空色 → 学校
+        0xFFFFFF: 'hospital',  // 白 → 病院
+        0xFFD700: 'supermarket', // 金色 → スーパーマーケット
+        0xFF69B4: 'familyRestaurant', // ピンク → ファミレス
+        0x4169E1: 'postOffice', // ロイヤルブルー → 郵便局
+        0x32CD32: 'bank',      // ライムグリーン → 銀行
+        0xFF1493: 'beautySalon', // ディープピンク → 美容院
+        0x20B2AA: 'cleaning',  // ライトシーグリーン → クリーニング店
+        0x00CED1: 'pharmacy',  // ダークターコイズ → 薬局
+        0xFF4500: 'convenience' // オレンジレッド → コンビニ
+    };
+    
+    return colorToType[color] || null;
 }
 
 // フィールド色のプリセット
@@ -154,18 +246,6 @@ const fieldColorPresets = {
     pink: { name: 'ピンク', color: 0xF0B8E6 },
     gray: { name: 'グレー', color: 0xC0C0C0 },
     brown: { name: 'ブラウン', color: 0xD2B48C }
-};
-
-// フィールド色に合わせた道路色の設定
-const roadColorByField = {
-    green: 0x666666,    // グリーンフィールド → グレーの道路
-    purple: 0xFFFF00,   // パープルフィールド → 黄色の道路
-    black: 0x808080,    // ブラックフィールド → グレーの道路
-    blue: 0xFF0000,     // ブルーフィールド → 赤色の道路
-    orange: 0x0000FF,   // オレンジフィールド → 青色の道路
-    pink: 0x00FF00,     // ピンクフィールド → 緑色の道路
-    gray: 0x333333,     // グレーフィールド → 濃いグレーの道路
-    brown: 0xFFFFFF     // ブラウンフィールド → 白色の道路
 };
 
 // Three.jsの初期化
@@ -563,8 +643,11 @@ function setupMouseControls() {
         }
         
         if (!isPanelDragging) { // パネルドラッグ中でない場合のみズーム可能
-            const scale = event.deltaY > 0 ? 1.1 : 0.9;
-            camera.position.multiplyScalar(scale);
+            // カメラの高さ（Y座標）だけを変更
+            const heightChange = event.deltaY > 0 ? 1.0 : -1.0; // 上スクロールで上昇、下スクロールで下降
+            camera.position.y += heightChange;
+            
+            // 高さの制限を設定（10から50の範囲）
             camera.position.y = Math.max(10, Math.min(50, camera.position.y));
             
             // カメラの向きを維持
@@ -1625,3 +1708,32 @@ function changeFieldColor(colorHex) {
 
 // グローバルスコープに公開
 window.changeFieldColor = changeFieldColor;
+
+// 既存の道路の色を更新する関数
+function updateExistingRoadColors(roadColor) {
+    // シーン内の全ての道路メッシュを更新
+    scene.children.forEach(child => {
+        if (child.material && child.material.color) {
+            // 現在の道路色と比較して、道路メッシュかどうかを判定
+            const currentColor = child.material.color.getHex();
+            if (currentColor === cityLayoutConfig.roadColors.mainRoad ||
+                currentColor === cityLayoutConfig.roadColors.normalRoad ||
+                currentColor === cityLayoutConfig.roadColors.entranceRoad ||
+                currentColor === cityLayoutConfig.roadColors.homeRoad ||
+                // 以前の色設定も含める
+                currentColor === 0x444444 ||
+                currentColor === 0x666666 ||
+                currentColor === 0x808080 ||
+                currentColor === 0x333333) {
+                child.material.color.setHex(roadColor);
+                console.log(`道路の色を更新: ${currentColor.toString(16)} → ${roadColor.toString(16)}`);
+            }
+        }
+    });
+    
+    // 設定ファイルの道路色も更新
+    cityLayoutConfig.roadColors.mainRoad = roadColor;
+    cityLayoutConfig.roadColors.normalRoad = roadColor;
+    cityLayoutConfig.roadColors.entranceRoad = roadColor;
+    cityLayoutConfig.roadColors.homeRoad = roadColor;
+}

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>自律エージェント・シミュレーション with AI</title>
+    <title>MESA (Multi-Entity Simulation Architecture)</title>
     <link rel="stylesheet" href="./css/main.css">
 </head>
 <body>
@@ -63,8 +63,11 @@
             <!-- エージェント管理タブ -->
             <div id="agent-management" class="tab-pane">
                 <div class="agent-creation">
+                    <div class="agent-input-section">
+                        <label for="agentCustomPrompt">エージェントの希望条件（任意）:</label>
+                        <textarea id="agentCustomPrompt" placeholder="例: 30代の女性、看護師、明るい性格&#10;例: 20代の男性、学生、内向的だが親切&#10;例: 40代の男性、会社員、責任感が強い&#10;例: 50代の女性、主婦、地域活動に熱心" rows="3" style="width: 100%; margin-bottom: 10px;"></textarea>
+                    </div>
                     <button onclick="generateNewAgent()" id="generateAgentBtn">新しいエージェントを生成</button>
-                    <button onclick="generateMultipleAgents(5)" id="generateMultipleAgentsBtn">新しいエージェントを5人作成</button>
                 </div>
                 <div class="agent-storage-controls">
                     <button onclick="loadSavedAgents()" id="loadAgentsBtn">保存されたエージェントを読み込み</button>
@@ -279,7 +282,12 @@
         <script src="./js/log.js"></script>
         <script src="./js/panel.js"></script>
         <script src="./js/buildings.js"></script>
-        <script src="./js/citylayout.js"></script>
+        <script src="./js/road-system.js"></script>
+        <script src="./js/building-system.js"></script>
+        <script src="./js/facility-system.js"></script>
+        <script src="./js/pathfinding-system.js"></script>
+        <script src="./js/visualization-system.js"></script>
+        <script src="./js/city-layout-manager.js"></script>
         <script src="./js/vehicles.js"></script>
         <script src="./js/main.js"></script>
 </body>

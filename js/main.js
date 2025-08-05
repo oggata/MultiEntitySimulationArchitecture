@@ -41,6 +41,10 @@ let targetFacility = null;
 let cameraFollowEnabled = false;
 let cameraMode = 'free'; // 'free', 'agent', 'facility'
 
+// カメラの回転角度を管理（グローバル変数）
+let cameraRotationX = 0; // 上下の回転
+let cameraRotationY = 0; // 左右の回転
+
 // コミュニケーション機能の変数（新しい管理システムで置き換え）
 
 // 時間制御用の変数
@@ -123,9 +127,9 @@ function init() {
     directionalLight.shadow.mapSize.height = 2048;
     scene.add(directionalLight);
     
-    // 街のレイアウトを生成
-    cityLayout = new CityLayout();
-    cityLayout.generateRoads();
+    // 街のレイアウトを生成（新しい分割されたシステムを使用）
+    cityLayout = new CityLayoutManager(cityLayoutConfig);
+    const cityData = cityLayout.generateCity();
     
     // 自宅を先に生成（建物生成時の重複チェックのため）
     if (typeof homeManager !== 'undefined') {
@@ -133,9 +137,6 @@ function init() {
         console.log('自宅の初期化が完了しました');
     }
     
-    // 建物と施設を生成（自宅との重複チェックを含む）
-    cityLayout.generateBuildings();
-    cityLayout.generateFacilities();
     console.log('建物と施設の生成が完了しました');
 
     // 無限大の地面（遠景用）
@@ -221,14 +222,8 @@ function init() {
     // アニメーションループ
     animate();
 
-    // 道路の描画
-    cityLayout.drawRoads();
-    
-    // 建物の描画
-    cityLayout.drawBuildings();
-    
-    // 施設の描画
-    cityLayout.drawFacilities();
+    // 都市全体の描画（新しい分割されたシステムを使用）
+    cityLayout.drawCity();
     
     // 入り口接続は通常の道路描画に統合済み
 
@@ -354,8 +349,7 @@ function init() {
     }
     if (clearRoadBtn) {
         clearRoadBtn.addEventListener('click', () => {
-            cityLayout.clearRoadNetworkVisualization();
-            cityLayout.clearPathVisualization();
+            cityLayout.clearVisualizations();
             addLog('🗑️ 道路表示をクリアしました', 'system');
         });
     }
@@ -364,17 +358,8 @@ function init() {
     const toggleEntranceBtn = document.getElementById('toggleEntranceConnections');
     if (toggleEntranceBtn) {
         toggleEntranceBtn.addEventListener('click', () => {
-            if (cityLayout.entranceConnections && cityLayout.entranceConnections.length > 0) {
-                // 入り口接続を非表示
-                for (const connection of cityLayout.entranceConnections) {
-                    scene.remove(connection);
-                }
-                cityLayout.entranceConnections = [];
-                addLog('🚪 入り口接続を非表示にしました', 'system');
-            } else {
-                // 入り口接続は通常の道路として常に表示されています
-                addLog('🚪 入り口接続は通常の道路として常に表示されています', 'system');
-            }
+            // 入り口接続は通常の道路として常に表示されています
+            addLog('🚪 入り口接続は通常の道路として常に表示されています', 'system');
         });
     }
 
@@ -498,20 +483,27 @@ function setupMouseControls() {
     let isMouseDown = false;
     let isPanelDragging = false; // パネルドラッグ中かどうかのフラグ
     
+
+    
     document.addEventListener('mousemove', (event) => {
         // 人物視点モード中はマウス操作を無効
         if (cameraMode === 'agent' && cameraFollowEnabled) {
             return;
         }
         
-        if (isMouseDown && !isPanelDragging) { // パネルドラッグ中でない場合のみ地図を回転
+        if (isMouseDown && !isPanelDragging) { // パネルドラッグ中でない場合のみカメラを回転
             const deltaX = event.clientX - mouseX;
             const deltaY = event.clientY - mouseY;
             
-            // マウスの移動方向と逆方向にカメラを移動
-            camera.position.x -= deltaX * 0.1;
-            camera.position.z -= deltaY * 0.1;
-            camera.lookAt(0, 0, 0);
+            // マウスの移動量に応じてカメラの回転角度を更新
+            cameraRotationY -= deltaX * 0.01; // 左右の回転
+            cameraRotationX -= deltaY * 0.01; // 上下の回転
+            
+            // 上下の回転角度を制限（-80度から80度まで）
+            cameraRotationX = Math.max(-Math.PI * 0.4, Math.min(Math.PI * 0.4, cameraRotationX));
+            
+            // カメラの向きを更新
+            updateCameraRotation();
         }
         mouseX = event.clientX;
         mouseY = event.clientY;
@@ -535,13 +527,36 @@ function setupMouseControls() {
             const scale = event.deltaY > 0 ? 1.1 : 0.9;
             camera.position.multiplyScalar(scale);
             camera.position.y = Math.max(10, Math.min(50, camera.position.y));
-            camera.lookAt(0, 0, 0);
+            
+            // カメラの向きを維持
+            window.updateCameraRotation();
         }
     });
+
+    // カメラの回転を更新する関数
+    window.updateCameraRotation = function() {
+        // カメラの前方ベクトルを計算
+        const forward = new THREE.Vector3(
+            Math.sin(cameraRotationY) * Math.cos(cameraRotationX),
+            Math.sin(cameraRotationX),
+            Math.cos(cameraRotationY) * Math.cos(cameraRotationX)
+        );
+        
+        // カメラの位置から前方に向けてlookAt
+        const targetPosition = camera.position.clone().add(forward);
+        camera.lookAt(targetPosition);
+    };
 
     // パネルドラッグ状態を監視する関数をグローバルに公開
     window.setPanelDragging = function(dragging) {
         isPanelDragging = dragging;
+    };
+    
+    // カメラ回転角度をリセットする関数をグローバルに公開
+    window.resetCameraRotation = function() {
+        cameraRotationX = 0;
+        cameraRotationY = 0;
+        window.updateCameraRotation();
     };
 }
 
@@ -1057,6 +1072,10 @@ function focusCameraOnAgentByIndex(index) {
     targetAgent = agent;
     cameraFollowEnabled = true;
     
+    // カメラの回転角度をリセット（人物視点では固定の角度を使用）
+    cameraRotationX = 0;
+    cameraRotationY = 0;
+    
     // カメラを人物の後ろに配置
     const pos = agent.mesh.position;
     const agentRotation = agent.mesh.rotation.y;
@@ -1097,6 +1116,10 @@ function focusCameraOnFacilityByIndex(index) {
     targetFacility = facility;
     cameraFollowEnabled = false; // 施設は固定なので追従不要
     
+    // カメラの回転角度をリセット（施設視点では固定の角度を使用）
+    cameraRotationX = 0;
+    cameraRotationY = 0;
+    
     const pos = facility.position;
     camera.position.set(pos.x + 10, 10, pos.z + 10);
     camera.lookAt(pos.x, pos.y, pos.z);
@@ -1112,6 +1135,10 @@ function resetCamera() {
     targetAgent = null;
     targetFacility = null;
     cameraFollowEnabled = false;
+    
+    // カメラの回転角度をリセット（全体表示では自由な角度を許可）
+    cameraRotationX = 0;
+    cameraRotationY = 0;
     
     camera.position.set(0, 30, 30);
     camera.lookAt(0, 0, 0);
@@ -1436,11 +1463,14 @@ function updateCameraMovement(deltaTime) {
         // カメラの前方・右方向ベクトルを計算
         const forward = new THREE.Vector3();
         camera.getWorldDirection(forward);
-        forward.y = 0;
-        forward.normalize();
+        
+        // 水平移動用のベクトル（Y成分を0にする）
+        const forwardHorizontal = forward.clone();
+        forwardHorizontal.y = 0;
+        forwardHorizontal.normalize();
 
         const right = new THREE.Vector3();
-        right.crossVectors(forward, camera.up).normalize();
+        right.crossVectors(forwardHorizontal, camera.up).normalize();
         
         const up = new THREE.Vector3(0, 1, 0);
         
@@ -1455,10 +1485,10 @@ function updateCameraMovement(deltaTime) {
         
         // 各キーの押下状態に応じて移動
         if (cameraKeys.w) {
-            camera.position.add(forward.clone().multiplyScalar(moveAmount));
+            camera.position.add(forwardHorizontal.clone().multiplyScalar(moveAmount));
         }
         if (cameraKeys.s) {
-            camera.position.add(forward.clone().multiplyScalar(-moveAmount));
+            camera.position.add(forwardHorizontal.clone().multiplyScalar(-moveAmount));
         }
         if (cameraKeys.a) {
             camera.position.add(right.clone().multiplyScalar(-moveAmount));
@@ -1473,12 +1503,8 @@ function updateCameraMovement(deltaTime) {
             camera.position.add(up.clone().multiplyScalar(-moveAmount));
         }
         
-        // カメラの向きを維持
-        camera.lookAt(
-            camera.position.x + forward.x,
-            camera.position.y + forward.y,
-            camera.position.z + forward.z
-        );
+                    // カメラの向きを維持（マウスで設定された角度を保持）
+            window.updateCameraRotation();
     }
 }
 

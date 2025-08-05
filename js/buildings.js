@@ -1408,7 +1408,7 @@ function createAgentHome(homeData) {
     const homeGroup = new THREE.Group();
     
     // 自宅のサイズ（小サイズ）
-    const homeSize = cityLayout.buildingSizes.small;
+    const homeSize = cityLayoutConfig.buildingSizes.small;
     const homeHeight = homeSize * 0.8;
     
     // 家の基本構造（透過した壁）
@@ -1591,7 +1591,7 @@ function createAgentHome(homeData) {
     };
     
     // 入り口接続を描画
-    if (cityLayout && cityLayout.drawEntranceConnections) {
+    if (cityLayout && cityLayout.createEntranceConnection) {
         const connection = cityLayout.createEntranceConnection(homeBuilding);
         if (connection) {
             const dx = connection.end.x - connection.start.x;
@@ -1932,24 +1932,24 @@ function getFacilityInfo(facilityName) {
 function getFacilitySize(facilityName) {
     const sizeMap = {
         // 大サイズの施設
-        '公園': cityLayout.buildingSizes.large,
-        '学校': cityLayout.buildingSizes.large,
-        'スーパーマーケット': cityLayout.buildingSizes.large,
-        '病院': cityLayout.buildingSizes.large,
-        'スポーツジム': cityLayout.buildingSizes.large,
-        '図書館': cityLayout.buildingSizes.large,
-        '町の広場': cityLayout.buildingSizes.large,
+        '公園': cityLayoutConfig.buildingSizes.large,
+        '学校': cityLayoutConfig.buildingSizes.large,
+        'スーパーマーケット': cityLayoutConfig.buildingSizes.large,
+        '病院': cityLayoutConfig.buildingSizes.large,
+        'スポーツジム': cityLayoutConfig.buildingSizes.large,
+        '図書館': cityLayoutConfig.buildingSizes.large,
+        '町の広場': cityLayoutConfig.buildingSizes.large,
         
         // 中サイズの施設
-        'カフェ': cityLayout.buildingSizes.medium,
-        'ファミレス': cityLayout.buildingSizes.medium,
-        'ショップ': cityLayout.buildingSizes.medium,
-        'オフィス': cityLayout.buildingSizes.medium,
-        '銀行': cityLayout.buildingSizes.medium,
-        '郵便局': cityLayout.buildingSizes.medium
+        'カフェ': cityLayoutConfig.buildingSizes.medium,
+        'ファミレス': cityLayoutConfig.buildingSizes.medium,
+        'ショップ': cityLayoutConfig.buildingSizes.medium,
+        'オフィス': cityLayoutConfig.buildingSizes.medium,
+        '銀行': cityLayoutConfig.buildingSizes.medium,
+        '郵便局': cityLayoutConfig.buildingSizes.medium
     };
     
-    return sizeMap[facilityName] || cityLayout.buildingSizes.medium;
+    return sizeMap[facilityName] || cityLayoutConfig.buildingSizes.medium;
 }
 
 // 待機スポットの座標を取得する関数

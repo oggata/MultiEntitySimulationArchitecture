@@ -36,9 +36,22 @@ async function generateNewAgent() {
         }
     }
     try {
+        // ユーザーの希望条件を取得
+        const customPrompt = document.getElementById('agentCustomPrompt').value.trim();
+        let userRequirements = '';
+        
+        if (customPrompt) {
+            userRequirements = `
+
+ユーザーの希望条件：
+${customPrompt}
+
+上記の希望条件を考慮して、より適切なエージェントを生成してください。希望条件が具体的な場合は、それに合わせて調整してください。`;
+        }
+        
         const prompt = `あなたは自律的なエージェントの詳細なペルソナ生成システムです。
 以下の条件に基づいて、新しいエージェントの詳細なペルソナと特徴を生成してください。
-出力は必ず有効なJSON形式のみで、余分な説明やテキストは含めないでください。
+出力は必ず有効なJSON形式のみで、余分な説明やテキストは含めないでください。${userRequirements}
 
 条件：
 1. 名前（日本語の一般的な苗字と名前の組み合わせ、例：田中太郎、佐藤花子など）
@@ -341,6 +354,12 @@ async function generateNewAgent() {
         generationMessage.textContent = `✅ エージェント「${agentData.name}」の生成が完了しました！`;
         generationProgress.textContent = '';
         
+        // テキストエリアをクリア
+        const agentCustomPrompt = document.getElementById('agentCustomPrompt');
+        if (agentCustomPrompt) {
+            agentCustomPrompt.value = '';
+        }
+        
         // 3秒後にメッセージを非表示
         setTimeout(() => {
             generationStatus.style.display = 'none';
@@ -361,6 +380,12 @@ async function generateNewAgent() {
         // エラーメッセージを表示
         generationMessage.textContent = '❌ エージェントの生成に失敗しました';
         generationProgress.textContent = error.message;
+        
+        // テキストエリアをクリア
+        const agentCustomPrompt = document.getElementById('agentCustomPrompt');
+        if (agentCustomPrompt) {
+            agentCustomPrompt.value = '';
+        }
         
         // 活動ログにエラーを記録
         addLog(`❌ エージェントの生成に失敗しました: ${error.message}`, 'error');
@@ -432,6 +457,12 @@ async function generateMultipleAgents(count) {
         generationMessage.textContent = `✅ ${count}人のエージェントの生成が完了しました！`;
         generationProgress.textContent = `現在のエージェント総数: ${agents.length}人`;
         
+        // テキストエリアをクリア
+        const agentCustomPrompt = document.getElementById('agentCustomPrompt');
+        if (agentCustomPrompt) {
+            agentCustomPrompt.value = '';
+        }
+        
         // 3秒後にメッセージを非表示
         setTimeout(() => {
             generationStatus.style.display = 'none';
@@ -445,6 +476,12 @@ async function generateMultipleAgents(count) {
         // エラーメッセージを表示
         generationMessage.textContent = '❌ エージェントの一括生成に失敗しました';
         generationProgress.textContent = error.message;
+        
+        // テキストエリアをクリア
+        const agentCustomPrompt = document.getElementById('agentCustomPrompt');
+        if (agentCustomPrompt) {
+            agentCustomPrompt.value = '';
+        }
         
         // 5秒後にメッセージを非表示
         setTimeout(() => {

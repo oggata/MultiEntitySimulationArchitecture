@@ -94,6 +94,80 @@ function updateLlmCallCountDisplay() {
         countDisplay.textContent = llmCallCount;
     }
 }
+
+// フィールド色に合わせて道路色を更新する関数
+function updateRoadColorsByField(fieldColorHex) {
+    // フィールド色からプリセット名を特定
+    let fieldPreset = 'gray'; // デフォルト
+    for (const [presetName, preset] of Object.entries(fieldColorPresets)) {
+        if (preset.color === fieldColorHex) {
+            fieldPreset = presetName;
+            break;
+        }
+    }
+    
+    // 対応する道路色を取得
+    const roadColor = roadColorByField[fieldPreset] || 0x444444;
+    
+    console.log(`フィールド色変更: ${fieldPreset} → 道路色: ${roadColor.toString(16)}`);
+    
+    // 既存の道路の色を更新
+    updateExistingRoadColors(roadColor);
+}
+
+// 既存の道路の色を更新する関数
+function updateExistingRoadColors(roadColor) {
+    // シーン内の全ての道路メッシュを更新
+    scene.children.forEach(child => {
+        if (child.material && child.material.color) {
+            // 現在の道路色と比較して、道路メッシュかどうかを判定
+            const currentColor = child.material.color.getHex();
+            if (currentColor === cityLayoutConfig.roadColors.mainRoad ||
+                currentColor === cityLayoutConfig.roadColors.normalRoad ||
+                currentColor === cityLayoutConfig.roadColors.entranceRoad ||
+                currentColor === cityLayoutConfig.roadColors.homeRoad ||
+                // 以前の色設定も含める
+                currentColor === 0x444444 ||
+                currentColor === 0x666666 ||
+                currentColor === 0x808080 ||
+                currentColor === 0x333333) {
+                child.material.color.setHex(roadColor);
+                console.log(`道路の色を更新: ${currentColor.toString(16)} → ${roadColor.toString(16)}`);
+            }
+        }
+    });
+    
+    // 設定ファイルの道路色も更新
+    cityLayoutConfig.roadColors.mainRoad = roadColor;
+    cityLayoutConfig.roadColors.normalRoad = roadColor;
+    cityLayoutConfig.roadColors.entranceRoad = roadColor;
+    cityLayoutConfig.roadColors.homeRoad = roadColor;
+}
+
+// フィールド色のプリセット
+const fieldColorPresets = {
+    green: { name: 'グリーン', color: 0xB8E6B8 },
+    purple: { name: 'パープル', color: 0x8B5A8B }, // より濃い紫に変更
+    black: { name: 'ブラック', color: 0x2d2d2d },
+    blue: { name: 'ブルー', color: 0xB8E6F0 },
+    orange: { name: 'オレンジ', color: 0xF0E6B8 },
+    pink: { name: 'ピンク', color: 0xF0B8E6 },
+    gray: { name: 'グレー', color: 0xC0C0C0 },
+    brown: { name: 'ブラウン', color: 0xD2B48C }
+};
+
+// フィールド色に合わせた道路色の設定
+const roadColorByField = {
+    green: 0x666666,    // グリーンフィールド → グレーの道路
+    purple: 0xFFFF00,   // パープルフィールド → 黄色の道路
+    black: 0x808080,    // ブラックフィールド → グレーの道路
+    blue: 0xFF0000,     // ブルーフィールド → 赤色の道路
+    orange: 0x0000FF,   // オレンジフィールド → 青色の道路
+    pink: 0x00FF00,     // ピンクフィールド → 緑色の道路
+    gray: 0x333333,     // グレーフィールド → 濃いグレーの道路
+    brown: 0xFFFFFF     // ブラウンフィールド → 白色の道路
+};
+
 // Three.jsの初期化
 function init() {
     scene = new THREE.Scene();
@@ -437,44 +511,9 @@ function init() {
     if (greenButton) {
         greenButton.classList.add('selected');
     }
-
-    // コミュニケーション機能のイベント登録
-    const callAgentBtn = document.getElementById('callAgentBtn');
-    const messageAgentBtn = document.getElementById('messageAgentBtn');
-    const messageModal = document.getElementById('messageModal');
-    const closeMessageModal = document.getElementById('closeMessageModal');
-    const sendMessageBtn = document.getElementById('sendMessageBtn');
-    const messageInput = document.getElementById('messageInput');
-
-    if (callAgentBtn) {
-        callAgentBtn.addEventListener('click', startCall);
-    }
-    if (messageAgentBtn) {
-        messageAgentBtn.addEventListener('click', openMessageModal);
-    }
-    if (closeMessageModal) {
-        closeMessageModal.addEventListener('click', closeMessageModalHandler);
-    }
-    if (sendMessageBtn) {
-        sendMessageBtn.addEventListener('click', sendMessage);
-    }
-    if (messageInput) {
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-    }
-
-    // モーダルの外側クリックで閉じる
-    if (messageModal) {
-        messageModal.addEventListener('click', (e) => {
-            if (e.target === messageModal) {
-                closeMessageModalHandler();
-            }
-        });
-    }
+    
+    // 初期フィールド色に合わせて道路色を設定
+    updateRoadColorsByField(fieldColor);
 }
 
 // マウスコントロール
@@ -1578,20 +1617,11 @@ function changeFieldColor(colorHex) {
         infiniteGroundMesh.material.color.setHex(colorHex);
     }
     
+    // フィールド色に合わせて道路色を更新
+    updateRoadColorsByField(colorHex);
+    
     console.log(`フィールド色を変更しました: ${colorHex.toString(16)}`);
 }
-
-// フィールド色のプリセット
-const fieldColorPresets = {
-    green: { name: 'グリーン', color: 0xB8E6B8 },
-    purple: { name: 'パープル', color: 0x8B5A8B }, // より濃い紫に変更
-    black: { name: 'ブラック', color: 0x2d2d2d },
-    blue: { name: 'ブルー', color: 0xB8E6F0 },
-    orange: { name: 'オレンジ', color: 0xF0E6B8 },
-    pink: { name: 'ピンク', color: 0xF0B8E6 },
-    gray: { name: 'グレー', color: 0xC0C0C0 },
-    brown: { name: 'ブラウン', color: 0xD2B48C }
-};
 
 // グローバルスコープに公開
 window.changeFieldColor = changeFieldColor;

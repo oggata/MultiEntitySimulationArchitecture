@@ -455,12 +455,14 @@ class RoadSystem {
             
             // 道路の幅を決定
             let roadWidth = this.roadWidth;
-            let roadColor = 0x444444;
+            let roadColor = cityLayoutConfig.roadColors.normalRoad; // 設定ファイルから読み込み
             
             if (road.isMain) {
                 roadWidth = this.roadWidth * 3;
+                roadColor = cityLayoutConfig.roadColors.mainRoad; // 主要道路の色
             } else if (road.isShort) {
                 roadWidth = this.roadWidth * 0.5;
+                roadColor = cityLayoutConfig.roadColors.normalRoad; // 通常道路の色
             }
             
             // 道路の平面を作成
@@ -468,7 +470,7 @@ class RoadSystem {
             const roadMaterial = new THREE.MeshBasicMaterial({ 
                 color: roadColor,
                 transparent: true,
-                opacity: 0.8
+                opacity: cityLayoutConfig.roadColors.opacity // 設定ファイルから読み込み
             });
             const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
             roadMesh.position.set(
@@ -480,16 +482,16 @@ class RoadSystem {
             roadMesh.rotation.z = angle;
             scene.add(roadMesh);
             
-            // 道路の境界線を追加
-            const edges = new THREE.EdgesGeometry(roadGeometry);
-            const lineMaterial = new THREE.LineBasicMaterial({ 
-                color: 0x333333,
-                linewidth: 1
-            });
-            const line = new THREE.LineSegments(edges, lineMaterial);
-            line.position.copy(roadMesh.position);
-            line.rotation.copy(roadMesh.rotation);
-            scene.add(line);
+            // 道路の境界線を追加（無効化）
+            // const edges = new THREE.EdgesGeometry(roadGeometry);
+            // const lineMaterial = new THREE.LineBasicMaterial({ 
+            //     color: cityLayoutConfig.roadColors.borderLine, // 透明
+            //     linewidth: 1
+            // });
+            // const line = new THREE.LineSegments(edges, lineMaterial);
+            // line.position.copy(roadMesh.position);
+            // line.rotation.copy(roadMesh.rotation);
+            // scene.add(line);
             
             // 道路の種類をカウント
             if (road.isMain) {

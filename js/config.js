@@ -11,6 +11,17 @@ const cityLayoutConfig = {
     blockSize: 15,                    // 街区のサイズ（現在の10から増加）
     shortRoadRatio: 0.6,              // 短い道路の出現率（0.0〜1.0）
     
+    // 道路の色設定
+    roadColors: {
+        mainRoad: 0x444444,           // 主要道路の色
+        normalRoad: 0x444444,         // 通常道路の色
+        entranceRoad: 0x444444,       // 入り口接続道路の色
+        homeRoad: 0x444444,           // 自宅前道路の色
+        borderLine: 0x00000000,       // 道路の境界線（透明）
+        entranceMarker: 0x444444,     // 入り口マーカーの色
+        opacity: 1.0                  // 道路の透過度（統一）
+    },
+    
     // 建物設定
     buildingSize: 4,                  // 標準建物サイズ
     minBuildingDistance: 8,           // 建物間の最小距離（現在の6から増加）

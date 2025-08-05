@@ -29,6 +29,30 @@ class CityLayoutManager {
         // 施設の生成
         this.facilities = this.facilitySystem.generateFacilities();
         
+        // エージェントの自宅の入り口接続も道路として追加
+        if (window.agents && window.agents.length > 0) {
+            for (const agent of window.agents) {
+                if (agent.home) {
+                    const homeBuilding = {
+                        x: agent.home.x,
+                        z: agent.home.z,
+                        size: 2,
+                        rotation: 0,
+                        type: 'home'
+                    };
+                    const connection = this.createEntranceConnection(homeBuilding);
+                    if (connection) {
+                        this.roads.push({
+                            start: connection.start,
+                            end: connection.end,
+                            isMain: false,
+                            isShort: true
+                        });
+                    }
+                }
+            }
+        }
+        
         return {
             roads: this.roads,
             buildings: this.buildings,

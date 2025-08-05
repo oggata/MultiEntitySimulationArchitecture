@@ -1599,19 +1599,34 @@ function createAgentHome(homeData) {
             const length = Math.sqrt(dx * dx + dz * dz);
             const angle = Math.atan2(dz, dx);
             
-            // 家の入り口通路の地面
-            const pathGeometry = new THREE.PlaneGeometry(length, 1.2, Math.ceil(length), 2);
-            const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-            const pathMaterial = new THREE.LineBasicMaterial({ color: 0x555555 });
-            const path = new THREE.LineSegments(pathEdges, pathMaterial);
+            // 家の入り口通路の地面（塗りつぶし）
+            const pathGeometry = new THREE.PlaneGeometry(length, 1.2);
+            const roadMaterial = new THREE.MeshBasicMaterial({ 
+                color: cityLayoutConfig.roadColors.homeRoad, // 設定ファイルから読み込み
+                transparent: true,
+                opacity: cityLayoutConfig.roadColors.opacity // 設定ファイルから読み込み
+            });
+            const path = new THREE.Mesh(pathGeometry, roadMaterial);
             path.position.set(
                 (connection.start.x + connection.end.x) / 2,
-                0.03,
+                0.15, // 地面より少し上に配置
                 (connection.start.z + connection.end.z) / 2
             );
             path.rotation.x = -Math.PI / 2;
             path.rotation.z = angle;
             scene.add(path);
+            
+            // 境界線
+            // 境界線（無効化）
+            // const pathEdges = new THREE.EdgesGeometry(pathGeometry);
+            // const edgeMaterial = new THREE.LineBasicMaterial({ 
+            //     color: cityLayoutConfig.roadColors.borderLine, // 透明
+            //     linewidth: 2
+            // });
+            // const edge = new THREE.LineSegments(pathEdges, edgeMaterial);
+            // edge.position.copy(path.position);
+            // edge.rotation.copy(path.rotation);
+            // scene.add(edge);
             
             // 家の入り口の階段
             const stepGeometry = new THREE.BoxGeometry(1, 0.1, 0.15);

@@ -943,7 +943,7 @@ generateBuildings() {
             const requiredDistance = (roadWidth / 2) + buildingRadius + safetyMargin;
             
             if (distance < requiredDistance) {
-                console.log(`    道路距離不足: 実際距離=${distance.toFixed(2)}, 必要距離=${requiredDistance.toFixed(2)}, 建物サイズ=${buildingSize}, 安全マージン=${safetyMargin.toFixed(2)}`);
+                //console.log(`    道路距離不足: 実際距離=${distance.toFixed(2)}, 必要距離=${requiredDistance.toFixed(2)}, 建物サイズ=${buildingSize}, 安全マージン=${safetyMargin.toFixed(2)}`);
                 return false;
             }
         }
@@ -1301,7 +1301,7 @@ calculateMinDistanceToRoads(x, z) {
                             placed = true;
                         }
                     } else {
-                        console.log(`  施設位置が道路に近すぎるため除外: ${loc.name} (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)})`);
+                        //console.log(`  施設位置が道路に近すぎるため除外: ${loc.name} (${facilityX.toFixed(1)}, ${facilityZ.toFixed(1)})`);
                     }
                 }
                 attempts++;

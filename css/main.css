@@ -936,3 +936,41 @@ button:disabled {
 .agent-detail-btn:hover {
     background: rgba(76, 175, 80, 0.5);
 }
+
+/* フィールド色選択ボタン */
+.field-color-section {
+    margin-bottom: 15px;
+}
+
+.field-color-section h4 {
+    margin-bottom: 10px;
+    color: #4CAF50;
+}
+
+.color-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.color-btn {
+    padding: 8px 12px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.color-btn:hover {
+    transform: scale(1.05);
+    border-color: #fff;
+}
+
+.color-btn.selected {
+    border-color: #4CAF50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+    transform: scale(1.05);
+}

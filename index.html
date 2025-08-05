@@ -102,6 +102,21 @@
                     <button id="clearRoadVisualization">道路表示クリア</button>
                     <button id="toggleEntranceConnections">入り口接続情報</button>
                 </div>
+                <div class="vehicle-controls">
+                    <h4>🚗 車両システム</h4>
+                    <div class="vehicle-settings">
+                        <label for="vehicleCount">最大車両数: <span id="currentVehicleCount">15</span></label>
+                        <input type="range" id="vehicleCount" min="0" max="30" value="15" style="width: 100%;">
+                    </div>
+                    <div class="vehicle-stats">
+                        <div>現在の車両数: <span id="vehicleStatsCurrent">0</span></div>
+                        <div>生成間隔: <span id="vehicleStatsInterval">2.0</span>秒</div>
+                    </div>
+                    <div class="vehicle-buttons">
+                        <button id="clearAllVehiclesBtn">全車両削除</button>
+                        <button id="toggleVehicleSystemBtn">車両システムON/OFF</button>
+                    </div>
+                </div>
             </div>
             
             <!-- その他タブ -->
@@ -111,6 +126,21 @@
                         <label for="topicPrompt">話題のテーマ:</label>
                         <textarea id="topicPrompt" placeholder="例: テーマ、社会課題について&#10;例: 環境問題、地域コミュニティについて&#10;例: 健康、ライフスタイルについて" rows="3"></textarea>
                     </div>
+                    
+                    <div class="field-color-section">
+                        <h4>🎨 フィールド色設定</h4>
+                        <div class="color-buttons">
+                            <button class="color-btn" data-color="green" style="background-color: #B8E6B8;">グリーン</button>
+                            <button class="color-btn" data-color="purple" style="background-color: #8B5A8B; color: white;">パープル</button>
+                            <button class="color-btn" data-color="black" style="background-color: #2d2d2d; color: white;">ブラック</button>
+                            <button class="color-btn" data-color="blue" style="background-color: #B8E6F0;">ブルー</button>
+                            <button class="color-btn" data-color="orange" style="background-color: #F0E6B8;">オレンジ</button>
+                            <button class="color-btn" data-color="pink" style="background-color: #F0B8E6;">ピンク</button>
+                            <button class="color-btn" data-color="gray" style="background-color: #C0C0C0;">グレー</button>
+                            <button class="color-btn" data-color="brown" style="background-color: #D2B48C;">ブラウン</button>
+                        </div>
+                    </div>
+                    
                     <p>その他の設定や機能をここに配置</p>
                 </div>
             </div>
@@ -250,6 +280,7 @@
         <script src="./js/panel.js"></script>
         <script src="./js/buildings.js"></script>
         <script src="./js/citylayout.js"></script>
+        <script src="./js/vehicles.js"></script>
         <script src="./js/main.js"></script>
 </body>
 </html>

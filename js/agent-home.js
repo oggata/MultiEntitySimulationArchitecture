@@ -66,7 +66,7 @@ const homeManager = {
                             this.homes.set(name, homeData);
                             this.availableHomes.push(homeData);
                             
-                            console.log(`自宅配置成功: ${name} (${homeX.toFixed(1)}, ${homeZ.toFixed(1)}) サイズ:${homeSize} 道路距離:${cityLayout.calculateMinDistanceToRoads(homeX, homeZ).toFixed(2)}`);
+                            //console.log(`自宅配置成功: ${name} (${homeX.toFixed(1)}, ${homeZ.toFixed(1)}) サイズ:${homeSize} 道路距離:${cityLayout.calculateMinDistanceToRoads(homeX, homeZ).toFixed(2)}`);
                             placed = true;
                         }
                     }

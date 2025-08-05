@@ -20,6 +20,11 @@ let cameraKeys = {
     e: false  // 下降
 };
 
+// フィールド色設定
+let fieldColor = 0xB8E6B8; // デフォルトは緑
+let groundMesh = null;
+let infiniteGroundMesh = null;
+
 // 天候システム（weather.jsで定義されるため、ここでは宣言のみ）
 
 // グローバル変数をwindowに公開
@@ -88,8 +93,10 @@ function updateLlmCallCountDisplay() {
 // Three.jsの初期化
 function init() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a0026);
-    //scene.fog = new THREE.Fog(0x87CEEB, 30, 60);
+    scene.background = new THREE.Color(0x87CEEB); // 空色の背景
+    
+    // 霧（フォグ）を追加して遠景を自然に（薄めに設定）
+    scene.fog = new THREE.Fog(0x87CEEB, 100, 400);
     
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 35, 35);
@@ -131,18 +138,32 @@ function init() {
     cityLayout.generateFacilities();
     console.log('建物と施設の生成が完了しました');
 
+    // 無限大の地面（遠景用）
+    const infiniteGroundGeometry = new THREE.PlaneGeometry(1000, 1000, 1, 1);
+    const infiniteGroundMaterial = new THREE.MeshBasicMaterial({ 
+        color: fieldColor, // 設定可能な色
+        transparent: false // 透過を無効化
+    });
+    infiniteGroundMesh = new THREE.Mesh(infiniteGroundGeometry, infiniteGroundMaterial);
+    infiniteGroundMesh.rotation.x = -Math.PI / 2;
+    infiniteGroundMesh.position.y = -0.02; // 現在の地面より少し下に配置
+    scene.add(infiniteGroundMesh);
+    
+    // 遠景の山々は削除（シンプルな遠景に）
+    // createDistantMountains();
+    
     // 地面（塗りつぶし）
     const groundSize = cityLayout.gridSize;
     const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize, 1, 1);
     const groundMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xB8E6B8, // より薄い緑色でグリッド線とのコントラストを強調
+        color: fieldColor, // 設定可能な色
         transparent: true,
         opacity: 0.6
     });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = 0.01; // 少し上に配置
-    scene.add(ground);
+    groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+    groundMesh.rotation.x = -Math.PI / 2;
+    groundMesh.position.y = 0.01; // 少し上に配置
+    scene.add(groundMesh);
     
     // 地面のグリッド線（手動で作成）
     const gridGroup = new THREE.Group();
@@ -261,6 +282,13 @@ function init() {
         createWeatherDisplay();
     }
 
+    // 車両システムの初期化（道路生成後に実行）
+    setTimeout(() => {
+        if (typeof initializeVehicleSystem === 'function') {
+            initializeVehicleSystem();
+        }
+    }, 1000); // 1秒後に初期化
+
     // シミュレーション制御ボタンのイベント登録
     const startBtn = document.getElementById('startSimulationBtn');
     if (startBtn) {
@@ -348,6 +376,81 @@ function init() {
                 addLog('🚪 入り口接続は通常の道路として常に表示されています', 'system');
             }
         });
+    }
+
+    // 車両システムのイベント登録
+    const vehicleCountSlider = document.getElementById('vehicleCount');
+    const currentVehicleCount = document.getElementById('currentVehicleCount');
+    const vehicleStatsCurrent = document.getElementById('vehicleStatsCurrent');
+    const vehicleStatsInterval = document.getElementById('vehicleStatsInterval');
+    const clearAllVehiclesBtn = document.getElementById('clearAllVehiclesBtn');
+    const toggleVehicleSystemBtn = document.getElementById('toggleVehicleSystemBtn');
+
+    if (vehicleCountSlider) {
+        vehicleCountSlider.addEventListener('input', (e) => {
+            const count = parseInt(e.target.value);
+            currentVehicleCount.textContent = count;
+            setVehicleCount(count);
+        });
+    }
+
+    if (clearAllVehiclesBtn) {
+        clearAllVehiclesBtn.addEventListener('click', () => {
+            if (vehicleManager) {
+                vehicleManager.clearAllVehicles();
+                addLog('🚗 すべての車両を削除しました', 'system');
+            }
+        });
+    }
+
+    if (toggleVehicleSystemBtn) {
+        toggleVehicleSystemBtn.addEventListener('click', () => {
+            if (vehicleManager) {
+                const isEnabled = vehicleManager.maxVehicles > 0;
+                if (isEnabled) {
+                    vehicleManager.setMaxVehicles(0);
+                    toggleVehicleSystemBtn.textContent = '車両システムON';
+                    addLog('🚗 車両システムを停止しました', 'system');
+                } else {
+                    vehicleManager.setMaxVehicles(15);
+                    toggleVehicleSystemBtn.textContent = '車両システムOFF';
+                    addLog('🚗 車両システムを開始しました', 'system');
+                }
+            }
+        });
+    }
+
+    // 車両統計の定期更新
+    setInterval(() => {
+        if (vehicleManager) {
+            const stats = vehicleManager.getStats();
+            if (vehicleStatsCurrent) vehicleStatsCurrent.textContent = stats.current;
+            if (vehicleStatsInterval) vehicleStatsInterval.textContent = stats.spawnInterval;
+        }
+    }, 1000);
+
+    // フィールド色選択ボタンのイベント登録
+    const colorButtons = document.querySelectorAll('.color-btn');
+    colorButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const colorKey = button.getAttribute('data-color');
+            if (fieldColorPresets[colorKey]) {
+                const colorHex = fieldColorPresets[colorKey].color;
+                changeFieldColor(colorHex);
+                
+                // 選択されたボタンをハイライト
+                colorButtons.forEach(btn => btn.classList.remove('selected'));
+                button.classList.add('selected');
+                
+                addLog(`🎨 フィールド色を${fieldColorPresets[colorKey].name}に変更しました`, 'system');
+            }
+        });
+    });
+    
+    // デフォルトでグリーンを選択状態にする
+    const greenButton = document.querySelector('[data-color="green"]');
+    if (greenButton) {
+        greenButton.classList.add('selected');
     }
 
     // コミュニケーション機能のイベント登録
@@ -524,24 +627,29 @@ function updateEnvironment(hour) {
     
     // 従来の時間帯による環境変化（天候システムが無効な場合のフォールバック）
     let skyColor;
+    let fogColor;
     let ambientIntensity;
     let directionalIntensity;
     
     if (hour < 6 || hour > 20) {
         skyColor = new THREE.Color(0x1a1a2e); // 夜
+        fogColor = new THREE.Color(0x1a1a2e);
         ambientIntensity = 0.2;
         directionalIntensity = 0.3;
     } else if (hour < 8 || hour > 18) {
-        skyColor = new THREE.Color(0x3a2a1a); // 朝夕（やや暗めブラウン）
+        skyColor = new THREE.Color(0x87CEEB); // 朝夕（空色）
+        fogColor = new THREE.Color(0x87CEEB);
         ambientIntensity = 0.25;
         directionalIntensity = 0.35;
     } else {
-        skyColor = new THREE.Color(0x3a4a5a); // 昼（暗めブルーグレー）
+        skyColor = new THREE.Color(0x87CEEB); // 昼（明るい空色）
+        fogColor = new THREE.Color(0x87CEEB);
         ambientIntensity = 0.18;
         directionalIntensity = 0.25;
     }
     
     scene.background = skyColor;
+    scene.fog.color = fogColor;
     
     // ライトの強度を更新
     scene.children.forEach(child => {
@@ -802,6 +910,9 @@ function animate() {
     // 天候の更新
     updateWeather();
     
+    // 車両システムの更新
+    updateVehicleSystem(deltaTime);
+    
     // エージェントの更新
     if (agents.length > 0) {
         agents.forEach(agent => {
@@ -950,16 +1061,17 @@ function focusCameraOnAgentByIndex(index) {
     const pos = agent.mesh.position;
     const agentRotation = agent.mesh.rotation.y;
     
-    // 人物の後ろ8単位、上8単位の位置にカメラを配置
-    const cameraOffsetX = -Math.sin(agentRotation) * 8;
-    const cameraOffsetZ = -Math.cos(agentRotation) * 8;
+    // 人物の後ろ16単位、上12単位の位置にカメラを配置（より遠くに）
+    const cameraOffsetX = -Math.sin(agentRotation) * 16;
+    const cameraOffsetZ = -Math.cos(agentRotation) * 16;
     
     camera.position.set(
         pos.x + cameraOffsetX,
-        pos.y + 8,
+        pos.y + 12,
         pos.z + cameraOffsetZ
     );
-    camera.lookAt(pos.x, pos.y + 1, pos.z);
+    // カメラを人物の少し下の位置に向ける（より下向きに）
+    camera.lookAt(pos.x, pos.y - 1.0, pos.z);
     
     // カメラモード表示を更新
     updateCameraModeDisplay();
@@ -1023,13 +1135,13 @@ function updateCameraFollow() {
     const pos = agent.mesh.position;
     const agentRotation = agent.mesh.rotation.y;
     
-    // 人物の後ろ8単位、上8単位の位置にカメラを配置
-    const cameraOffsetX = -Math.sin(agentRotation) * 8;
-    const cameraOffsetZ = -Math.cos(agentRotation) * 8;
+    // 人物の後ろ16単位、上12単位の位置にカメラを配置（より遠くに）
+    const cameraOffsetX = -Math.sin(agentRotation) * 16;
+    const cameraOffsetZ = -Math.cos(agentRotation) * 16;
     
     // スムーズな追従のための補間
     const targetX = pos.x + cameraOffsetX;
-    const targetY = pos.y + 8;
+    const targetY = pos.y + 12;
     const targetZ = pos.z + cameraOffsetZ;
     
     // 現在のカメラ位置から目標位置への補間
@@ -1038,8 +1150,8 @@ function updateCameraFollow() {
     camera.position.y += (targetY - camera.position.y) * lerpFactor;
     camera.position.z += (targetZ - camera.position.z) * lerpFactor;
     
-    // カメラの向きを人物に向ける
-    camera.lookAt(pos.x, pos.y + 1, pos.z);
+    // カメラの向きを人物の少し下の位置に向ける（より下向きに）
+    camera.lookAt(pos.x, pos.y - 1.0, pos.z);
 }
 
 // エージェント情報パネルで指定されたエージェントまでスクロール
@@ -1320,53 +1432,94 @@ async function generateAgentResponse(userMessage) {
 
 // カメラ移動更新関数
 function updateCameraMovement(deltaTime) {
-    if (cameraMode !== 'free') return;
-    
-    // カメラの前方・右方向ベクトルを計算
-    const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
-    forward.y = 0;
-    forward.normalize();
+    if (cameraMode === 'free' || cameraMode === 'agent' || cameraMode === 'facility') {
+        // カメラの前方・右方向ベクトルを計算
+        const forward = new THREE.Vector3();
+        camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
 
-    const right = new THREE.Vector3();
-    right.crossVectors(forward, camera.up).normalize();
+        const right = new THREE.Vector3();
+        right.crossVectors(forward, camera.up).normalize();
+        
+        const up = new THREE.Vector3(0, 1, 0);
+        
+        // 移動量を計算
+        const moveAmount = cameraMoveSpeed * deltaTime;
+        
+        // 人物視点や施設視点でカメラ移動が開始された時に追従モードを一時的に無効
+        if ((cameraMode === 'agent' || cameraMode === 'facility') && 
+            (cameraKeys.w || cameraKeys.s || cameraKeys.a || cameraKeys.d || cameraKeys.q || cameraKeys.e)) {
+            cameraFollowEnabled = false;
+        }
+        
+        // 各キーの押下状態に応じて移動
+        if (cameraKeys.w) {
+            camera.position.add(forward.clone().multiplyScalar(moveAmount));
+        }
+        if (cameraKeys.s) {
+            camera.position.add(forward.clone().multiplyScalar(-moveAmount));
+        }
+        if (cameraKeys.a) {
+            camera.position.add(right.clone().multiplyScalar(-moveAmount));
+        }
+        if (cameraKeys.d) {
+            camera.position.add(right.clone().multiplyScalar(moveAmount));
+        }
+        if (cameraKeys.q) {
+            camera.position.add(up.clone().multiplyScalar(moveAmount));
+        }
+        if (cameraKeys.e) {
+            camera.position.add(up.clone().multiplyScalar(-moveAmount));
+        }
+        
+        // カメラの向きを維持
+        camera.lookAt(
+            camera.position.x + forward.x,
+            camera.position.y + forward.y,
+            camera.position.z + forward.z
+        );
+    }
+}
+
+// 遠景の山々を作成する関数
+function createDistantMountains() {
+    const mountainGroup = new THREE.Group();
     
-    const up = new THREE.Vector3(0, 1, 0);
+    // 複数の山を配置
+    const mountainPositions = [
+        { x: -200, z: -150, height: 30, width: 80 },
+        { x: 200, z: -180, height: 25, width: 60 },
+        { x: -150, z: 200, height: 35, width: 90 },
+        { x: 180, z: 220, height: 20, width: 50 },
+        { x: 0, z: -300, height: 40, width: 100 },
+        { x: -300, z: 0, height: 30, width: 70 },
+        { x: 300, z: 50, height: 25, width: 65 }
+    ];
     
-    // 移動量を計算
-    const moveAmount = cameraMoveSpeed * deltaTime;
+    mountainPositions.forEach((mountain, index) => {
+        // 山のジオメトリ（三角形の山）
+        const mountainGeometry = new THREE.ConeGeometry(mountain.width, mountain.height, 8);
+        const mountainMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0x4a5d23, // 山の色
+            transparent: true,
+            opacity: 0.7
+        });
+        const mountainMesh = new THREE.Mesh(mountainGeometry, mountainMaterial);
+        
+        mountainMesh.position.set(mountain.x, mountain.height / 2, mountain.z);
+        mountainMesh.castShadow = false; // 影は無効
+        mountainMesh.receiveShadow = false;
+        
+        mountainGroup.add(mountainMesh);
+    });
     
-    // 各キーの押下状態に応じて移動
-    if (cameraKeys.w) {
-        camera.position.add(forward.clone().multiplyScalar(moveAmount));
-    }
-    if (cameraKeys.s) {
-        camera.position.add(forward.clone().multiplyScalar(-moveAmount));
-    }
-    if (cameraKeys.a) {
-        camera.position.add(right.clone().multiplyScalar(-moveAmount));
-    }
-    if (cameraKeys.d) {
-        camera.position.add(right.clone().multiplyScalar(moveAmount));
-    }
-    if (cameraKeys.q) {
-        camera.position.add(up.clone().multiplyScalar(moveAmount));
-    }
-    if (cameraKeys.e) {
-        camera.position.add(up.clone().multiplyScalar(-moveAmount));
-    }
-    
-    // カメラの向きを維持
-    camera.lookAt(
-        camera.position.x + forward.x,
-        camera.position.y + forward.y,
-        camera.position.z + forward.z
-    );
+    scene.add(mountainGroup);
 }
 
 // キーイベントリスナー
 window.addEventListener('keydown', function(e) {
-    if (cameraMode !== 'free') return;
+    if (cameraMode !== 'free' && cameraMode !== 'agent' && cameraMode !== 'facility') return;
     
     const key = e.key.toLowerCase();
     if (cameraKeys.hasOwnProperty(key)) {
@@ -1376,7 +1529,7 @@ window.addEventListener('keydown', function(e) {
 });
 
 window.addEventListener('keyup', function(e) {
-    if (cameraMode !== 'free') return;
+    if (cameraMode !== 'free' && cameraMode !== 'agent' && cameraMode !== 'facility') return;
     
     const key = e.key.toLowerCase();
     if (cameraKeys.hasOwnProperty(key)) {
@@ -1384,3 +1537,35 @@ window.addEventListener('keyup', function(e) {
         e.preventDefault(); // デフォルトの動作を防ぐ
     }
 });
+
+// フィールド色を変更する関数
+function changeFieldColor(colorHex) {
+    fieldColor = colorHex;
+    
+    // 地面の色を更新
+    if (groundMesh) {
+        groundMesh.material.color.setHex(colorHex);
+    }
+    
+    // 無限平面の色を更新
+    if (infiniteGroundMesh) {
+        infiniteGroundMesh.material.color.setHex(colorHex);
+    }
+    
+    console.log(`フィールド色を変更しました: ${colorHex.toString(16)}`);
+}
+
+// フィールド色のプリセット
+const fieldColorPresets = {
+    green: { name: 'グリーン', color: 0xB8E6B8 },
+    purple: { name: 'パープル', color: 0x8B5A8B }, // より濃い紫に変更
+    black: { name: 'ブラック', color: 0x2d2d2d },
+    blue: { name: 'ブルー', color: 0xB8E6F0 },
+    orange: { name: 'オレンジ', color: 0xF0E6B8 },
+    pink: { name: 'ピンク', color: 0xF0B8E6 },
+    gray: { name: 'グレー', color: 0xC0C0C0 },
+    brown: { name: 'ブラウン', color: 0xD2B48C }
+};
+
+// グローバルスコープに公開
+window.changeFieldColor = changeFieldColor;

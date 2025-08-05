@@ -50,25 +50,27 @@ class CityLayout {
         // 東西方向のメインストリート
         for (let i = 1; i <= numMainStreets; i++) {
             const z = -this.gridSize/2 + spacing * i;
+            const isMainStreet = i === 1 || i === numMainStreets; // 最初と最後の道路を主要道路に
             mainStreets.push({
                 start: { x: -this.gridSize/2, z: z },
                 end: { x: this.gridSize/2, z: z },
                 type: 'main',
-                isMain: Math.random() < 0.2 // 20%の確率で主要道路
+                isMain: isMainStreet
             });
-            console.log(`東西方向メインストリート${i}: z=${z.toFixed(1)}`);
+            console.log(`東西方向メインストリート${i}: z=${z.toFixed(1)}, isMain=${isMainStreet}`);
         }
 
         // 南北方向のメインストリート
         for (let i = 1; i <= numMainStreets; i++) {
             const x = -this.gridSize/2 + spacing * i;
+            const isMainStreet = i === 1 || i === numMainStreets; // 最初と最後の道路を主要道路に
             mainStreets.push({
                 start: { x: x, z: -this.gridSize/2 },
                 end: { x: x, z: this.gridSize/2 },
                 type: 'main',
-                isMain: Math.random() < 0.2
+                isMain: isMainStreet
             });
-            console.log(`南北方向メインストリート${i}: x=${x.toFixed(1)}`);
+            console.log(`南北方向メインストリート${i}: x=${x.toFixed(1)}, isMain=${isMainStreet}`);
         }
         
         console.log(`メインストリート生成完了: ${mainStreets.length}本`);
@@ -112,9 +114,9 @@ class CityLayout {
                 const blockSubStreets = this.generateBlockSubStreets(blockBounds);
                 console.log(`ブロック内サブストリート生成: ${blockSubStreets.length}本`);
                 
-                // サブストリートも20%で主要道路に
+                // サブストリートは通常道路として設定（主要道路はメインストリートのみ）
                 blockSubStreets.forEach(street => {
-                    street.isMain = Math.random() < 0.2;
+                    street.isMain = false;
                 });
                 subStreets.push(...blockSubStreets);
             }
@@ -598,28 +600,67 @@ class CityLayout {
 
     // 道路の描画を修正
     drawRoads() {
+        let mainRoadCount = 0;
+        let normalRoadCount = 0;
+        let shortRoadCount = 0;
+        
         this.roads.forEach(road => {
             const dx = road.end.x - road.start.x;
             const dz = road.end.z - road.start.z;
             const length = Math.sqrt(dx * dx + dz * dz);
             const angle = Math.atan2(dz, dx);
-            // 主要道路は幅2倍、短い道路は1/4幅
+            
+            // 道路の幅を決定
             let roadWidth = this.roadWidth;
-            if (road.isMain) roadWidth = this.roadWidth * 2;
-            if (road.isShort) roadWidth = this.roadWidth * 0.25;
-            const geometry = new THREE.PlaneGeometry(length, roadWidth, Math.ceil(length), 2);
-            const edges = new THREE.EdgesGeometry(geometry);
-            const material = new THREE.LineBasicMaterial({ color: 0x87ceeb });
-            const line = new THREE.LineSegments(edges, material);
-            line.position.set(
+            let roadColor = 0x666666; // 標準道路はグレー
+            
+            if (road.isMain) {
+                roadWidth = this.roadWidth * 3; // 主要道路は3倍の幅
+                roadColor = 0x444444; // 主要道路は濃いグレー
+            } else if (road.isShort) {
+                roadWidth = this.roadWidth * 0.5; // 短い道路は半分の幅
+                roadColor = 0x888888; // 短い道路は薄いグレー
+            }
+            
+            // 道路の平面を作成
+            const roadGeometry = new THREE.PlaneGeometry(length, roadWidth);
+            const roadMaterial = new THREE.MeshBasicMaterial({ 
+                color: roadColor,
+                transparent: true,
+                opacity: 0.8
+            });
+            const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
+            roadMesh.position.set(
                 (road.start.x + road.end.x) / 2,
-                0.12,
+                0.1, // 地面より少し上に配置
                 (road.start.z + road.end.z) / 2
             );
-            line.rotation.x = -Math.PI / 2;
-            line.rotation.z = angle;
+            roadMesh.rotation.x = -Math.PI / 2;
+            roadMesh.rotation.z = angle;
+            scene.add(roadMesh);
+            
+            // 道路の境界線を追加
+            const edges = new THREE.EdgesGeometry(roadGeometry);
+            const lineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0x333333,
+                linewidth: 1
+            });
+            const line = new THREE.LineSegments(edges, lineMaterial);
+            line.position.copy(roadMesh.position);
+            line.rotation.copy(roadMesh.rotation);
             scene.add(line);
+            
+            // 道路の種類をカウント
+            if (road.isMain) {
+                mainRoadCount++;
+            } else if (road.isShort) {
+                shortRoadCount++;
+            } else {
+                normalRoadCount++;
+            }
         });
+        
+        console.log(`道路描画完了: 主要道路=${mainRoadCount}本, 通常道路=${normalRoadCount}本, 短い道路=${shortRoadCount}本`);
     }
 
     // citylayout.js の generateBuildings() メソッドの修正版
@@ -1220,18 +1261,27 @@ calculateMinDistanceToRoads(x, z) {
     // 施設の描画
     drawFacilities() {
         this.facilities.forEach(facility => {
-            const geometry = new THREE.BoxGeometry(facility.size, facility.size, facility.size);
-            const edges = new THREE.EdgesGeometry(geometry);
-            const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
-            const mesh = new THREE.LineSegments(edges, material);
-            mesh.position.set(facility.x, facility.size/2, facility.z);
+            // buildings.jsの詳細な建物作成関数を使用
+            const locationGroup = new THREE.Group();
             
-            // 施設の向きを設定（入り口が道路に向くように）
+            // 施設情報を取得
+            const facilityInfo = getFacilityInfo(facility.name);
+            const facilitySize = getFacilitySize(facility.name);
+            const facilityHeight = facilitySize * 0.8;
+            
+            // 詳細な建物を作成
+            createDetailedBuilding(locationGroup, {
+                name: facility.name,
+                color: facilityInfo.color
+            }, facilitySize, facilityHeight);
+            
+            // 建物の位置と向きを設定
+            locationGroup.position.set(facility.x, 0, facility.z);
             if (facility.rotation !== undefined) {
-                mesh.rotation.y = facility.rotation;
+                locationGroup.rotation.y = facility.rotation;
             }
             
-            scene.add(mesh);
+            scene.add(locationGroup);
             
             // 施設名の表示
             const canvas = document.createElement('canvas');
@@ -1245,7 +1295,7 @@ calculateMinDistanceToRoads(x, z) {
             const texture = new THREE.CanvasTexture(canvas);
             const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
             const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.position.set(facility.x, facility.size + 1, facility.z);
+            sprite.position.set(facility.x, facilitySize + 1, facility.z);
             sprite.scale.set(2, 0.5, 1);
             scene.add(sprite);
             

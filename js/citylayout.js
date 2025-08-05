@@ -612,14 +612,12 @@ class CityLayout {
             
             // 道路の幅を決定
             let roadWidth = this.roadWidth;
-            let roadColor = 0x666666; // 標準道路はグレー
+            let roadColor = 0x444444; // すべての道路を主要道路と同じ色に統一
             
             if (road.isMain) {
                 roadWidth = this.roadWidth * 3; // 主要道路は3倍の幅
-                roadColor = 0x444444; // 主要道路は濃いグレー
             } else if (road.isShort) {
                 roadWidth = this.roadWidth * 0.5; // 短い道路は半分の幅
-                roadColor = 0x888888; // 短い道路は薄いグレー
             }
             
             // 道路の平面を作成
@@ -661,6 +659,90 @@ class CityLayout {
         });
         
         console.log(`道路描画完了: 主要道路=${mainRoadCount}本, 通常道路=${normalRoadCount}本, 短い道路=${shortRoadCount}本`);
+        
+        // 入り口接続を通常の道路として描画
+        this.drawEntranceConnectionsAsRoads();
+    }
+    
+    // 入り口接続を通常の道路として描画
+    drawEntranceConnectionsAsRoads() {
+        // 建物の入り口接続を描画
+        for (const building of this.buildings) {
+            const connection = this.createEntranceConnection(building);
+            if (connection) {
+                const dx = connection.end.x - connection.start.x;
+                const dz = connection.end.z - connection.start.z;
+                const length = Math.sqrt(dx * dx + dz * dz);
+                const angle = Math.atan2(dz, dx);
+                
+                // 入り口通路を道路として描画
+                const roadGeometry = new THREE.PlaneGeometry(length, 1.5);
+                const roadMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0x444444,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
+                roadMesh.position.set(
+                    (connection.start.x + connection.end.x) / 2,
+                    0.1, // 地面より少し上に配置
+                    (connection.start.z + connection.end.z) / 2
+                );
+                roadMesh.rotation.x = -Math.PI / 2;
+                roadMesh.rotation.z = angle;
+                scene.add(roadMesh);
+                
+                // 道路の境界線を追加
+                const edges = new THREE.EdgesGeometry(roadGeometry);
+                const lineMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0x333333,
+                    linewidth: 1
+                });
+                const line = new THREE.LineSegments(edges, lineMaterial);
+                line.position.copy(roadMesh.position);
+                line.rotation.copy(roadMesh.rotation);
+                scene.add(line);
+            }
+        }
+        
+        // 施設の入り口接続を描画
+        for (const facility of this.facilities) {
+            const connection = this.createEntranceConnection(facility);
+            if (connection) {
+                const dx = connection.end.x - connection.start.x;
+                const dz = connection.end.z - connection.start.z;
+                const length = Math.sqrt(dx * dx + dz * dz);
+                const angle = Math.atan2(dz, dx);
+                
+                // 入り口通路を道路として描画
+                const roadGeometry = new THREE.PlaneGeometry(length, 2);
+                const roadMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0x444444,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
+                roadMesh.position.set(
+                    (connection.start.x + connection.end.x) / 2,
+                    0.1, // 地面より少し上に配置
+                    (connection.start.z + connection.end.z) / 2
+                );
+                roadMesh.rotation.x = -Math.PI / 2;
+                roadMesh.rotation.z = angle;
+                scene.add(roadMesh);
+                
+                // 道路の境界線を追加
+                const edges = new THREE.EdgesGeometry(roadGeometry);
+                const lineMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0x333333,
+                    linewidth: 1
+                });
+                const line = new THREE.LineSegments(edges, lineMaterial);
+                line.position.copy(roadMesh.position);
+                line.rotation.copy(roadMesh.rotation);
+                scene.add(line);
+            }
+        }
     }
 
     // citylayout.js の generateBuildings() メソッドの修正版
@@ -1402,7 +1484,7 @@ calculateMinDistanceToRoads(x, z) {
                 const linePoints = points.map(p => new THREE.Vector3(p.x, 0.05, p.z));
                 const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
                 const material = new THREE.LineBasicMaterial({ 
-                    color: road.isMain ? 0xff8800 : road.isShort ? 0x888888 : 0x00ff88,
+                    color: 0x444444,
                     linewidth: 2,
                     transparent: true,
                     opacity: 0.5
@@ -1428,7 +1510,7 @@ calculateMinDistanceToRoads(x, z) {
                 ];
                 const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
                 const material = new THREE.LineBasicMaterial({ 
-                    color: 0xff00ff,
+                    color: 0x444444,
                     linewidth: 3,
                     transparent: true,
                     opacity: 0.8
@@ -1441,7 +1523,7 @@ calculateMinDistanceToRoads(x, z) {
                 // 入り口位置にマーカーを表示
                 const entranceGeometry = new THREE.SphereGeometry(0.3, 8, 8);
                 const entranceMaterial = new THREE.MeshBasicMaterial({ 
-                    color: 0xff00ff,
+                    color: 0x444444,
                     transparent: true,
                     opacity: 0.7
                 });
@@ -1463,7 +1545,7 @@ calculateMinDistanceToRoads(x, z) {
                 ];
                 const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
                 const material = new THREE.LineBasicMaterial({ 
-                    color: 0x00ffff,
+                    color: 0x444444,
                     linewidth: 3,
                     transparent: true,
                     opacity: 0.8
@@ -1476,7 +1558,7 @@ calculateMinDistanceToRoads(x, z) {
                 // 入り口位置にマーカーを表示
                 const entranceGeometry = new THREE.SphereGeometry(0.3, 8, 8);
                 const entranceMaterial = new THREE.MeshBasicMaterial({ 
-                    color: 0x00ffff,
+                    color: 0x444444,
                     transparent: true,
                     opacity: 0.7
                 });
@@ -1508,7 +1590,7 @@ calculateMinDistanceToRoads(x, z) {
                         ];
                         const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
                         const material = new THREE.LineBasicMaterial({ 
-                            color: 0xff8800,
+                            color: 0x444444,
                             linewidth: 3,
                             transparent: true,
                             opacity: 0.8
@@ -1521,7 +1603,7 @@ calculateMinDistanceToRoads(x, z) {
                         // 入り口位置にマーカーを表示
                         const entranceGeometry = new THREE.SphereGeometry(0.3, 8, 8);
                         const entranceMaterial = new THREE.MeshBasicMaterial({ 
-                            color: 0xff8800,
+                            color: 0x444444,
                             transparent: true,
                             opacity: 0.7
                         });
@@ -1584,7 +1666,7 @@ calculateMinDistanceToRoads(x, z) {
                 // 入り口通路の地面
                 const pathGeometry = new THREE.PlaneGeometry(length, 1.5, Math.ceil(length), 2);
                 const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-                const pathMaterial = new THREE.LineBasicMaterial({ color: 0x666666 });
+                const pathMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
                 const path = new THREE.LineSegments(pathEdges, pathMaterial);
                 path.position.set(
                     (connection.start.x + connection.end.x) / 2,
@@ -1623,7 +1705,7 @@ calculateMinDistanceToRoads(x, z) {
                 // 入り口通路の地面
                 const pathGeometry = new THREE.PlaneGeometry(length, 2, Math.ceil(length), 2);
                 const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-                const pathMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
+                const pathMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
                 const path = new THREE.LineSegments(pathEdges, pathMaterial);
                 path.position.set(
                     (connection.start.x + connection.end.x) / 2,
@@ -1638,7 +1720,7 @@ calculateMinDistanceToRoads(x, z) {
                 // 入り口の階段
                 const stepGeometry = new THREE.BoxGeometry(1.5, 0.1, 0.3);
                 const stepEdges = new THREE.EdgesGeometry(stepGeometry);
-                const stepMaterial = new THREE.LineBasicMaterial({ color: 0x555555 });
+                const stepMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
                 const step = new THREE.LineSegments(stepEdges, stepMaterial);
                 step.position.set(
                     connection.start.x,

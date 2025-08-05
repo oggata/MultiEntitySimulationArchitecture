@@ -9,6 +9,8 @@ let timeSpeed = 1;
 let currentTime = 8 * 60; // 8:00 AM in minutes
 const clock = new THREE.Clock();
 
+// 天候システム（weather.jsで定義されるため、ここでは宣言のみ）
+
 // グローバル変数をwindowに公開
 window.agents = agents;
 
@@ -108,16 +110,56 @@ function init() {
     cityLayout.generateRoads();
     //cityLayout.placeBuildings();
 
-    // 地面
+    // 地面（塗りつぶし）
     const groundSize = cityLayout.gridSize;
-    const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize, 100, 100);
+    const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize, 1, 1);
     const groundMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x220044,
-        wireframe: true
+        color: 0xB8E6B8, // より薄い緑色でグリッド線とのコントラストを強調
+        transparent: true,
+        opacity: 0.6
     });
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0.01; // 少し上に配置
     scene.add(ground);
+    
+    // 地面のグリッド線（手動で作成）
+    const gridGroup = new THREE.Group();
+    const gridSize = groundSize;
+    const gridSpacing = 2; // グリッドの間隔を小さく
+    
+    // 縦線
+    for (let x = -gridSize/2; x <= gridSize/2; x += gridSpacing) {
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(x, 0, -gridSize/2),
+            new THREE.Vector3(x, 0, gridSize/2)
+        ]);
+        const lineMaterial = new THREE.LineBasicMaterial({ 
+            color: 0xFFFFFF, 
+            transparent: true, 
+            opacity: 0.8 
+        });
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        gridGroup.add(line);
+    }
+    
+    // 横線
+    for (let z = -gridSize/2; z <= gridSize/2; z += gridSpacing) {
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-gridSize/2, 0, z),
+            new THREE.Vector3(gridSize/2, 0, z)
+        ]);
+        const lineMaterial = new THREE.LineBasicMaterial({ 
+            color: 0xFFFFFF, 
+            transparent: true, 
+            opacity: 0.8 
+        });
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        gridGroup.add(line);
+    }
+    
+    gridGroup.position.y = 0.03; // 床より少し上に配置
+    scene.add(gridGroup);
     
     // 場所の作成
     createLocations();
@@ -151,8 +193,7 @@ function init() {
     // 施設の描画
     cityLayout.drawFacilities();
     
-    // 入り口接続の描画
-    cityLayout.drawEntranceConnections();
+    // 入り口接続は通常の道路描画に統合済み
 
     // パネルのHTMLを更新
     updatePanelHTML();
@@ -197,6 +238,12 @@ function init() {
 
     // 保存されたエージェントの自動読み込みは無効化
     // 手動で「保存されたエージェントを読み込み」ボタンを押してから読み込む
+
+    // 天候システムの初期化
+    if (typeof initWeatherSystem === 'function') {
+        initWeatherSystem();
+        createWeatherDisplay();
+    }
 
     // シミュレーション制御ボタンのイベント登録
     const startBtn = document.getElementById('startSimulationBtn');
@@ -281,9 +328,8 @@ function init() {
                 cityLayout.entranceConnections = [];
                 addLog('🚪 入り口接続を非表示にしました', 'system');
             } else {
-                // 入り口接続を表示
-                cityLayout.drawEntranceConnections();
-                addLog('🚪 入り口接続を表示しました', 'system');
+                // 入り口接続は通常の道路として常に表示されています
+                addLog('🚪 入り口接続は通常の道路として常に表示されています', 'system');
             }
         });
     }
@@ -454,7 +500,13 @@ function updateTime() {
 }
 
 function updateEnvironment(hour) {
-    // 空の色を時間帯に応じて変更
+    // 天候システムが有効な場合は、天候による環境効果を優先
+    if (weatherSystem) {
+        weatherSystem.applyWeatherEffects();
+        return;
+    }
+    
+    // 従来の時間帯による環境変化（天候システムが無効な場合のフォールバック）
     let skyColor;
     let ambientIntensity;
     let directionalIntensity;
@@ -730,6 +782,9 @@ function animate() {
     
     // 時間の更新
     updateTime();
+    
+    // 天候の更新
+    updateWeather();
     
     // エージェントの更新
     if (agents.length > 0) {

@@ -11,6 +11,7 @@
     
     <div class="time-display" id="time-display">
         午前 8:00
+        <div id="weather-display" class="weather-display"></div>
     </div>
     
     <div class="camera-target-display" id="cameraTargetDisplay" style="display: none;">
@@ -102,7 +103,7 @@
                 <div class="road-visualization">
                     <button id="toggleRoadNetwork">道路ネットワーク表示</button>
                     <button id="clearRoadVisualization">道路表示クリア</button>
-                    <button id="toggleEntranceConnections">入り口接続表示</button>
+                    <button id="toggleEntranceConnections">入り口接続情報</button>
                 </div>
             </div>
             
@@ -234,20 +235,20 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
      
-         <script src="./js/config.js"></script>
-    <script src="./js/character.js"></script>
-    <script src="./js/homeManager.js"></script>
-    <script src="./js/agentStorage.js"></script>
-    <script src="./js/agentMovement.js"></script>
-    <script src="./js/agentInteraction.js"></script>
-    <script src="./js/agentMemory.js"></script>
-    <script src="./js/agentGenerator.js"></script>
-    <script src="./js/agentLLM.js"></script>
-    <script src="./js/agent.js"></script>
-    <script src="./js/log.js"></script>
-    <script src="./js/panel.js"></script>
-    <script src="./js/buildings.js"></script>
-    <script src="./js/citylayout.js"></script>
-    <script src="./js/main.js"></script>
+                 <script src="./js/config.js"></script>
+        <script src="./js/weather.js"></script>
+        <script src="./js/character.js"></script>
+        <script src="./js/agent-utils.js"></script>
+        <script src="./js/agent-home.js"></script>
+        <script src="./js/agent-storage.js"></script>
+        <script src="./js/agent-generation.js"></script>
+        <script src="./js/agent-interaction.js"></script>
+        <script src="./js/agent-movement.js"></script>
+        <script src="./js/agent-core.js"></script>
+        <script src="./js/log.js"></script>
+        <script src="./js/panel.js"></script>
+        <script src="./js/buildings.js"></script>
+        <script src="./js/citylayout.js"></script>
+        <script src="./js/main.js"></script>
 </body>
 </html>

@@ -565,28 +565,182 @@ function createDetailedBuilding(locationGroup, loc, facilitySize, facilityHeight
     }
 }
 
+// 共通の透過化建物作成関数
+function createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, options = {}) {
+    const {
+        windows = [],
+        roof = { type: 'flat', color: 0x696969 },
+        decorations = [],
+        entrance = null,
+        sign = null
+    } = options;
+    
+    // メインの建物
+    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
+    mainBuilding.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuilding);
+    
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
+    
+    // 窓の追加
+    windows.forEach(windowConfig => {
+        const windowGeometry = new THREE.PlaneGeometry(windowConfig.width, windowConfig.height);
+        const windowMaterial = new THREE.MeshBasicMaterial({ 
+            color: windowConfig.color || 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
+        window.position.set(windowConfig.x, windowConfig.y, windowConfig.z);
+        if (windowConfig.rotation) {
+            window.rotation.set(windowConfig.rotation.x || 0, windowConfig.rotation.y || 0, windowConfig.rotation.z || 0);
+        }
+        locationGroup.add(window);
+    });
+    
+    // 屋根の追加
+    if (roof.type === 'flat') {
+        const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
+        const roofMaterial = new THREE.MeshBasicMaterial({ 
+            color: roof.color, 
+            transparent: true, 
+            opacity: 0.4 
+        });
+        const roofMesh = new THREE.Mesh(roofGeometry, roofMaterial);
+        roofMesh.position.set(0, facilityHeight + 0.1, 0);
+        locationGroup.add(roofMesh);
+        
+        // 屋根の輪郭線
+        const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+        const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
+            color: roof.color, 
+            transparent: true, 
+            opacity: 0.8 
+        }));
+        roofOutline.position.set(0, facilityHeight + 0.1, 0);
+        locationGroup.add(roofOutline);
+    } else if (roof.type === 'cone') {
+        const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
+        const roofMaterial = new THREE.MeshBasicMaterial({ 
+            color: roof.color, 
+            transparent: true, 
+            opacity: 0.4 
+        });
+        const roofMesh = new THREE.Mesh(roofGeometry, roofMaterial);
+        roofMesh.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
+        roofMesh.rotation.y = Math.PI / 4;
+        locationGroup.add(roofMesh);
+    }
+    
+    // 装飾の追加
+    decorations.forEach(decoration => {
+        const decorationGeometry = new THREE.BoxGeometry(decoration.width, decoration.height, decoration.depth);
+        const decorationMaterial = new THREE.MeshBasicMaterial({ 
+            color: decoration.color, 
+            transparent: true, 
+            opacity: decoration.opacity || 0.8 
+        });
+        const decorationMesh = new THREE.Mesh(decorationGeometry, decorationMaterial);
+        decorationMesh.position.set(decoration.x, decoration.y, decoration.z);
+        locationGroup.add(decorationMesh);
+    });
+    
+    // 入口の追加
+    if (entrance) {
+        const entranceGeometry = new THREE.PlaneGeometry(entrance.width, entrance.height);
+        const entranceMaterial = new THREE.MeshBasicMaterial({ 
+            color: entrance.color, 
+            transparent: true, 
+            opacity: entrance.opacity || 0.7 
+        });
+        const entranceMesh = new THREE.Mesh(entranceGeometry, entranceMaterial);
+        entranceMesh.position.set(entrance.x, entrance.y, entrance.z);
+        locationGroup.add(entranceMesh);
+    }
+    
+    // 看板の追加
+    if (sign) {
+        const signGeometry = new THREE.BoxGeometry(sign.width, sign.height, sign.depth);
+        const signMaterial = new THREE.MeshBasicMaterial({ 
+            color: sign.color, 
+            transparent: true, 
+            opacity: sign.opacity || 0.8 
+        });
+        const signMesh = new THREE.Mesh(signGeometry, signMaterial);
+        signMesh.position.set(sign.x, sign.y, sign.z);
+        locationGroup.add(signMesh);
+    }
+}
+
 // カフェの建物を作成
 function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物（小さめ）
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize * 0.8, facilityHeight * 0.7, facilitySize * 0.8);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight * 0.35, 0);
     locationGroup.add(mainBuilding);
     
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight * 0.35, 0);
+    locationGroup.add(mainBuildingOutline);
+    
     // 屋根（三角屋根）
     const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.6, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight * 0.7 + facilityHeight * 0.15, 0);
     roof.rotation.y = Math.PI / 4;
     locationGroup.add(roof);
     
+    // 屋根の輪郭線
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    roofOutline.position.set(0, facilityHeight * 0.7 + facilityHeight * 0.15, 0);
+    roofOutline.rotation.y = Math.PI / 4;
+    locationGroup.add(roofOutline);
+    
     // 窓
     for(let i = 0; i < 2; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+        const windowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
         window.position.set(
             (i === 0 ? -1 : 1) * facilitySize * 0.25,
             facilityHeight * 0.35,
@@ -597,8 +751,12 @@ function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, 
     
     // テラス
     const terraceGeometry = new THREE.BoxGeometry(facilitySize * 0.6, 0.1, facilitySize * 0.3);
-    const terraceEdges = new THREE.EdgesGeometry(terraceGeometry);
-    const terrace = new THREE.LineSegments(terraceEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const terraceMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.5 
+    });
+    const terrace = new THREE.Mesh(terraceGeometry, terraceMaterial);
     terrace.position.set(0, 0.05, facilitySize * 0.4);
     locationGroup.add(terrace);
 }
@@ -607,16 +765,34 @@ function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, 
 function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
     locationGroup.add(mainBuilding);
+    
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
     
     // 柱（正面）
     for(let i = 0; i < 3; i++) {
         const columnGeometry = new THREE.BoxGeometry(0.3, facilityHeight, 0.3);
-        const columnEdges = new THREE.EdgesGeometry(columnGeometry);
-        const column = new THREE.LineSegments(columnEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+        const columnMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x8B4513, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const column = new THREE.Mesh(columnGeometry, columnMaterial);
         column.position.set(
             (i - 1) * facilitySize * 0.3,
             facilityHeight/2,
@@ -627,15 +803,33 @@ function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, colo
     
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roof);
     
+    // 屋根の輪郭線
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    roofOutline.position.set(0, facilityHeight + 0.1, 0);
+    locationGroup.add(roofOutline);
+    
     // 大きな窓
     const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.8, facilityHeight * 0.6);
-    const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-    const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+    const windowMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x87CEEB, 
+        transparent: true, 
+        opacity: 0.6 
+    });
+    const window = new THREE.Mesh(windowGeometry, windowMaterial);
     window.position.set(0, facilityHeight * 0.3, facilitySize * 0.5);
     locationGroup.add(window);
 }
@@ -644,16 +838,34 @@ function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, colo
 function createGymBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
     locationGroup.add(mainBuilding);
+    
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
     
     // 大きな窓（複数）
     for(let i = 0; i < 3; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.25, facilityHeight * 0.7);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+        const windowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
         window.position.set(
             (i - 1) * facilitySize * 0.3,
             facilityHeight * 0.35,
@@ -664,47 +876,91 @@ function createGymBuilding(locationGroup, facilitySize, facilityHeight, color, s
     
     // 屋上設備
     const roofEquipmentGeometry = new THREE.BoxGeometry(facilitySize * 0.3, facilityHeight * 0.2, facilitySize * 0.3);
-    const roofEquipmentEdges = new THREE.EdgesGeometry(roofEquipmentGeometry);
-    const roofEquipment = new THREE.LineSegments(roofEquipmentEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
+    const roofEquipmentMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roofEquipment = new THREE.Mesh(roofEquipmentGeometry, roofEquipmentMaterial);
     roofEquipment.position.set(0, facilityHeight + facilityHeight * 0.1, 0);
     locationGroup.add(roofEquipment);
     
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roof);
+    
+    // 屋根の輪郭線
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    roofOutline.position.set(0, facilityHeight + 0.1, 0);
+    locationGroup.add(roofOutline);
 }
 
 // 学校の建物を作成
 function createSchoolBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
     locationGroup.add(mainBuilding);
     
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
+    
     // 時計塔
     const clockTowerGeometry = new THREE.BoxGeometry(facilitySize * 0.2, facilityHeight * 0.5, facilitySize * 0.2);
-    const clockTowerEdges = new THREE.EdgesGeometry(clockTowerGeometry);
-    const clockTower = new THREE.LineSegments(clockTowerEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const clockTowerMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.6 
+    });
+    const clockTower = new THREE.Mesh(clockTowerGeometry, clockTowerMaterial);
     clockTower.position.set(0, facilityHeight + facilityHeight * 0.25, 0);
     locationGroup.add(clockTower);
     
     // 時計
     const clockGeometry = new THREE.CircleGeometry(facilitySize * 0.08, 16);
-    const clockEdges = new THREE.EdgesGeometry(clockGeometry);
-    const clock = new THREE.LineSegments(clockEdges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+    const clockMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x000000, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const clock = new THREE.Mesh(clockGeometry, clockMaterial);
     clock.position.set(0, facilityHeight + facilityHeight * 0.25, facilitySize * 0.1);
     clock.rotation.x = -Math.PI / 2;
     locationGroup.add(clock);
     
     // 屋根（三角屋根）
     const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
     roof.rotation.y = Math.PI / 4;
     locationGroup.add(roof);
@@ -712,8 +968,12 @@ function createSchoolBuilding(locationGroup, facilitySize, facilityHeight, color
     // 窓
     for(let i = 0; i < 4; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.5);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+        const windowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
         window.position.set(
             Math.cos(i * Math.PI/2) * facilitySize * 0.4,
             facilityHeight * 0.25,
@@ -728,36 +988,76 @@ function createSchoolBuilding(locationGroup, facilitySize, facilityHeight, color
 function createHospitalBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
     locationGroup.add(mainBuilding);
     
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
+    
     // 十字マーク
     const crossGeometry = new THREE.BoxGeometry(facilitySize * 0.1, facilityHeight * 0.3, facilitySize * 0.3);
-    const crossEdges = new THREE.EdgesGeometry(crossGeometry);
-    const cross = new THREE.LineSegments(crossEdges, new THREE.LineBasicMaterial({ color: 0xFF0000 }));
+    const crossMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xFF0000, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const cross = new THREE.Mesh(crossGeometry, crossMaterial);
     cross.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
     locationGroup.add(cross);
     
     const cross2Geometry = new THREE.BoxGeometry(facilitySize * 0.3, facilityHeight * 0.3, facilitySize * 0.1);
-    const cross2Edges = new THREE.EdgesGeometry(cross2Geometry);
-    const cross2 = new THREE.LineSegments(cross2Edges, new THREE.LineBasicMaterial({ color: 0xFF0000 }));
+    const cross2Material = new THREE.MeshBasicMaterial({ 
+        color: 0xFF0000, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const cross2 = new THREE.Mesh(cross2Geometry, cross2Material);
     cross2.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
     locationGroup.add(cross2);
     
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roof);
+    
+    // 屋根の輪郭線
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    roofOutline.position.set(0, facilityHeight + 0.1, 0);
+    locationGroup.add(roofOutline);
     
     // 窓
     for(let i = 0; i < 3; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+        const windowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
         window.position.set(
             (i - 1) * facilitySize * 0.3,
             facilityHeight * 0.3,
@@ -771,29 +1071,65 @@ function createHospitalBuilding(locationGroup, facilitySize, facilityHeight, col
 function createSupermarketBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
     locationGroup.add(mainBuilding);
     
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
+    
     // 大きな入口
     const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.6, facilityHeight * 0.8);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+    const entranceMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x87CEEB, 
+        transparent: true, 
+        opacity: 0.7 
+    });
+    const entrance = new THREE.Mesh(entranceGeometry, entranceMaterial);
     entrance.position.set(0, facilityHeight * 0.4, facilitySize * 0.5);
     locationGroup.add(entrance);
     
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roof);
     
+    // 屋根の輪郭線
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    roofOutline.position.set(0, facilityHeight + 0.1, 0);
+    locationGroup.add(roofOutline);
+    
     // 看板
     const signGeometry = new THREE.BoxGeometry(facilitySize * 0.8, facilityHeight * 0.2, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0xFFD700 }));
+    const signMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xFFD700, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const sign = new THREE.Mesh(signGeometry, signMaterial);
     sign.position.set(0, facilityHeight + facilityHeight * 0.1, facilitySize * 0.4);
     locationGroup.add(sign);
 }
@@ -802,15 +1138,33 @@ function createSupermarketBuilding(locationGroup, facilitySize, facilityHeight, 
 function createFamilyRestaurantBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
     locationGroup.add(mainBuilding);
     
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
+    
     // 屋根（三角屋根）
     const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
     roof.rotation.y = Math.PI / 4;
     locationGroup.add(roof);
@@ -818,8 +1172,12 @@ function createFamilyRestaurantBuilding(locationGroup, facilitySize, facilityHei
     // 窓
     for(let i = 0; i < 2; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.5);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+        const windowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
         window.position.set(
             (i === 0 ? -1 : 1) * facilitySize * 0.25,
             facilityHeight * 0.25,
@@ -830,33 +1188,69 @@ function createFamilyRestaurantBuilding(locationGroup, facilitySize, facilityHei
     
     // 入口の庇
     const canopyGeometry = new THREE.BoxGeometry(facilitySize * 0.4, 0.1, facilitySize * 0.2);
-    const canopyEdges = new THREE.EdgesGeometry(canopyGeometry);
-    const canopy = new THREE.LineSegments(canopyEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const canopyMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.5 
+    });
+    const canopy = new THREE.Mesh(canopyGeometry, canopyMaterial);
     canopy.position.set(0, facilityHeight * 0.8, facilitySize * 0.4);
     locationGroup.add(canopy);
 }
 
 // デフォルトの建物を作成（より詳細な立方体）
 function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
+    // メインの建物（透過可能な面で作成）
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
     locationGroup.add(mainBuilding);
     
+    // 建物の輪郭線（透過を保ちながら輪郭を明確にする）
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
+    
     // 屋根（平らな屋根）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roof);
+    
+    // 屋根の輪郭線
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    roofOutline.position.set(0, facilityHeight + 0.1, 0);
+    locationGroup.add(roofOutline);
     
     // 窓（正面）
     for(let i = 0; i < 3; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.15, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+        const windowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
         window.position.set(
             (i - 1) * facilitySize * 0.25,
             facilityHeight * 0.3,
@@ -869,8 +1263,12 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
     for(let i = 0; i < 2; i++) {
         for(let j = 0; j < 2; j++) {
             const sideWindowGeometry = new THREE.PlaneGeometry(facilitySize * 0.12, facilityHeight * 0.3);
-            const sideWindowEdges = new THREE.EdgesGeometry(sideWindowGeometry);
-            const sideWindow = new THREE.LineSegments(sideWindowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+            const sideWindowMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x87CEEB, 
+                transparent: true, 
+                opacity: 0.6 
+            });
+            const sideWindow = new THREE.Mesh(sideWindowGeometry, sideWindowMaterial);
             sideWindow.position.set(
                 (i === 0 ? -1 : 1) * facilitySize * 0.5,
                 facilityHeight * 0.25 + (j - 0.5) * facilityHeight * 0.4,
@@ -883,16 +1281,24 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
     
     // 入口
     const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.6);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const entranceMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.7 
+    });
+    const entrance = new THREE.Mesh(entranceGeometry, entranceMaterial);
     entrance.position.set(0, facilityHeight * 0.3, facilitySize * 0.5);
     locationGroup.add(entrance);
     
     // 屋上設備（大きな建物の場合）
     if (facilitySize > 4) {
         const roofEquipmentGeometry = new THREE.BoxGeometry(facilitySize * 0.2, facilityHeight * 0.15, facilitySize * 0.2);
-        const roofEquipmentEdges = new THREE.EdgesGeometry(roofEquipmentGeometry);
-        const roofEquipment = new THREE.LineSegments(roofEquipmentEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
+        const roofEquipmentMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x696969, 
+            transparent: true, 
+            opacity: 0.4 
+        });
+        const roofEquipment = new THREE.Mesh(roofEquipmentGeometry, roofEquipmentMaterial);
         roofEquipment.position.set(0, facilityHeight + facilityHeight * 0.075, 0);
         locationGroup.add(roofEquipment);
     }
@@ -1679,23 +2085,45 @@ function getWaitingSpots(facilityName, facilitySize) {
 function createPostOfficeBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
     locationGroup.add(mainBuilding);
     
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
+    
     // 郵便局の看板
     const signGeometry = new THREE.BoxGeometry(facilitySize * 0.6, facilityHeight * 0.2, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x4169E1 }));
+    const signMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x4169E1, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const sign = new THREE.Mesh(signGeometry, signMaterial);
     sign.position.set(0, facilityHeight + facilityHeight * 0.1, facilitySize * 0.4);
     locationGroup.add(sign);
     
     // 窓
     for(let i = 0; i < 2; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+        const windowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
         window.position.set(
             (i === 0 ? -1 : 1) * facilitySize * 0.25,
             facilityHeight * 0.3,
@@ -1706,26 +2134,58 @@ function createPostOfficeBuilding(locationGroup, facilitySize, facilityHeight, c
     
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roof);
+    
+    // 屋根の輪郭線
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    roofOutline.position.set(0, facilityHeight + 0.1, 0);
+    locationGroup.add(roofOutline);
 }
 
 // 銀行の建物を作成
 function createBankBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
     locationGroup.add(mainBuilding);
+    
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
     
     // 柱（正面）
     for(let i = 0; i < 3; i++) {
         const columnGeometry = new THREE.BoxGeometry(0.3, facilityHeight, 0.3);
-        const columnEdges = new THREE.EdgesGeometry(columnGeometry);
-        const column = new THREE.LineSegments(columnEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+        const columnMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x8B4513, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const column = new THREE.Mesh(columnGeometry, columnMaterial);
         column.position.set(
             (i - 1) * facilitySize * 0.3,
             facilityHeight/2,
@@ -1736,33 +2196,69 @@ function createBankBuilding(locationGroup, facilitySize, facilityHeight, color, 
     
     // 大きな入口
     const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.4, facilityHeight * 0.7);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const entranceMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.7 
+    });
+    const entrance = new THREE.Mesh(entranceGeometry, entranceMaterial);
     entrance.position.set(0, facilityHeight * 0.35, facilitySize * 0.5);
     locationGroup.add(entrance);
     
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roof);
+    
+    // 屋根の輪郭線
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    roofOutline.position.set(0, facilityHeight + 0.1, 0);
+    locationGroup.add(roofOutline);
 }
 
 // 美容院の建物を作成
 function createBeautySalonBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
     locationGroup.add(mainBuilding);
+    
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
     
     // 大きな窓（美容院らしい）
     for(let i = 0; i < 2; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.6);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+        const windowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
         window.position.set(
             (i === 0 ? -1 : 1) * facilitySize * 0.25,
             facilityHeight * 0.3,
@@ -1773,8 +2269,12 @@ function createBeautySalonBuilding(locationGroup, facilitySize, facilityHeight, 
     
     // 屋根（三角屋根）
     const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
     roof.rotation.y = Math.PI / 4;
     locationGroup.add(roof);
@@ -1784,16 +2284,34 @@ function createBeautySalonBuilding(locationGroup, facilitySize, facilityHeight, 
 function createCleaningShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
+    const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.3 
+    });
+    const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
     locationGroup.add(mainBuilding);
+    
+    // 建物の輪郭線
+    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
+    const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
+        color: color, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    mainBuildingOutline.position.set(0, facilityHeight/2, 0);
+    locationGroup.add(mainBuildingOutline);
     
     // 窓
     for(let i = 0; i < 2; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+        const windowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
         window.position.set(
             (i === 0 ? -1 : 1) * facilitySize * 0.25,
             facilityHeight * 0.3,
@@ -1804,883 +2322,909 @@ function createCleaningShopBuilding(locationGroup, facilitySize, facilityHeight,
     
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
+    const roofMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.4 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roof);
+    
+    // 屋根の輪郭線
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.8 
+    }));
+    roofOutline.position.set(0, facilityHeight + 0.1, 0);
+    locationGroup.add(roofOutline);
 }
 
 // 薬局の建物を作成
 function createPharmacyBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 十字マーク（薬局らしい）
-    const crossGeometry = new THREE.BoxGeometry(facilitySize * 0.1, facilityHeight * 0.2, facilitySize * 0.2);
-    const crossEdges = new THREE.EdgesGeometry(crossGeometry);
-    const cross = new THREE.LineSegments(crossEdges, new THREE.LineBasicMaterial({ color: 0x00CED1 }));
-    cross.position.set(0, facilityHeight + facilityHeight * 0.1, 0);
-    locationGroup.add(cross);
+    const decorations = [
+        {
+            width: facilitySize * 0.1,
+            height: facilityHeight * 0.2,
+            depth: facilitySize * 0.2,
+            x: 0,
+            y: facilityHeight + facilityHeight * 0.1,
+            z: 0,
+            color: 0x00CED1,
+            opacity: 0.8
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.2,
+            depth: facilitySize * 0.1,
+            x: 0,
+            y: facilityHeight + facilityHeight * 0.1,
+            z: 0,
+            color: 0x00CED1,
+            opacity: 0.8
+        }
+    ];
     
-    const cross2Geometry = new THREE.BoxGeometry(facilitySize * 0.2, facilityHeight * 0.2, facilitySize * 0.1);
-    const cross2Edges = new THREE.EdgesGeometry(cross2Geometry);
-    const cross2 = new THREE.LineSegments(cross2Edges, new THREE.LineBasicMaterial({ color: 0x00CED1 }));
-    cross2.position.set(0, facilityHeight + facilityHeight * 0.1, 0);
-    locationGroup.add(cross2);
-    
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'flat', color: 0x696969 },
+        decorations: decorations
+    });
 }
 
 // 本屋の建物を作成
 function createBookstoreBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.3,
+            height: facilityHeight * 0.5,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.25,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.3,
+            height: facilityHeight * 0.5,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.25,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 大きな窓（本屋らしい）
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.5);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.25,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 }
+    });
 }
 
 // コンビニの建物を作成
 function createConvenienceStoreBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const entrance = {
+        width: facilitySize * 0.5,
+        height: facilityHeight * 0.8,
+        x: 0,
+        y: facilityHeight * 0.4,
+        z: facilitySize * 0.5,
+        color: 0x87CEEB,
+        opacity: 0.7
+    };
     
-    // 大きな入口（コンビニらしい）
-    const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.5, facilityHeight * 0.8);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-    entrance.position.set(0, facilityHeight * 0.4, facilitySize * 0.5);
-    locationGroup.add(entrance);
+    const sign = {
+        width: facilitySize * 0.7,
+        height: facilityHeight * 0.15,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.075,
+        z: facilitySize * 0.4,
+        color: 0xFF4500,
+        opacity: 0.8
+    };
     
-    // 看板
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.7, facilityHeight * 0.15, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0xFF4500 }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.075, facilitySize * 0.4);
-    locationGroup.add(sign);
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        roof: { type: 'flat', color: 0x696969 },
+        entrance: entrance,
+        sign: sign
+    });
 }
 
 // パン屋の建物を作成
 function createBakeryBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 煙突（パン屋らしい）
-    const chimneyGeometry = new THREE.BoxGeometry(facilitySize * 0.15, facilitySize * 0.4, facilitySize * 0.15);
-    const chimneyEdges = new THREE.EdgesGeometry(chimneyGeometry);
-    const chimney = new THREE.LineSegments(chimneyEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    chimney.position.set(facilitySize * 0.2, facilityHeight + facilitySize * 0.2, 0);
-    locationGroup.add(chimney);
+    const decorations = [
+        {
+            width: facilitySize * 0.15,
+            height: facilitySize * 0.4,
+            depth: facilitySize * 0.15,
+            x: facilitySize * 0.2,
+            y: facilityHeight + facilitySize * 0.2,
+            z: 0,
+            color: 0x696969,
+            opacity: 0.6
+        }
+    ];
     
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 },
+        decorations: decorations
+    });
 }
 
 // 花屋の建物を作成
 function createFlowerShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.3,
+            height: facilityHeight * 0.6,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.3,
+            height: facilityHeight * 0.6,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 大きな窓（花屋らしい）
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.6);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 }
+    });
 }
 
 // 電気屋の建物を作成
 function createElectronicsShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const entrance = {
+        width: facilitySize * 0.4,
+        height: facilityHeight * 0.7,
+        x: 0,
+        y: facilityHeight * 0.35,
+        z: facilitySize * 0.5,
+        color: 0x87CEEB,
+        opacity: 0.7
+    };
     
-    // 大きな入口
-    const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.4, facilityHeight * 0.7);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-    entrance.position.set(0, facilityHeight * 0.35, facilitySize * 0.5);
-    locationGroup.add(entrance);
+    const sign = {
+        width: facilitySize * 0.6,
+        height: facilityHeight * 0.15,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.075,
+        z: facilitySize * 0.4,
+        color: 0x1E90FF,
+        opacity: 0.8
+    };
     
-    // 看板
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.6, facilityHeight * 0.15, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x1E90FF }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.075, facilitySize * 0.4);
-    locationGroup.add(sign);
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        roof: { type: 'flat', color: 0x696969 },
+        entrance: entrance,
+        sign: sign
+    });
 }
 
 // 八百屋の建物を作成
 function createGreengrocerBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.3,
+            height: facilityHeight * 0.5,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.25,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.3,
+            height: facilityHeight * 0.5,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.25,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 大きな窓（八百屋らしい）
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.5);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.25,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 }
+    });
 }
 
 // 魚屋の建物を作成
 function createFishShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 }
+    });
 }
 
 // 肉屋の建物を作成
 function createButcherShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 }
+    });
 }
 
 // ケーキ屋の建物を作成
 function createCakeShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.3,
+            height: facilityHeight * 0.5,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.25,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.3,
+            height: facilityHeight * 0.5,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.25,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 大きな窓（ケーキ屋らしい）
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.5);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.25,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 }
+    });
 }
 
 // 喫茶店の建物を作成
 function createTeaHouseBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 }
+    });
 }
 
 // ラーメン屋の建物を作成
 function createRamenShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 煙突（ラーメン屋らしい）
-    const chimneyGeometry = new THREE.BoxGeometry(facilitySize * 0.15, facilitySize * 0.3, facilitySize * 0.15);
-    const chimneyEdges = new THREE.EdgesGeometry(chimneyGeometry);
-    const chimney = new THREE.LineSegments(chimneyEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    chimney.position.set(facilitySize * 0.2, facilityHeight + facilitySize * 0.15, 0);
-    locationGroup.add(chimney);
+    const decorations = [
+        {
+            width: facilitySize * 0.15,
+            height: facilitySize * 0.3,
+            depth: facilitySize * 0.15,
+            x: facilitySize * 0.2,
+            y: facilityHeight + facilitySize * 0.15,
+            z: 0,
+            color: 0x696969,
+            opacity: 0.6
+        }
+    ];
     
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 },
+        decorations: decorations
+    });
 }
 
 // 寿司屋の建物を作成
 function createSushiShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 看板（寿司屋らしい）
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.5, facilityHeight * 0.15, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x00CED1 }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.075, facilitySize * 0.4);
-    locationGroup.add(sign);
+    const sign = {
+        width: facilitySize * 0.5,
+        height: facilityHeight * 0.15,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.075,
+        z: facilitySize * 0.4,
+        color: 0x00CED1,
+        opacity: 0.8
+    };
     
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 },
+        sign: sign
+    });
 }
 
 // 居酒屋の建物を作成
 function createIzakayaBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 看板（居酒屋らしい）
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.5, facilityHeight * 0.15, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0xFF4500 }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.075, facilitySize * 0.4);
-    locationGroup.add(sign);
+    const sign = {
+        width: facilitySize * 0.5,
+        height: facilityHeight * 0.15,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.075,
+        z: facilitySize * 0.4,
+        color: 0xFF4500,
+        opacity: 0.8
+    };
     
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 },
+        sign: sign
+    });
 }
 
 // 銭湯の建物を作成
 function createPublicBathBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 看板（銭湯らしい）
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.5, facilityHeight * 0.15, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x20B2AA }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.075, facilitySize * 0.4);
-    locationGroup.add(sign);
+    const sign = {
+        width: facilitySize * 0.5,
+        height: facilityHeight * 0.15,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.075,
+        z: facilitySize * 0.4,
+        color: 0x20B2AA,
+        opacity: 0.8
+    };
     
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'flat', color: 0x696969 },
+        sign: sign
+    });
 }
 
 // ゲームセンターの建物を作成
 function createGameCenterBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const entrance = {
+        width: facilitySize * 0.4,
+        height: facilityHeight * 0.7,
+        x: 0,
+        y: facilityHeight * 0.35,
+        z: facilitySize * 0.5,
+        color: 0x87CEEB,
+        opacity: 0.7
+    };
     
-    // 大きな入口
-    const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.4, facilityHeight * 0.7);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-    entrance.position.set(0, facilityHeight * 0.35, facilitySize * 0.5);
-    locationGroup.add(entrance);
+    const sign = {
+        width: facilitySize * 0.6,
+        height: facilityHeight * 0.15,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.075,
+        z: facilitySize * 0.4,
+        color: 0xFF1493,
+        opacity: 0.8
+    };
     
-    // 看板
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.6, facilityHeight * 0.15, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0xFF1493 }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.075, facilitySize * 0.4);
-    locationGroup.add(sign);
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        roof: { type: 'flat', color: 0x696969 },
+        entrance: entrance,
+        sign: sign
+    });
 }
 
 // 映画館の建物を作成
 function createCinemaBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const entrance = {
+        width: facilitySize * 0.5,
+        height: facilityHeight * 0.8,
+        x: 0,
+        y: facilityHeight * 0.4,
+        z: facilitySize * 0.5,
+        color: 0x87CEEB,
+        opacity: 0.7
+    };
     
-    // 大きな入口
-    const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.5, facilityHeight * 0.8);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-    entrance.position.set(0, facilityHeight * 0.4, facilitySize * 0.5);
-    locationGroup.add(entrance);
+    const sign = {
+        width: facilitySize * 0.7,
+        height: facilityHeight * 0.2,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.1,
+        z: facilitySize * 0.4,
+        color: 0x4B0082,
+        opacity: 0.8
+    };
     
-    // 看板
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.7, facilityHeight * 0.2, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x4B0082 }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.1, facilitySize * 0.4);
-    locationGroup.add(sign);
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        roof: { type: 'flat', color: 0x696969 },
+        entrance: entrance,
+        sign: sign
+    });
 }
 
 // カラオケの建物を作成
 function createKaraokeBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const entrance = {
+        width: facilitySize * 0.4,
+        height: facilityHeight * 0.7,
+        x: 0,
+        y: facilityHeight * 0.35,
+        z: facilitySize * 0.5,
+        color: 0x87CEEB,
+        opacity: 0.7
+    };
     
-    // 大きな入口
-    const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.4, facilityHeight * 0.7);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-    entrance.position.set(0, facilityHeight * 0.35, facilitySize * 0.5);
-    locationGroup.add(entrance);
+    const sign = {
+        width: facilitySize * 0.6,
+        height: facilityHeight * 0.15,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.075,
+        z: facilitySize * 0.4,
+        color: 0xFF69B4,
+        opacity: 0.8
+    };
     
-    // 看板
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.6, facilityHeight * 0.15, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0xFF69B4 }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.075, facilitySize * 0.4);
-    locationGroup.add(sign);
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        roof: { type: 'flat', color: 0x696969 },
+        entrance: entrance,
+        sign: sign
+    });
 }
 
 // ボーリング場の建物を作成
 function createBowlingAlleyBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const entrance = {
+        width: facilitySize * 0.4,
+        height: facilityHeight * 0.7,
+        x: 0,
+        y: facilityHeight * 0.35,
+        z: facilitySize * 0.5,
+        color: 0x87CEEB,
+        opacity: 0.7
+    };
     
-    // 大きな入口
-    const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.4, facilityHeight * 0.7);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-    entrance.position.set(0, facilityHeight * 0.35, facilitySize * 0.5);
-    locationGroup.add(entrance);
+    const sign = {
+        width: facilitySize * 0.6,
+        height: facilityHeight * 0.15,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.075,
+        z: facilitySize * 0.4,
+        color: 0x1E90FF,
+        opacity: 0.8
+    };
     
-    // 看板
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.6, facilityHeight * 0.15, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x1E90FF }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.075, facilitySize * 0.4);
-    locationGroup.add(sign);
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        roof: { type: 'flat', color: 0x696969 },
+        entrance: entrance,
+        sign: sign
+    });
 }
 
 // 温泉の建物を作成
 function createHotSpringBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 看板（温泉らしい）
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.5, facilityHeight * 0.15, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x20B2AA }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.075, facilitySize * 0.4);
-    locationGroup.add(sign);
+    const sign = {
+        width: facilitySize * 0.5,
+        height: facilityHeight * 0.15,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.075,
+        z: facilitySize * 0.4,
+        color: 0x20B2AA,
+        opacity: 0.8
+    };
     
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'flat', color: 0x696969 },
+        sign: sign
+    });
 }
 
 // 神社の建物を作成
 function createShrineBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 鳥居
-    const toriiGeometry = new THREE.BoxGeometry(facilitySize * 0.8, facilityHeight * 0.3, 0.2);
-    const toriiEdges = new THREE.EdgesGeometry(toriiGeometry);
-    const torii = new THREE.LineSegments(toriiEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    torii.position.set(0, facilityHeight + facilityHeight * 0.15, facilitySize * 0.3);
-    locationGroup.add(torii);
+    const decorations = [
+        {
+            width: facilitySize * 0.8,
+            height: facilityHeight * 0.3,
+            depth: 0.2,
+            x: 0,
+            y: facilityHeight + facilityHeight * 0.15,
+            z: facilitySize * 0.3,
+            color: 0x8B4513,
+            opacity: 0.8
+        }
+    ];
     
-    // 屋根（神社らしい三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.9, facilityHeight * 0.4, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.2, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
-    
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 },
+        decorations: decorations
+    });
 }
 
 // 寺の建物を作成
 function createTempleBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const windows = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: -facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        },
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.4,
+            x: facilitySize * 0.25,
+            y: facilityHeight * 0.3,
+            z: facilitySize * 0.5
+        }
+    ];
     
-    // 鐘楼
-    const bellTowerGeometry = new THREE.BoxGeometry(facilitySize * 0.2, facilityHeight * 0.6, facilitySize * 0.2);
-    const bellTowerEdges = new THREE.EdgesGeometry(bellTowerGeometry);
-    const bellTower = new THREE.LineSegments(bellTowerEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    bellTower.position.set(0, facilityHeight + facilityHeight * 0.3, 0);
-    locationGroup.add(bellTower);
+    const decorations = [
+        {
+            width: facilitySize * 0.2,
+            height: facilityHeight * 0.6,
+            depth: facilitySize * 0.2,
+            x: 0,
+            y: facilityHeight + facilityHeight * 0.3,
+            z: 0,
+            color: 0x8B4513,
+            opacity: 0.8
+        },
+        {
+            width: facilitySize * 0.08,
+            height: facilitySize * 0.1,
+            depth: facilitySize * 0.08,
+            x: 0,
+            y: facilityHeight + facilityHeight * 0.6,
+            z: 0,
+            color: 0xFFD700,
+            opacity: 0.8
+        }
+    ];
     
-    // 鐘
-    const bellGeometry = new THREE.CylinderGeometry(facilitySize * 0.08, facilitySize * 0.08, facilitySize * 0.1, 8);
-    const bellEdges = new THREE.EdgesGeometry(bellGeometry);
-    const bell = new THREE.LineSegments(bellEdges, new THREE.LineBasicMaterial({ color: 0xFFD700 }));
-    bell.position.set(0, facilityHeight + facilityHeight * 0.6, 0);
-    locationGroup.add(bell);
-    
-    // 屋根（寺らしい三角屋根）
-    const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.9, facilityHeight * 0.4, 4);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-    roof.position.set(0, facilityHeight + facilityHeight * 0.2, 0);
-    roof.rotation.y = Math.PI / 4;
-    locationGroup.add(roof);
-    
-    // 窓
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-        window.position.set(
-            (i === 0 ? -1 : 1) * facilitySize * 0.25,
-            facilityHeight * 0.3,
-            facilitySize * 0.5
-        );
-        locationGroup.add(window);
-    }
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        windows: windows,
+        roof: { type: 'cone', color: 0x8B4513 },
+        decorations: decorations
+    });
 }
 
 // 消防署の建物を作成
 function createFireStationBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const entrance = {
+        width: facilitySize * 0.6,
+        height: facilityHeight * 0.8,
+        x: 0,
+        y: facilityHeight * 0.4,
+        z: facilitySize * 0.5,
+        color: 0x87CEEB,
+        opacity: 0.7
+    };
     
-    // 大きな入口（消防車が出られるように）
-    const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.6, facilityHeight * 0.8);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-    entrance.position.set(0, facilityHeight * 0.4, facilitySize * 0.5);
-    locationGroup.add(entrance);
+    const sign = {
+        width: facilitySize * 0.6,
+        height: facilityHeight * 0.15,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.075,
+        z: facilitySize * 0.4,
+        color: 0xFF0000,
+        opacity: 0.8
+    };
     
-    // 看板
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.6, facilityHeight * 0.15, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0xFF0000 }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.075, facilitySize * 0.4);
-    locationGroup.add(sign);
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        roof: { type: 'flat', color: 0x696969 },
+        entrance: entrance,
+        sign: sign
+    });
 }
 
 // 警察署の建物を作成
 function createPoliceStationBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const entrance = {
+        width: facilitySize * 0.4,
+        height: facilityHeight * 0.7,
+        x: 0,
+        y: facilityHeight * 0.35,
+        z: facilitySize * 0.5,
+        color: 0x87CEEB,
+        opacity: 0.7
+    };
     
-    // 柱（正面）
-    for(let i = 0; i < 3; i++) {
-        const columnGeometry = new THREE.BoxGeometry(0.3, facilityHeight, 0.3);
-        const columnEdges = new THREE.EdgesGeometry(columnGeometry);
-        const column = new THREE.LineSegments(columnEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-        column.position.set(
-            (i - 1) * facilitySize * 0.3,
-            facilityHeight/2,
-            facilitySize * 0.5
-        );
-        locationGroup.add(column);
-    }
+    const sign = {
+        width: facilitySize * 0.6,
+        height: facilityHeight * 0.15,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.075,
+        z: facilitySize * 0.4,
+        color: 0x0000FF,
+        opacity: 0.8
+    };
     
-    // 大きな入口
-    const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.4, facilityHeight * 0.7);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-    entrance.position.set(0, facilityHeight * 0.35, facilitySize * 0.5);
-    locationGroup.add(entrance);
+    const decorations = [
+        {
+            width: 0.3,
+            height: facilityHeight,
+            depth: 0.3,
+            x: -facilitySize * 0.3,
+            y: facilityHeight/2,
+            z: facilitySize * 0.5,
+            color: 0x8B4513,
+            opacity: 0.8
+        },
+        {
+            width: 0.3,
+            height: facilityHeight,
+            depth: 0.3,
+            x: 0,
+            y: facilityHeight/2,
+            z: facilitySize * 0.5,
+            color: 0x8B4513,
+            opacity: 0.8
+        },
+        {
+            width: 0.3,
+            height: facilityHeight,
+            depth: 0.3,
+            x: facilitySize * 0.3,
+            y: facilityHeight/2,
+            z: facilitySize * 0.5,
+            color: 0x8B4513,
+            opacity: 0.8
+        }
+    ];
     
-    // 看板
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.6, facilityHeight * 0.15, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x0000FF }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.075, facilitySize * 0.4);
-    locationGroup.add(sign);
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        roof: { type: 'flat', color: 0x696969 },
+        entrance: entrance,
+        sign: sign,
+        decorations: decorations
+    });
 }
 
 // 市役所の建物を作成
 function createCityHallBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // メインの建物
-    const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
-    const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
-    const mainBuilding = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ color: color }));
-    mainBuilding.position.set(0, facilityHeight/2, 0);
-    locationGroup.add(mainBuilding);
+    const entrance = {
+        width: facilitySize * 0.5,
+        height: facilityHeight * 0.8,
+        x: 0,
+        y: facilityHeight * 0.4,
+        z: facilitySize * 0.5,
+        color: 0x87CEEB,
+        opacity: 0.7
+    };
     
-    // 柱（正面）
-    for(let i = 0; i < 4; i++) {
-        const columnGeometry = new THREE.BoxGeometry(0.3, facilityHeight, 0.3);
-        const columnEdges = new THREE.EdgesGeometry(columnGeometry);
-        const column = new THREE.LineSegments(columnEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
-        column.position.set(
-            (i - 1.5) * facilitySize * 0.25,
-            facilityHeight/2,
-            facilitySize * 0.5
-        );
-        locationGroup.add(column);
-    }
+    const sign = {
+        width: facilitySize * 0.7,
+        height: facilityHeight * 0.2,
+        depth: 0.1,
+        x: 0,
+        y: facilityHeight + facilityHeight * 0.1,
+        z: facilitySize * 0.4,
+        color: 0x808080,
+        opacity: 0.8
+    };
     
-    // 大きな入口
-    const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.5, facilityHeight * 0.8);
-    const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-    const entrance = new THREE.LineSegments(entranceEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
-    entrance.position.set(0, facilityHeight * 0.4, facilitySize * 0.5);
-    locationGroup.add(entrance);
+    const decorations = [
+        {
+            width: 0.3,
+            height: facilityHeight,
+            depth: 0.3,
+            x: -facilitySize * 0.375,
+            y: facilityHeight/2,
+            z: facilitySize * 0.5,
+            color: 0x8B4513,
+            opacity: 0.8
+        },
+        {
+            width: 0.3,
+            height: facilityHeight,
+            depth: 0.3,
+            x: -facilitySize * 0.125,
+            y: facilityHeight/2,
+            z: facilitySize * 0.5,
+            color: 0x8B4513,
+            opacity: 0.8
+        },
+        {
+            width: 0.3,
+            height: facilityHeight,
+            depth: 0.3,
+            x: facilitySize * 0.125,
+            y: facilityHeight/2,
+            z: facilitySize * 0.5,
+            color: 0x8B4513,
+            opacity: 0.8
+        },
+        {
+            width: 0.3,
+            height: facilityHeight,
+            depth: 0.3,
+            x: facilitySize * 0.375,
+            y: facilityHeight/2,
+            z: facilitySize * 0.5,
+            color: 0x8B4513,
+            opacity: 0.8
+        }
+    ];
     
-    // 看板
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.7, facilityHeight * 0.2, 0.1);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const sign = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x808080 }));
-    sign.position.set(0, facilityHeight + facilityHeight * 0.1, facilitySize * 0.4);
-    locationGroup.add(sign);
-    
-    // 屋根（平ら）
-    const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roof = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
-    roof.position.set(0, facilityHeight + 0.1, 0);
-    locationGroup.add(roof);
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+        roof: { type: 'flat', color: 0x696969 },
+        entrance: entrance,
+        sign: sign,
+        decorations: decorations
+    });
 }
 

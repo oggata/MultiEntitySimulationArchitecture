@@ -9,6 +9,17 @@ let timeSpeed = 1;
 let currentTime = 8 * 60; // 8:00 AM in minutes
 const clock = new THREE.Clock();
 
+// カメラ移動制御用変数
+let cameraMoveSpeed = 15.0; // 移動速度
+let cameraKeys = {
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+    q: false, // 上昇
+    e: false  // 下降
+};
+
 // 天候システム（weather.jsで定義されるため、ここでは宣言のみ）
 
 // グローバル変数をwindowに公開
@@ -806,6 +817,9 @@ function animate() {
     // カメラ追従の更新
     updateCameraFollow();
     
+    // フリーカメラモードでのWASD移動
+    updateCameraMovement(deltaTime);
+    
     // 追従対象の表示を更新（0.5秒ごと）
     if (Math.floor(clock.getElapsedTime() * 2) % 1 === 0) {
         updateCameraTargetDisplay();
@@ -1304,10 +1318,10 @@ async function generateAgentResponse(userMessage) {
     }
 }
 
-// フリーカメラ時にWASDでカメラ移動
-window.addEventListener('keydown', function(e) {
+// カメラ移動更新関数
+function updateCameraMovement(deltaTime) {
     if (cameraMode !== 'free') return;
-    const moveSpeed = 1.0;
+    
     // カメラの前方・右方向ベクトルを計算
     const forward = new THREE.Vector3();
     camera.getWorldDirection(forward);
@@ -1316,17 +1330,57 @@ window.addEventListener('keydown', function(e) {
 
     const right = new THREE.Vector3();
     right.crossVectors(forward, camera.up).normalize();
+    
+    const up = new THREE.Vector3(0, 1, 0);
+    
+    // 移動量を計算
+    const moveAmount = cameraMoveSpeed * deltaTime;
+    
+    // 各キーの押下状態に応じて移動
+    if (cameraKeys.w) {
+        camera.position.add(forward.clone().multiplyScalar(moveAmount));
+    }
+    if (cameraKeys.s) {
+        camera.position.add(forward.clone().multiplyScalar(-moveAmount));
+    }
+    if (cameraKeys.a) {
+        camera.position.add(right.clone().multiplyScalar(-moveAmount));
+    }
+    if (cameraKeys.d) {
+        camera.position.add(right.clone().multiplyScalar(moveAmount));
+    }
+    if (cameraKeys.q) {
+        camera.position.add(up.clone().multiplyScalar(moveAmount));
+    }
+    if (cameraKeys.e) {
+        camera.position.add(up.clone().multiplyScalar(-moveAmount));
+    }
+    
+    // カメラの向きを維持
+    camera.lookAt(
+        camera.position.x + forward.x,
+        camera.position.y + forward.y,
+        camera.position.z + forward.z
+    );
+}
 
-    if (e.key === 'w' || e.key === 'W') {
-        camera.position.add(forward.clone().multiplyScalar(moveSpeed));
+// キーイベントリスナー
+window.addEventListener('keydown', function(e) {
+    if (cameraMode !== 'free') return;
+    
+    const key = e.key.toLowerCase();
+    if (cameraKeys.hasOwnProperty(key)) {
+        cameraKeys[key] = true;
+        e.preventDefault(); // デフォルトの動作を防ぐ
     }
-    if (e.key === 's' || e.key === 'S') {
-        camera.position.add(forward.clone().multiplyScalar(-moveSpeed));
-    }
-    if (e.key === 'a' || e.key === 'A') {
-        camera.position.add(right.clone().multiplyScalar(-moveSpeed));
-    }
-    if (e.key === 'd' || e.key === 'D') {
-        camera.position.add(right.clone().multiplyScalar(moveSpeed));
+});
+
+window.addEventListener('keyup', function(e) {
+    if (cameraMode !== 'free') return;
+    
+    const key = e.key.toLowerCase();
+    if (cameraKeys.hasOwnProperty(key)) {
+        cameraKeys[key] = false;
+        e.preventDefault(); // デフォルトの動作を防ぐ
     }
 });

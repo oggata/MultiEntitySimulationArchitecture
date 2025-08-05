@@ -1449,24 +1449,39 @@ function createAgentHome(homeData) {
     roofEdge.rotation.copy(roof.rotation);
     homeGroup.add(roofEdge);
 
-    // 窓（正面）
+    // 窓（正面、透過した色）
     for(let i = 0; i < 2; i++) {
         const windowGeometry = new THREE.PlaneGeometry(homeSize * 0.2, homeHeight * 0.3);
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const window = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+        const windowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
         window.position.set(
             (i === 0 ? -1 : 1) * homeSize * 0.25,
             homeHeight * 0.4,
             homeSize * 0.5
         );
         homeGroup.add(window);
+        
+        // 窓の境界線
+        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
+        const windowEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x87CEEB });
+        const windowEdge = new THREE.LineSegments(windowEdges, windowEdgeMaterial);
+        windowEdge.position.copy(window.position);
+        homeGroup.add(windowEdge);
     }
 
-    // 窓（側面）
+    // 窓（側面、透過した色）
     for(let i = 0; i < 2; i++) {
         const sideWindowGeometry = new THREE.PlaneGeometry(homeSize * 0.15, homeHeight * 0.25);
-        const sideWindowEdges = new THREE.EdgesGeometry(sideWindowGeometry);
-        const sideWindow = new THREE.LineSegments(sideWindowEdges, new THREE.LineBasicMaterial({ color: 0x87CEEB }));
+        const sideWindowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x87CEEB, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const sideWindow = new THREE.Mesh(sideWindowGeometry, sideWindowMaterial);
         sideWindow.position.set(
             (i === 0 ? -1 : 1) * homeSize * 0.5,
             homeHeight * 0.35,
@@ -1474,28 +1489,69 @@ function createAgentHome(homeData) {
         );
         sideWindow.rotation.y = i === 0 ? Math.PI / 2 : -Math.PI / 2;
         homeGroup.add(sideWindow);
+        
+        // 側面窓の境界線
+        const sideWindowEdges = new THREE.EdgesGeometry(sideWindowGeometry);
+        const sideWindowEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x87CEEB });
+        const sideWindowEdge = new THREE.LineSegments(sideWindowEdges, sideWindowEdgeMaterial);
+        sideWindowEdge.position.copy(sideWindow.position);
+        sideWindowEdge.rotation.copy(sideWindow.rotation);
+        homeGroup.add(sideWindowEdge);
     }
 
-    // 入り口の扉
+    // 入り口の扉（透過した色）
     const doorGeometry = new THREE.PlaneGeometry(homeSize * 0.3, homeHeight * 0.5);
-    const doorEdges = new THREE.EdgesGeometry(doorGeometry);
-    const door = new THREE.LineSegments(doorEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const doorMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.7 
+    });
+    const door = new THREE.Mesh(doorGeometry, doorMaterial);
     door.position.set(0, homeHeight * 0.25, homeSize * 0.5);
     homeGroup.add(door);
+    
+    // 扉の境界線
+    const doorEdges = new THREE.EdgesGeometry(doorGeometry);
+    const doorEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x8B4513 });
+    const doorEdge = new THREE.LineSegments(doorEdges, doorEdgeMaterial);
+    doorEdge.position.copy(door.position);
+    homeGroup.add(doorEdge);
 
-    // 玄関の庇
+    // 玄関の庇（透過した色）
     const canopyGeometry = new THREE.BoxGeometry(homeSize * 0.4, 0.1, homeSize * 0.2);
-    const canopyEdges = new THREE.EdgesGeometry(canopyGeometry);
-    const canopy = new THREE.LineSegments(canopyEdges, new THREE.LineBasicMaterial({ color: 0x8B4513 }));
+    const canopyMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const canopy = new THREE.Mesh(canopyGeometry, canopyMaterial);
     canopy.position.set(0, homeHeight * 0.8, homeSize * 0.4);
     homeGroup.add(canopy);
+    
+    // 庇の境界線
+    const canopyEdges = new THREE.EdgesGeometry(canopyGeometry);
+    const canopyEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x8B4513 });
+    const canopyEdge = new THREE.LineSegments(canopyEdges, canopyEdgeMaterial);
+    canopyEdge.position.copy(canopy.position);
+    homeGroup.add(canopyEdge);
 
-    // 煙突
+    // 煙突（透過した色）
     const chimneyGeometry = new THREE.BoxGeometry(homeSize * 0.15, homeSize * 0.3, homeSize * 0.15);
-    const chimneyEdges = new THREE.EdgesGeometry(chimneyGeometry);
-    const chimney = new THREE.LineSegments(chimneyEdges, new THREE.LineBasicMaterial({ color: 0x696969 }));
+    const chimneyMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x696969, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const chimney = new THREE.Mesh(chimneyGeometry, chimneyMaterial);
     chimney.position.set(homeSize * 0.2, homeHeight + homeSize * 0.4, 0);
     homeGroup.add(chimney);
+    
+    // 煙突の境界線
+    const chimneyEdges = new THREE.EdgesGeometry(chimneyGeometry);
+    const chimneyEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x696969 });
+    const chimneyEdge = new THREE.LineSegments(chimneyEdges, chimneyEdgeMaterial);
+    chimneyEdge.position.copy(chimney.position);
+    homeGroup.add(chimneyEdge);
 
     // 看板（自宅）
     const canvas = document.createElement('canvas');

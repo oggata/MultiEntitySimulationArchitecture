@@ -44,10 +44,7 @@
                         <label><input type="radio" name="apiProvider" value="openai" checked> OpenAI</label>
                         <label><input type="radio" name="apiProvider" value="gemini"> Gemini</label>
                     </div>
-                    <div class="prompt-section">
-                        <label for="topicPrompt">話題のテーマ:</label>
-                        <textarea id="topicPrompt" placeholder="例: テーマ、社会課題について&#10;例: 環境問題、地域コミュニティについて&#10;例: 健康、ライフスタイルについて" rows="3"></textarea>
-                    </div>
+
                     <div class="warning">
                         ⚠️ APIキーはlocalStorageに保存されます。
                     </div>
@@ -60,10 +57,6 @@
                     <button id="startSimulationBtn">シミュレーション開始</button>
                     <button id="pauseBtn" disabled>一時停止</button>
                     <button id="timeSpeedBtn">時間速度: <span id="speed">1x</span></button>
-                </div>
-                <div class="communication-controls">
-                    <button id="callAgentBtn" disabled>📞 電話をかける</button>
-                    <button id="messageAgentBtn" disabled>💬 メッセージを送る</button>
                 </div>
             </div>
             
@@ -96,6 +89,10 @@
                     <button id="facilityViewBtn">施設視点切り替え</button>
                     <button id="resetCamera">全体表示</button>
                 </div>
+                <div class="communication-controls">
+                    <button id="callAgentBtn" disabled>📞 電話をかける</button>
+                    <button id="messageAgentBtn" disabled>💬 メッセージを送る</button>
+                </div>
             </div>
             
             <!-- 道路設定タブ -->
@@ -110,6 +107,10 @@
             <!-- その他タブ -->
             <div id="other-settings" class="tab-pane">
                 <div class="other-controls">
+                    <div class="prompt-section">
+                        <label for="topicPrompt">話題のテーマ:</label>
+                        <textarea id="topicPrompt" placeholder="例: テーマ、社会課題について&#10;例: 環境問題、地域コミュニティについて&#10;例: 健康、ライフスタイルについて" rows="3"></textarea>
+                    </div>
                     <p>その他の設定や機能をここに配置</p>
                 </div>
             </div>

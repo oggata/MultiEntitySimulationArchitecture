@@ -1,3 +1,137 @@
+// 建物カラー設定の読み込み
+let buildingColorsConfig;
+try {
+    buildingColorsConfig = {
+        // 建物の基本色
+        building: {
+            primary: 0xFFFFFF,      // 純白
+            secondary: 0xF5F5F5,    // オフホワイト
+            tertiary: 0xFFFFF0,     // アイボリー
+            quaternary: 0xF5F5DC,   // ベージュ
+            quinary: 0xD3D3D3       // ライトグレー
+        },
+        
+        // 屋根の色
+        roof: {
+            primary: 0xF5F5DC,      // ベージュ
+            secondary: 0xFFFFFF,    // 純白（平らな屋根用）
+            tertiary: 0xFFFFF0      // アイボリー（特殊な屋根用）
+        },
+        
+        // 窓の色
+        window: {
+            primary: 0xFFFFFF,      // 純白
+            secondary: 0xF5F5F5,    // オフホワイト（透過度が高い場合）
+            frame: 0xF5F5DC         // ベージュ（窓枠）
+        },
+        
+        // ドアの色
+        door: {
+            primary: 0xF5F5DC,      // ベージュ
+            secondary: 0xFFFFFF,    // 純白
+            frame: 0xF5F5F5         // オフホワイト（ドア枠）
+        },
+        
+        // 柱の色
+        column: {
+            primary: 0xF5F5DC,      // ベージュ
+            secondary: 0xFFFFFF      // 純白
+        },
+        
+        // テラス・庇の色
+        terrace: {
+            primary: 0xF5F5DC,      // ベージュ
+            secondary: 0xFFFFFF      // 純白
+        },
+        
+        // 煙突の色
+        chimney: {
+            primary: 0xF5F5DC,      // ベージュ
+            secondary: 0xFFFFFF      // 純白
+        },
+        
+        // 家具・装飾品の色
+        furniture: {
+            // テーブル
+            table: 0xF5F5DC,
+            // 椅子
+            chair: 0xF5F5DC,
+            // ベンチ
+            bench: 0xF5F5DC,
+            // 本棚
+            bookshelf: 0xF5F5DC,
+            // 机
+            desk: 0xF5F5DC,
+            // トレーニングマシン
+            machine: 0xF5F5DC,
+            // ウェイト
+            weight: 0xF5F5DC,
+            // カウンター
+            counter: 0xF5F5DC,
+            // ショッピングカート
+            cart: 0xF5F5DC,
+            // 駐車場
+            parking: 0xF5F5DC,
+            // 待機席
+            waitingSeat: 0xF5F5DC,
+            // 救急車スペース
+            ambulanceSpace: 0xF5F5DC,
+            // ヘリポート
+            helipad: 0xF5F5DC,
+            // 待合室の椅子
+            waitingChair: 0xF5F5DC,
+            // レジ待機列
+            queueSpot: 0xF5F5DC
+        },
+        
+        // 自然物の色
+        nature: {
+            // 木の幹
+            trunk: 0xF5F5DC,
+            // 木の葉
+            leaves: 0xF5F5DC,
+            // 噴水
+            fountain: 0xF5F5DC
+        },
+        
+        // 装飾品の色
+        decoration: {
+            // 旗
+            flag: 0xF5F5DC,
+            // 校庭
+            playground: 0xF5F5DC,
+            // 看板
+            sign: 0xF5F5DC
+        },
+        
+        // 通路・入口の色
+        entrance: {
+            // 通路
+            path: 0xD3D3D3,
+            // 階段
+            step: 0xF5F5DC,
+            // ドア枠
+            doorFrame: 0xF5F5F5,
+            // 看板
+            sign: 0xF5F5F5,
+            // 柵
+            fence: 0xF5F5DC,
+            // 玄関のポーチ
+            porch: 0xF5F5DC
+        },
+        
+        // 公園・広場の色
+        publicSpace: {
+            // 公園
+            park: 0xFFFFF0,
+            // 広場
+            plaza: 0xFFFFF0
+        }
+    };
+} catch (error) {
+    console.warn('building-colors-config.jsが見つかりません。デフォルト設定を使用します。');
+}
+
 // 場所の作成
 function createLocations() {
     // cityLayout.facilitiesから動的に生成された施設データを使用
@@ -28,7 +162,7 @@ function createLocations() {
             // 公園は特殊な形状（円形の緑地）
             const parkGeometry = new THREE.CircleGeometry(facilitySize * 0.8, 32);
             const parkEdges = new THREE.EdgesGeometry(parkGeometry);
-            const park = new THREE.LineSegments(parkEdges, new THREE.LineBasicMaterial({ color: 0x228B22 }));
+            const park = new THREE.LineSegments(parkEdges, new THREE.LineBasicMaterial({ color: 0xFFFFF0 }));
             park.rotation.x = -Math.PI / 2;
             park.position.set(0, 0.01, 0);
             locationGroup.add(park);
@@ -36,7 +170,7 @@ function createLocations() {
             // 広場は特殊な形状（正方形の広場）
             const plazaGeometry = new THREE.PlaneGeometry(facilitySize, facilitySize);
             const plazaEdges = new THREE.EdgesGeometry(plazaGeometry);
-            const plaza = new THREE.LineSegments(plazaEdges, new THREE.LineBasicMaterial({ color: 0x90EE90 }));
+            const plaza = new THREE.LineSegments(plazaEdges, new THREE.LineBasicMaterial({ color: 0xFFFFF0 }));
             plaza.rotation.x = -Math.PI / 2;
             plaza.position.set(0, 0.01, 0);
             locationGroup.add(plaza);
@@ -60,7 +194,7 @@ function createLocations() {
                 for(let i = 0; i < 4; i++) {
                     const tableGeometry = new THREE.CylinderGeometry(0.3 * scale, 0.3 * scale, 0.1 * scale, 8);
                     const tableEdges = new THREE.EdgesGeometry(tableGeometry);
-                    const table = new THREE.LineSegments(tableEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    const table = new THREE.LineSegments(tableEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.table }));
                     table.position.set(
                         Math.cos(i * Math.PI/2) * 1.2 * scale,
                         0.05 * scale,
@@ -71,7 +205,7 @@ function createLocations() {
                     // 椅子
                     const chairGeometry = new THREE.BoxGeometry(0.4 * scale, 0.4 * scale, 0.4 * scale);
                     const chairEdges = new THREE.EdgesGeometry(chairGeometry);
-                    const chair = new THREE.LineSegments(chairEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    const chair = new THREE.LineSegments(chairEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.chair }));
                     chair.position.set(
                         Math.cos(i * Math.PI/2) * 1 * scale,
                         0.2 * scale,
@@ -86,7 +220,7 @@ function createLocations() {
                 for(let i = 0; i < 3; i++) {
                     const trunkGeometry = new THREE.CylinderGeometry(0.2 * scale, 0.3 * scale, 1.5 * scale, 8);
                     const trunkEdges = new THREE.EdgesGeometry(trunkGeometry);
-                    const trunk = new THREE.LineSegments(trunkEdges, new THREE.LineBasicMaterial({ color: 0xffff00 }));
+                    const trunk = new THREE.LineSegments(trunkEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.nature.trunk }));
                     trunk.position.set(
                         Math.cos(i * Math.PI/1.5) * 2 * scale,
                         0.75 * scale,
@@ -96,7 +230,7 @@ function createLocations() {
 
                     const leavesGeometry = new THREE.SphereGeometry(1 * scale, 8, 8);
                     const leavesEdges = new THREE.EdgesGeometry(leavesGeometry);
-                    const leaves = new THREE.LineSegments(leavesEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    const leaves = new THREE.LineSegments(leavesEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.nature.leaves }));
                     leaves.position.set(
                         Math.cos(i * Math.PI/1.5) * 2 * scale,
                         2 * scale,
@@ -108,7 +242,7 @@ function createLocations() {
                 // ベンチ
                 const benchGeometry = new THREE.BoxGeometry(2 * scale, 0.2 * scale, 0.5 * scale);
                 const benchEdges = new THREE.EdgesGeometry(benchGeometry);
-                const bench = new THREE.LineSegments(benchEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
+                const bench = new THREE.LineSegments(benchEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.bench }));
                 bench.position.set(0, 0.1 * scale, 2 * scale);
                 locationGroup.add(bench);
                 break;
@@ -118,7 +252,7 @@ function createLocations() {
                 for(let i = 0; i < 2; i++) {
                     const bookshelfGeometry = new THREE.BoxGeometry(0.3 * scale, 3 * scale, 2 * scale);
                     const bookshelfEdges = new THREE.EdgesGeometry(bookshelfGeometry);
-                    const bookshelf = new THREE.LineSegments(bookshelfEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    const bookshelf = new THREE.LineSegments(bookshelfEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.bookshelf }));
                     bookshelf.position.set(
                         i === 0 ? -2 * scale : 2 * scale,
                         1.5 * scale,
@@ -131,7 +265,7 @@ function createLocations() {
                 for(let i = 0; i < 3; i++) {
                     const deskGeometry = new THREE.BoxGeometry(1.5 * scale, 0.1 * scale, 0.8 * scale);
                     const deskEdges = new THREE.EdgesGeometry(deskGeometry);
-                    const desk = new THREE.LineSegments(deskEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    const desk = new THREE.LineSegments(deskEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.desk }));
                     desk.position.set(
                         (i - 1) * 2 * scale,
                         0.05 * scale,
@@ -141,7 +275,7 @@ function createLocations() {
 
                     const chairGeometry = new THREE.BoxGeometry(0.4 * scale, 0.4 * scale, 0.4 * scale);
                     const chairEdges = new THREE.EdgesGeometry(chairGeometry);
-                    const chair = new THREE.LineSegments(chairEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    const chair = new THREE.LineSegments(chairEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.chair }));
                     chair.position.set(
                         (i - 1) * 2 * scale,
                         0.2 * scale,
@@ -155,7 +289,7 @@ function createLocations() {
                 // トレーニングマシン
                 const machineGeometry = new THREE.BoxGeometry(1 * scale, 1 * scale, 2 * scale);
                 const machineEdges = new THREE.EdgesGeometry(machineGeometry);
-                const machine = new THREE.LineSegments(machineEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                const machine = new THREE.LineSegments(machineEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.machine }));
                 machine.position.set(0, 0.5 * scale, 0);
                 locationGroup.add(machine);
 
@@ -163,7 +297,7 @@ function createLocations() {
                 const weightGeometry = new THREE.CylinderGeometry(0.2 * scale, 0.2 * scale, 0.4 * scale, 8);
                 const weightEdges = new THREE.EdgesGeometry(weightGeometry);
                 for(let i = 0; i < 4; i++) {
-                    const weight = new THREE.LineSegments(weightEdges, new THREE.LineBasicMaterial({ color: 0xffff00 }));
+                    const weight = new THREE.LineSegments(weightEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.weight }));
                     weight.position.set(
                         Math.cos(i * Math.PI/2) * 1.5 * scale,
                         0.2 * scale,
@@ -176,7 +310,7 @@ function createLocations() {
                 for(let i = 0; i < 2; i++) {
                     const gymBenchGeometry = new THREE.BoxGeometry(1.5 * scale, 0.2 * scale, 0.6 * scale);
                     const gymBenchEdges = new THREE.EdgesGeometry(gymBenchGeometry);
-                    const gymBench = new THREE.LineSegments(gymBenchEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
+                    const gymBench = new THREE.LineSegments(gymBenchEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.bench }));
                     gymBench.position.set(
                         i === 0 ? -2 * scale : 2 * scale,
                         0.1 * scale,
@@ -190,13 +324,13 @@ function createLocations() {
                 // 噴水
                 const fountainBaseGeometry = new THREE.CylinderGeometry(1 * scale, 1.2 * scale, 0.3 * scale, 16);
                 const fountainBaseEdges = new THREE.EdgesGeometry(fountainBaseGeometry);
-                const fountainBase = new THREE.LineSegments(fountainBaseEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                const fountainBase = new THREE.LineSegments(fountainBaseEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.nature.fountain }));
                 fountainBase.position.set(0, 0.15 * scale, 0);
                 locationGroup.add(fountainBase);
 
                 const fountainCenterGeometry = new THREE.CylinderGeometry(0.3 * scale, 0.3 * scale, 1 * scale, 8);
                 const fountainCenterEdges = new THREE.EdgesGeometry(fountainCenterGeometry);
-                const fountainCenter = new THREE.LineSegments(fountainCenterEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
+                const fountainCenter = new THREE.LineSegments(fountainCenterEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.nature.fountain }));
                 fountainCenter.position.set(0, 0.8 * scale, 0);
                 locationGroup.add(fountainCenter);
 
@@ -204,7 +338,7 @@ function createLocations() {
                 for(let i = 0; i < 4; i++) {
                     const benchGeometry = new THREE.BoxGeometry(2 * scale, 0.2 * scale, 0.5 * scale);
                     const benchEdges = new THREE.EdgesGeometry(benchGeometry);
-                    const bench = new THREE.LineSegments(benchEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
+                    const bench = new THREE.LineSegments(benchEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.bench }));
                     bench.position.set(
                         Math.cos(i * Math.PI/2) * 3 * scale,
                         0.1 * scale,
@@ -219,13 +353,13 @@ function createLocations() {
                 // 校舎の装飾
                 const schoolFlagGeometry = new THREE.BoxGeometry(0.1 * scale, 2 * scale, 0.1 * scale);
                 const schoolFlagEdges = new THREE.EdgesGeometry(schoolFlagGeometry);
-                const schoolFlag = new THREE.LineSegments(schoolFlagEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                const schoolFlag = new THREE.LineSegments(schoolFlagEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.decoration.flag }));
                 schoolFlag.position.set(2 * scale, 3 * scale, 2 * scale);
                 locationGroup.add(schoolFlag);
 
                 // 校庭の装飾
                 const playgroundGeometry = new THREE.CircleGeometry(2 * scale, 32);
-                const playground = new THREE.Mesh(playgroundGeometry, new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true }));
+                const playground = new THREE.Mesh(playgroundGeometry, new THREE.MeshBasicMaterial({ color: buildingColorsConfig.decoration.playground, wireframe: true }));
                 playground.rotation.x = -Math.PI / 2;
                 playground.position.set(0, 0.01, 0);
                 locationGroup.add(playground);
@@ -234,7 +368,7 @@ function createLocations() {
                 for(let i = 0; i < 2; i++) {
                     const schoolBenchGeometry = new THREE.BoxGeometry(1.5 * scale, 0.2 * scale, 0.5 * scale);
                     const schoolBenchEdges = new THREE.EdgesGeometry(schoolBenchGeometry);
-                    const schoolBench = new THREE.LineSegments(schoolBenchEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
+                    const schoolBench = new THREE.LineSegments(schoolBenchEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.bench }));
                     schoolBench.position.set(
                         i === 0 ? -1.5 * scale : 1.5 * scale,
                         0.1 * scale,
@@ -248,13 +382,13 @@ function createLocations() {
                 // 救急車の駐車スペース
                 const ambulanceSpaceGeometry = new THREE.BoxGeometry(2 * scale, 0.1 * scale, 1 * scale);
                 const ambulanceSpaceEdges = new THREE.EdgesGeometry(ambulanceSpaceGeometry);
-                const ambulanceSpace = new THREE.LineSegments(ambulanceSpaceEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                const ambulanceSpace = new THREE.LineSegments(ambulanceSpaceEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.ambulanceSpace }));
                 ambulanceSpace.position.set(2 * scale, 0.05 * scale, 0);
                 locationGroup.add(ambulanceSpace);
 
                 // ヘリポート
                 const helipadGeometry = new THREE.CircleGeometry(1 * scale, 32);
-                const helipad = new THREE.Mesh(helipadGeometry, new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true }));
+                const helipad = new THREE.Mesh(helipadGeometry, new THREE.MeshBasicMaterial({ color: buildingColorsConfig.furniture.helipad, wireframe: true }));
                 helipad.rotation.x = -Math.PI / 2;
                 helipad.position.set(0, facilityHeight + 0.1, 0);
                 locationGroup.add(helipad);
@@ -263,7 +397,7 @@ function createLocations() {
                 for(let i = 0; i < 4; i++) {
                     const waitingChairGeometry = new THREE.BoxGeometry(0.4 * scale, 0.4 * scale, 0.4 * scale);
                     const waitingChairEdges = new THREE.EdgesGeometry(waitingChairGeometry);
-                    const waitingChair = new THREE.LineSegments(waitingChairEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    const waitingChair = new THREE.LineSegments(waitingChairEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.waitingChair }));
                     waitingChair.position.set(
                         (i - 1.5) * 1.2 * scale,
                         0.2 * scale,
@@ -278,7 +412,7 @@ function createLocations() {
                 for(let i = 0; i < 3; i++) {
                     const cartGeometry = new THREE.BoxGeometry(0.5 * scale, 0.5 * scale, 0.8 * scale);
                     const cartEdges = new THREE.EdgesGeometry(cartGeometry);
-                    const cart = new THREE.LineSegments(cartEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    const cart = new THREE.LineSegments(cartEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.cart }));
                     cart.position.set(
                         Math.cos(i * Math.PI/1.5) * 2 * scale,
                         0.25 * scale,
@@ -290,7 +424,7 @@ function createLocations() {
                 // 駐車場
                 const parkingGeometry = new THREE.BoxGeometry(4 * scale, 0.1 * scale, 2 * scale);
                 const parkingEdges = new THREE.EdgesGeometry(parkingGeometry);
-                const parking = new THREE.LineSegments(parkingEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
+                const parking = new THREE.LineSegments(parkingEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.parking }));
                 parking.position.set(0, 0.05 * scale, 3 * scale);
                 locationGroup.add(parking);
                 
@@ -298,7 +432,7 @@ function createLocations() {
                 for(let i = 0; i < 3; i++) {
                     const queueSpotGeometry = new THREE.BoxGeometry(0.3 * scale, 0.1 * scale, 0.3 * scale);
                     const queueSpotEdges = new THREE.EdgesGeometry(queueSpotGeometry);
-                    const queueSpot = new THREE.LineSegments(queueSpotEdges, new THREE.LineBasicMaterial({ color: 0xffff00 }));
+                    const queueSpot = new THREE.LineSegments(queueSpotEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.queueSpot }));
                     queueSpot.position.set(
                         -2 * scale,
                         0.05 * scale,
@@ -313,7 +447,7 @@ function createLocations() {
                 for(let i = 0; i < 6; i++) {
                     const tableGeometry = new THREE.CylinderGeometry(0.4 * scale, 0.4 * scale, 0.1 * scale, 8);
                     const tableEdges = new THREE.EdgesGeometry(tableGeometry);
-                    const table = new THREE.LineSegments(tableEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    const table = new THREE.LineSegments(tableEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.table }));
                     table.position.set(
                         Math.cos(i * Math.PI/3) * 1.2 * scale,
                         0.05 * scale,
@@ -324,7 +458,7 @@ function createLocations() {
                     // 椅子
                     const chairGeometry = new THREE.BoxGeometry(0.5 * scale, 0.5 * scale, 0.5 * scale);
                     const chairEdges = new THREE.EdgesGeometry(chairGeometry);
-                    const chair = new THREE.LineSegments(chairEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+                    const chair = new THREE.LineSegments(chairEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.chair }));
                     chair.position.set(
                         Math.cos(i * Math.PI/3) * 1.5 * scale,
                         0.25 * scale,
@@ -336,7 +470,7 @@ function createLocations() {
                 // カウンター
                 const counterGeometry = new THREE.BoxGeometry(3 * scale, 0.8 * scale, 0.5 * scale);
                 const counterEdges = new THREE.EdgesGeometry(counterGeometry);
-                const counter = new THREE.LineSegments(counterEdges, new THREE.LineBasicMaterial({ color: 0xff00ff }));
+                const counter = new THREE.LineSegments(counterEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.counter }));
                 counter.position.set(0, 0.4 * scale, -2 * scale);
                 locationGroup.add(counter);
                 
@@ -344,7 +478,7 @@ function createLocations() {
                 for(let i = 0; i < 2; i++) {
                     const waitingSeatGeometry = new THREE.BoxGeometry(0.4 * scale, 0.4 * scale, 0.4 * scale);
                     const waitingSeatEdges = new THREE.EdgesGeometry(waitingSeatGeometry);
-                    const waitingSeat = new THREE.LineSegments(waitingSeatEdges, new THREE.LineBasicMaterial({ color: 0xffff00 }));
+                    const waitingSeat = new THREE.LineSegments(waitingSeatEdges, new THREE.LineBasicMaterial({ color: buildingColorsConfig.furniture.waitingSeat }));
                     waitingSeat.position.set(
                         (i - 0.5) * 1.5 * scale,
                         0.2 * scale,
@@ -362,12 +496,12 @@ function createLocations() {
         const context = canvas.getContext('2d');
         context.clearRect(0, 0, 256, 64);
         // グロー効果
-        context.shadowColor = '#00ffff';
+        context.shadowColor = '#F5F5F5';
         context.shadowBlur = 16;
         context.font = 'bold 32px sans-serif';
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.fillStyle = '#00ffff';
+        context.fillStyle = '#F5F5F5';
         context.fillText(loc.name, 128, 32);
         // 背景は透明
         // テクスチャ生成
@@ -569,7 +703,7 @@ function createDetailedBuilding(locationGroup, loc, facilitySize, facilityHeight
 function createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, options = {}) {
     const {
         windows = [],
-        roof = { type: 'flat', color: 0x696969 },
+        roof = { type: 'flat', color: buildingColorsConfig.roof.secondary },
         decorations = [],
         entrance = null,
         sign = null
@@ -578,7 +712,7 @@ function createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: buildingColorsConfig.building.primary, 
         transparent: true, 
         opacity: 0.3 
     });
@@ -589,7 +723,7 @@ function createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: buildingColorsConfig.building.primary, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -600,7 +734,7 @@ function createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 
     windows.forEach(windowConfig => {
         const windowGeometry = new THREE.PlaneGeometry(windowConfig.width, windowConfig.height);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: windowConfig.color || 0x87CEEB, 
+            color: windowConfig.color || buildingColorsConfig.window.primary, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -712,7 +846,7 @@ function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, 
     // 屋根（三角屋根）
     const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.6, facilityHeight * 0.3, 4);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x8B4513, 
+        color: buildingColorsConfig.roof.primary, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -724,7 +858,7 @@ function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, 
     // 屋根の輪郭線
     const roofEdges = new THREE.EdgesGeometry(roofGeometry);
     const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
-        color: 0x8B4513, 
+        color: buildingColorsConfig.roof.primary, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -736,7 +870,7 @@ function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, 
     for(let i = 0; i < 2; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.4);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x87CEEB, 
+            color: buildingColorsConfig.window.primary, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -752,7 +886,7 @@ function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, 
     // テラス
     const terraceGeometry = new THREE.BoxGeometry(facilitySize * 0.6, 0.1, facilitySize * 0.3);
     const terraceMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x8B4513, 
+        color: buildingColorsConfig.terrace.primary, 
         transparent: true, 
         opacity: 0.5 
     });
@@ -788,7 +922,7 @@ function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, colo
     for(let i = 0; i < 3; i++) {
         const columnGeometry = new THREE.BoxGeometry(0.3, facilityHeight, 0.3);
         const columnMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x8B4513, 
+            color: buildingColorsConfig.column.primary, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -804,7 +938,7 @@ function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, colo
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x696969, 
+        color: buildingColorsConfig.roof.secondary, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -815,7 +949,7 @@ function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, colo
     // 屋根の輪郭線
     const roofEdges = new THREE.EdgesGeometry(roofGeometry);
     const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
-        color: 0x696969, 
+        color: buildingColorsConfig.roof.secondary, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -825,7 +959,7 @@ function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, colo
     // 大きな窓
     const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.8, facilityHeight * 0.6);
     const windowMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x87CEEB, 
+        color: buildingColorsConfig.window.primary, 
         transparent: true, 
         opacity: 0.6 
     });
@@ -861,7 +995,7 @@ function createGymBuilding(locationGroup, facilitySize, facilityHeight, color, s
     for(let i = 0; i < 3; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.25, facilityHeight * 0.7);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x87CEEB, 
+            color: buildingColorsConfig.window.primary, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -956,7 +1090,7 @@ function createSchoolBuilding(locationGroup, facilitySize, facilityHeight, color
     // 屋根（三角屋根）
     const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x8B4513, 
+        color: buildingColorsConfig.roof.primary, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -969,7 +1103,7 @@ function createSchoolBuilding(locationGroup, facilitySize, facilityHeight, color
     for(let i = 0; i < 4; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.5);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x87CEEB, 
+            color: buildingColorsConfig.window.primary, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -1031,7 +1165,7 @@ function createHospitalBuilding(locationGroup, facilitySize, facilityHeight, col
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x696969, 
+        color: buildingColorsConfig.roof.secondary, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -1042,7 +1176,7 @@ function createHospitalBuilding(locationGroup, facilitySize, facilityHeight, col
     // 屋根の輪郭線
     const roofEdges = new THREE.EdgesGeometry(roofGeometry);
     const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
-        color: 0x696969, 
+        color: buildingColorsConfig.roof.secondary, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -1053,7 +1187,7 @@ function createHospitalBuilding(locationGroup, facilitySize, facilityHeight, col
     for(let i = 0; i < 3; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x87CEEB, 
+            color: buildingColorsConfig.window.primary, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -1093,7 +1227,7 @@ function createSupermarketBuilding(locationGroup, facilitySize, facilityHeight, 
     // 大きな入口
     const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.6, facilityHeight * 0.8);
     const entranceMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x87CEEB, 
+        color: buildingColorsConfig.door.primary, 
         transparent: true, 
         opacity: 0.7 
     });
@@ -1104,7 +1238,7 @@ function createSupermarketBuilding(locationGroup, facilitySize, facilityHeight, 
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x696969, 
+        color: buildingColorsConfig.roof.secondary, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -1115,7 +1249,7 @@ function createSupermarketBuilding(locationGroup, facilitySize, facilityHeight, 
     // 屋根の輪郭線
     const roofEdges = new THREE.EdgesGeometry(roofGeometry);
     const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
-        color: 0x696969, 
+        color: buildingColorsConfig.roof.secondary, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -1160,7 +1294,7 @@ function createFamilyRestaurantBuilding(locationGroup, facilitySize, facilityHei
     // 屋根（三角屋根）
     const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x8B4513, 
+        color: 0xF5F5DC, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -1173,7 +1307,7 @@ function createFamilyRestaurantBuilding(locationGroup, facilitySize, facilityHei
     for(let i = 0; i < 2; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.5);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x87CEEB, 
+            color: 0xFFFFFF, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -1189,7 +1323,7 @@ function createFamilyRestaurantBuilding(locationGroup, facilitySize, facilityHei
     // 入口の庇
     const canopyGeometry = new THREE.BoxGeometry(facilitySize * 0.4, 0.1, facilitySize * 0.2);
     const canopyMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x8B4513, 
+        color: 0xF5F5DC, 
         transparent: true, 
         opacity: 0.5 
     });
@@ -1203,7 +1337,7 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
     // メインの建物（透過可能な面で作成）
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: buildingColorsConfig.building.primary, 
         transparent: true, 
         opacity: 0.3 
     });
@@ -1214,7 +1348,7 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
     // 建物の輪郭線（透過を保ちながら輪郭を明確にする）
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: buildingColorsConfig.building.primary, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -1224,7 +1358,7 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
     // 屋根（平らな屋根）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x696969, 
+        color: buildingColorsConfig.roof.secondary, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -1235,7 +1369,7 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
     // 屋根の輪郭線
     const roofEdges = new THREE.EdgesGeometry(roofGeometry);
     const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
-        color: 0x696969, 
+        color: buildingColorsConfig.roof.secondary, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -1246,7 +1380,7 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
     for(let i = 0; i < 3; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.15, facilityHeight * 0.4);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x87CEEB, 
+            color: buildingColorsConfig.window.primary, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -1264,7 +1398,7 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
         for(let j = 0; j < 2; j++) {
             const sideWindowGeometry = new THREE.PlaneGeometry(facilitySize * 0.12, facilityHeight * 0.3);
             const sideWindowMaterial = new THREE.MeshBasicMaterial({ 
-                color: 0x87CEEB, 
+                color: buildingColorsConfig.window.primary, 
                 transparent: true, 
                 opacity: 0.6 
             });
@@ -1282,7 +1416,7 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
     // 入口
     const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.6);
     const entranceMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x8B4513, 
+        color: buildingColorsConfig.door.primary, 
         transparent: true, 
         opacity: 0.7 
     });
@@ -1294,7 +1428,7 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
     if (facilitySize > 4) {
         const roofEquipmentGeometry = new THREE.BoxGeometry(facilitySize * 0.2, facilityHeight * 0.15, facilitySize * 0.2);
         const roofEquipmentMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x696969, 
+            color: buildingColorsConfig.building.quinary, 
             transparent: true, 
             opacity: 0.4 
         });
@@ -1312,7 +1446,7 @@ function addEntrancePath(locationGroup, facilitySize, buildingColor) {
     // 通路の地面
     const pathGeometry = new THREE.PlaneGeometry(pathWidth, pathLength);
     const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-    const pathMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
+    const pathMaterial = new THREE.LineBasicMaterial({ color: 0xD3D3D3 });
     const path = new THREE.LineSegments(pathEdges, pathMaterial);
     path.rotation.x = -Math.PI / 2;
     path.position.set(0, 0.02, facilitySize * 0.6); // 建物の手前に配置
@@ -1329,7 +1463,7 @@ function addEntrancePath(locationGroup, facilitySize, buildingColor) {
     // 入り口のドア枠
     const doorFrameGeometry = new THREE.BoxGeometry(0.8, facilitySize * 0.4, 0.1);
     const doorFrameEdges = new THREE.EdgesGeometry(doorFrameGeometry);
-    const doorFrameMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
+    const doorFrameMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
     const doorFrame = new THREE.LineSegments(doorFrameEdges, doorFrameMaterial);
     doorFrame.position.set(0, facilitySize * 0.2, facilitySize * 0.45);
     locationGroup.add(doorFrame);
@@ -1337,7 +1471,7 @@ function addEntrancePath(locationGroup, facilitySize, buildingColor) {
     // 入り口の看板
     const entranceSignGeometry = new THREE.PlaneGeometry(1.5, 0.5);
     const entranceSignEdges = new THREE.EdgesGeometry(entranceSignGeometry);
-    const entranceSignMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+    const entranceSignMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
     const entranceSign = new THREE.LineSegments(entranceSignEdges, entranceSignMaterial);
     entranceSign.position.set(0, 0.5, facilitySize * 0.3);
     locationGroup.add(entranceSign);
@@ -1414,7 +1548,7 @@ function createAgentHome(homeData) {
     // 家の基本構造（透過した壁）
     const houseGeometry = new THREE.BoxGeometry(homeSize, homeHeight, homeSize);
     const houseMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xff00ff, 
+        color: 0xF5F5F5, 
         transparent: true, 
         opacity: 0.3 
     });
@@ -1424,7 +1558,7 @@ function createAgentHome(homeData) {
     
     // 家の境界線
     const houseEdges = new THREE.EdgesGeometry(houseGeometry);
-    const houseEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff });
+    const houseEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
     const houseEdge = new THREE.LineSegments(houseEdges, houseEdgeMaterial);
     houseEdge.position.copy(house.position);
     homeGroup.add(houseEdge);
@@ -1432,7 +1566,7 @@ function createAgentHome(homeData) {
     // 屋根（三角屋根、透過した色）
     const roofGeometry = new THREE.ConeGeometry(homeSize * 0.75, homeSize * 0.5, 4);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x8B4513, 
+        color: 0xF5F5DC, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -1443,7 +1577,7 @@ function createAgentHome(homeData) {
     
     // 屋根の境界線
     const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roofEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x8B4513 });
+    const roofEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
     const roofEdge = new THREE.LineSegments(roofEdges, roofEdgeMaterial);
     roofEdge.position.copy(roof.position);
     roofEdge.rotation.copy(roof.rotation);
@@ -1453,7 +1587,7 @@ function createAgentHome(homeData) {
     for(let i = 0; i < 2; i++) {
         const windowGeometry = new THREE.PlaneGeometry(homeSize * 0.2, homeHeight * 0.3);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x87CEEB, 
+            color: 0xFFFFFF, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -1467,7 +1601,7 @@ function createAgentHome(homeData) {
         
         // 窓の境界線
         const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const windowEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x87CEEB });
+        const windowEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
         const windowEdge = new THREE.LineSegments(windowEdges, windowEdgeMaterial);
         windowEdge.position.copy(window.position);
         homeGroup.add(windowEdge);
@@ -1477,7 +1611,7 @@ function createAgentHome(homeData) {
     for(let i = 0; i < 2; i++) {
         const sideWindowGeometry = new THREE.PlaneGeometry(homeSize * 0.15, homeHeight * 0.25);
         const sideWindowMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x87CEEB, 
+            color: 0xFFFFFF, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -1492,7 +1626,7 @@ function createAgentHome(homeData) {
         
         // 側面窓の境界線
         const sideWindowEdges = new THREE.EdgesGeometry(sideWindowGeometry);
-        const sideWindowEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x87CEEB });
+        const sideWindowEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
         const sideWindowEdge = new THREE.LineSegments(sideWindowEdges, sideWindowEdgeMaterial);
         sideWindowEdge.position.copy(sideWindow.position);
         sideWindowEdge.rotation.copy(sideWindow.rotation);
@@ -1502,7 +1636,7 @@ function createAgentHome(homeData) {
     // 入り口の扉（透過した色）
     const doorGeometry = new THREE.PlaneGeometry(homeSize * 0.3, homeHeight * 0.5);
     const doorMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x8B4513, 
+        color: 0xF5F5DC, 
         transparent: true, 
         opacity: 0.7 
     });
@@ -1512,7 +1646,7 @@ function createAgentHome(homeData) {
     
     // 扉の境界線
     const doorEdges = new THREE.EdgesGeometry(doorGeometry);
-    const doorEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x8B4513 });
+    const doorEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
     const doorEdge = new THREE.LineSegments(doorEdges, doorEdgeMaterial);
     doorEdge.position.copy(door.position);
     homeGroup.add(doorEdge);
@@ -1520,7 +1654,7 @@ function createAgentHome(homeData) {
     // 玄関の庇（透過した色）
     const canopyGeometry = new THREE.BoxGeometry(homeSize * 0.4, 0.1, homeSize * 0.2);
     const canopyMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x8B4513, 
+        color: 0xF5F5DC, 
         transparent: true, 
         opacity: 0.8 
     });
@@ -1530,7 +1664,7 @@ function createAgentHome(homeData) {
     
     // 庇の境界線
     const canopyEdges = new THREE.EdgesGeometry(canopyGeometry);
-    const canopyEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x8B4513 });
+    const canopyEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
     const canopyEdge = new THREE.LineSegments(canopyEdges, canopyEdgeMaterial);
     canopyEdge.position.copy(canopy.position);
     homeGroup.add(canopyEdge);
@@ -1538,7 +1672,7 @@ function createAgentHome(homeData) {
     // 煙突（透過した色）
     const chimneyGeometry = new THREE.BoxGeometry(homeSize * 0.15, homeSize * 0.3, homeSize * 0.15);
     const chimneyMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x696969, 
+        color: 0xF5F5DC, 
         transparent: true, 
         opacity: 0.8 
     });
@@ -1548,7 +1682,7 @@ function createAgentHome(homeData) {
     
     // 煙突の境界線
     const chimneyEdges = new THREE.EdgesGeometry(chimneyGeometry);
-    const chimneyEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x696969 });
+    const chimneyEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
     const chimneyEdge = new THREE.LineSegments(chimneyEdges, chimneyEdgeMaterial);
     chimneyEdge.position.copy(chimney.position);
     homeGroup.add(chimneyEdge);
@@ -1559,12 +1693,12 @@ function createAgentHome(homeData) {
     canvas.height = 64;
     const context = canvas.getContext('2d');
     context.clearRect(0, 0, 256, 64);
-    context.shadowColor = '#00ffff';
+    context.shadowColor = '#F5F5F5';
     context.shadowBlur = 16;
     context.font = 'bold 24px sans-serif';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    context.fillStyle = '#00ffff';
+    context.fillStyle = '#F5F5F5';
     context.fillText(homeData.name, 128, 32);
     const texture = new THREE.CanvasTexture(canvas);
     const signGeometry = new THREE.PlaneGeometry(2, 0.5);
@@ -1573,7 +1707,7 @@ function createAgentHome(homeData) {
     signMesh.position.set(0, homeHeight + 0.5, homeSize * 0.6);
     homeGroup.add(signMesh);
     const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const signLine = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+    const signLine = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0xF5F5DC }));
     signLine.position.copy(signMesh.position);
     homeGroup.add(signLine);
 
@@ -1661,7 +1795,7 @@ function addHomeEntrancePath(homeGroup, homeSize, homeColor) {
     // 通路の地面
     const pathGeometry = new THREE.PlaneGeometry(pathWidth, pathLength);
     const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-    const pathMaterial = new THREE.LineBasicMaterial({ color: 0x666666 });
+    const pathMaterial = new THREE.LineBasicMaterial({ color: 0xD3D3D3 });
     const path = new THREE.LineSegments(pathEdges, pathMaterial);
     path.rotation.x = -Math.PI / 2;
     path.position.set(0, 0.02, homeSize * 0.5); // 家の手前に配置
@@ -1678,7 +1812,7 @@ function addHomeEntrancePath(homeGroup, homeSize, homeColor) {
     // 入り口のドア枠
     const doorFrameGeometry = new THREE.BoxGeometry(0.6, homeSize * 0.3, 0.1);
     const doorFrameEdges = new THREE.EdgesGeometry(doorFrameGeometry);
-    const doorFrameMaterial = new THREE.LineBasicMaterial({ color: 0x333333 });
+    const doorFrameMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
     const doorFrame = new THREE.LineSegments(doorFrameEdges, doorFrameMaterial);
     doorFrame.position.set(0, homeSize * 0.15, homeSize * 0.4);
     homeGroup.add(doorFrame);
@@ -1686,7 +1820,7 @@ function addHomeEntrancePath(homeGroup, homeSize, homeColor) {
     // 玄関のポーチ
     const porchGeometry = new THREE.BoxGeometry(pathWidth * 0.8, 0.05, 0.3);
     const porchEdges = new THREE.EdgesGeometry(porchGeometry);
-    const porchMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
+    const porchMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
     const porch = new THREE.LineSegments(porchEdges, porchMaterial);
     porch.position.set(0, 0.025, homeSize * 0.25);
     homeGroup.add(porch);
@@ -1700,7 +1834,7 @@ function addPublicSpaceEntrance(locationGroup, facilitySize, spaceName) {
     // 通路の地面
     const pathGeometry = new THREE.PlaneGeometry(pathWidth, pathLength);
     const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-    const pathMaterial = new THREE.LineBasicMaterial({ color: 0x555555 });
+    const pathMaterial = new THREE.LineBasicMaterial({ color: 0xD3D3D3 });
     const path = new THREE.LineSegments(pathEdges, pathMaterial);
     path.rotation.x = -Math.PI / 2;
     path.position.set(0, 0.02, facilitySize * 0.4); // 施設の手前に配置
@@ -1709,7 +1843,7 @@ function addPublicSpaceEntrance(locationGroup, facilitySize, spaceName) {
     // 入り口の看板
     const signGeometry = new THREE.PlaneGeometry(2, 0.8);
     const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const signMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+    const signMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
     const sign = new THREE.LineSegments(signEdges, signMaterial);
     sign.position.set(0, 1, facilitySize * 0.3);
     locationGroup.add(sign);
@@ -1719,7 +1853,7 @@ function addPublicSpaceEntrance(locationGroup, facilitySize, spaceName) {
         for (let i = 0; i < 3; i++) {
             const fenceGeometry = new THREE.BoxGeometry(0.1, 0.8, 0.1);
             const fenceEdges = new THREE.EdgesGeometry(fenceGeometry);
-            const fenceMaterial = new THREE.LineBasicMaterial({ color: 0x8B4513 });
+            const fenceMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
             const fence = new THREE.LineSegments(fenceEdges, fenceMaterial);
             fence.position.set(
                 (i - 1) * 1.5,
@@ -1734,7 +1868,7 @@ function addPublicSpaceEntrance(locationGroup, facilitySize, spaceName) {
     if (spaceName === "町の広場") {
         const benchGeometry = new THREE.BoxGeometry(2, 0.2, 0.6);
         const benchEdges = new THREE.EdgesGeometry(benchGeometry);
-        const benchMaterial = new THREE.LineBasicMaterial({ color: 0x8B4513 });
+        const benchMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
         const bench = new THREE.LineSegments(benchEdges, benchMaterial);
         bench.position.set(0, 0.1, facilitySize * 0.2);
         locationGroup.add(bench);
@@ -1745,32 +1879,32 @@ function addPublicSpaceEntrance(locationGroup, facilitySize, spaceName) {
 function getFacilityInfo(facilityName) {
     const facilityInfo = {
         'カフェ': {
-            color: 0x8B4513,
+            color: 0xF5F5F5,
             activities: ["コーヒーを飲む", "会話する", "読書する", "仕事をする"],
             atmosphere: "落ち着いた雰囲気で、コーヒーの香りが漂う"
         },
         '公園': {
-            color: 0x228B22,
+            color: 0xFFFFF0,
             activities: ["散歩する", "絵を描く", "ベンチで休む", "運動する"],
             atmosphere: "緑豊かで開放的な空間"
         },
         '図書館': {
-            color: 0x4682B4,
+            color: 0xFFFFFF,
             activities: ["勉強する", "本を読む", "調べ物をする", "静かに過ごす"],
             atmosphere: "静寂に包まれた知識の宝庫"
         },
         'スポーツジム': {
-            color: 0xFF6347,
+            color: 0xF5F5DC,
             activities: ["運動する", "筋トレする", "ヨガをする", "他の人と運動の話をする"],
             atmosphere: "活気があり、エネルギッシュな場所"
         },
         '町の広場': {
-            color: 0x90EE90,
+            color: 0xFFFFF0,
             activities: ["散歩する", "休憩する", "会話する"],
             atmosphere: "開放的な空間で、人々が集まる場所"
         },
         '学校': {
-            color: 0x87CEEB,
+            color: 0xFFFFFF,
             activities: ["勉強する", "運動する", "友達と話す"],
             atmosphere: "活気のある教育施設"
         },
@@ -1780,164 +1914,164 @@ function getFacilityInfo(facilityName) {
             atmosphere: "清潔で落ち着いた医療施設"
         },
         'スーパーマーケット': {
-            color: 0xFFD700,
+            color: 0xF5F5F5,
             activities: ["買い物する", "食材を選ぶ", "レジで支払う"],
             atmosphere: "便利で快適なショッピング空間"
         },
         'ファミレス': {
-            color: 0xFF69B4,
+            color: 0xF5F5DC,
             activities: ["食事する", "会話する", "休憩する"],
             atmosphere: "家族向けの温かいレストラン"
         },
         '郵便局': {
-            color: 0x4169E1,
+            color: 0xFFFFFF,
             activities: ["郵便物を出す", "手紙を書く", "荷物を送る", "手続きをする"],
             atmosphere: "静かで落ち着いた公共施設"
         },
         '銀行': {
-            color: 0x32CD32,
+            color: 0xFFFFFF,
             activities: ["お金を下ろす", "振り込みをする", "相談する", "手続きをする"],
             atmosphere: "重厚で信頼感のある金融機関"
         },
         '美容院': {
-            color: 0xFF1493,
+            color: 0xF5F5F5,
             activities: ["髪を切る", "美容の相談をする", "雑誌を読む", "リラックスする"],
             atmosphere: "明るく親しみやすい美容空間"
         },
         'クリーニング店': {
-            color: 0x20B2AA,
+            color: 0xFFFFFF,
             activities: ["洗濯物を出す", "取り置きを取る", "相談する"],
             atmosphere: "清潔で整然とした洗濯店"
         },
         '薬局': {
-            color: 0x00CED1,
+            color: 0xFFFFFF,
             activities: ["薬を買う", "健康相談をする", "サプリメントを選ぶ"],
             atmosphere: "清潔で安心感のある薬局"
         },
         '本屋': {
-            color: 0x8B4513,
+            color: 0xF5F5DC,
             activities: ["本を探す", "立ち読みする", "本の相談をする", "雑誌を読む"],
             atmosphere: "本の香りが漂う知的空間"
         },
         'コンビニ': {
-            color: 0xFF4500,
+            color: 0xFFFFFF,
             activities: ["買い物する", "雑誌を読む", "休憩する", "軽食を買う"],
             atmosphere: "24時間営業の便利な店"
         },
         'パン屋': {
-            color: 0xFFB6C1,
+            color: 0xF5F5DC,
             activities: ["パンを買う", "香りを楽しむ", "朝食を買う", "おやつを買う"],
             atmosphere: "焼きたてパンの香りが漂う温かい店"
         },
         '花屋': {
-            color: 0xFF69B4,
+            color: 0xFFFFF0,
             activities: ["花を買う", "花の相談をする", "花を眺める", "プレゼントを選ぶ"],
             atmosphere: "色とりどりの花が並ぶ華やかな店"
         },
         '電気屋': {
-            color: 0x1E90FF,
+            color: 0xFFFFFF,
             activities: ["電化製品を見る", "相談する", "買い物する", "修理を依頼する"],
             atmosphere: "最新の電化製品が並ぶ明るい店"
         },
         '八百屋': {
-            color: 0x32CD32,
+            color: 0xFFFFF0,
             activities: ["野菜を買う", "果物を買う", "新鮮な食材を選ぶ", "店主と話す"],
             atmosphere: "新鮮な野菜や果物が並ぶ活気のある店"
         },
         '魚屋': {
-            color: 0x00CED1,
+            color: 0xFFFFFF,
             activities: ["魚を買う", "鮮度を確認する", "調理法を聞く", "刺身を買う"],
             atmosphere: "新鮮な魚の香りが漂う海鮮店"
         },
         '肉屋': {
-            color: 0xDC143C,
+            color: 0xF5F5F5,
             activities: ["肉を買う", "調理法を聞く", "新鮮さを確認する", "注文する"],
             atmosphere: "新鮮な肉が並ぶ専門店"
         },
         'ケーキ屋': {
-            color: 0xFFB6C1,
+            color: 0xF5F5DC,
             activities: ["ケーキを買う", "ケーキを眺める", "誕生日ケーキを注文する", "おやつを買う"],
             atmosphere: "甘い香りが漂う可愛らしい店"
         },
         '喫茶店': {
-            color: 0x8B4513,
+            color: 0xF5F5DC,
             activities: ["コーヒーを飲む", "ケーキを食べる", "会話する", "読書する"],
             atmosphere: "昭和の雰囲気が残る落ち着いた店"
         },
         'ラーメン屋': {
-            color: 0xFF6347,
+            color: 0xF5F5DC,
             activities: ["ラーメンを食べる", "会話する", "暖かいスープを楽しむ"],
             atmosphere: "醤油の香りが漂う温かい店"
         },
         '寿司屋': {
-            color: 0x00CED1,
+            color: 0xFFFFFF,
             activities: ["寿司を食べる", "刺身を食べる", "会話する", "職人の技を楽しむ"],
             atmosphere: "新鮮な魚と職人の技が光る高級店"
         },
         '居酒屋': {
-            color: 0xFF4500,
+            color: 0xF5F5DC,
             activities: ["お酒を飲む", "料理を食べる", "会話する", "リラックスする"],
             atmosphere: "温かみのある日本の居酒屋"
         },
         '銭湯': {
-            color: 0x20B2AA,
+            color: 0xFFFFFF,
             activities: ["お風呂に入る", "リラックスする", "会話する", "体を休める"],
             atmosphere: "日本の伝統的な銭湯"
         },
         'ゲームセンター': {
-            color: 0xFF1493,
+            color: 0xF5F5F5,
             activities: ["ゲームをする", "友達と遊ぶ", "景品を狙う", "楽しむ"],
             atmosphere: "活気があり、音と光が溢れる遊び場"
         },
         '映画館': {
-            color: 0x4B0082,
+            color: 0xD3D3D3,
             activities: ["映画を見る", "ポップコーンを食べる", "映画の話をする", "リラックスする"],
             atmosphere: "暗くて落ち着いた映画鑑賞空間"
         },
         'カラオケ': {
-            color: 0xFF69B4,
+            color: 0xF5F5F5,
             activities: ["歌を歌う", "友達と楽しむ", "リラックスする", "飲み物を飲む"],
             atmosphere: "明るく楽しいカラオケ空間"
         },
         'ボーリング場': {
-            color: 0x1E90FF,
+            color: 0xFFFFFF,
             activities: ["ボーリングをする", "友達と遊ぶ", "スコアを競う", "楽しむ"],
             atmosphere: "活気があり、音が響く遊び場"
         },
         '温泉': {
-            color: 0x20B2AA,
+            color: 0xFFFFFF,
             activities: ["温泉に入る", "リラックスする", "会話する", "体を休める"],
             atmosphere: "日本の伝統的な温泉施設"
         },
         '神社': {
-            color: 0x8B4513,
+            color: 0xF5F5DC,
             activities: ["お参りする", "願い事をする", "静かに過ごす", "写真を撮る"],
             atmosphere: "静寂で神聖な日本の伝統施設"
         },
         '寺': {
-            color: 0x8B4513,
+            color: 0xF5F5DC,
             activities: ["お参りする", "静かに過ごす", "仏像を見る", "心を落ち着かせる"],
             atmosphere: "静寂で厳かな仏教施設"
         },
         '消防署': {
-            color: 0xFF0000,
+            color: 0xFFFFFF,
             activities: ["見学する", "防災について学ぶ", "消防車を見る"],
             atmosphere: "安全を守る重要な公共施設"
         },
         '警察署': {
-            color: 0x0000FF,
+            color: 0xFFFFFF,
             activities: ["相談する", "届け出をする", "安全について学ぶ"],
             atmosphere: "地域の安全を守る重要な施設"
         },
         '市役所': {
-            color: 0x808080,
+            color: 0xFFFFFF,
             activities: ["手続きをする", "相談する", "書類を提出する", "情報を集める"],
             atmosphere: "地域の行政を担う重要な施設"
         }
     };
     
     return facilityInfo[facilityName] || {
-        color: 0x808080,
+        color: 0xF5F5F5,
         activities: ["過ごす"],
         atmosphere: "一般的な施設"
     };

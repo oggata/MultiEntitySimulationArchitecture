@@ -1158,96 +1158,158 @@ calculateMinDistanceToRoads(x, z) {
     getBuildingColorByType(buildingType) {
         const colorMap = {
             // 大サイズの建物（公共施設）
-            'park': 0x228B22,        // 緑
-            'school': 0x87CEEB,      // 空色
-            'supermarket': 0xFFD700, // 金色
+            'park': 0xFFFFF0,        // アイボリー
+            'school': 0xFFFFFF,      // 純白
+            'supermarket': 0xFFFFFF, // 純白
             'hospital': 0xFFFFFF,    // 白
-            'gym': 0xFF6347,         // 赤
-            'library': 0x4682B4,     // 青
-            'plaza': 0x90EE90,       // 薄緑
-            '公園': 0x228B22,        // 緑
-            '学校': 0x87CEEB,        // 空色
-            'スーパーマーケット': 0xFFD700, // 金色
+            'gym': 0xF5F5F5,         // オフホワイト
+            'library': 0xFFFFFF,     // 純白
+            'plaza': 0xFFFFF0,       // アイボリー
+            '公園': 0xFFFFF0,        // アイボリー
+            '学校': 0xFFFFFF,        // 純白
+            'スーパーマーケット': 0xFFFFFF, // 純白
             '病院': 0xFFFFFF,        // 白
-            'スポーツジム': 0xFF6347, // 赤
-            '図書館': 0x4682B4,      // 青
-            '町の広場': 0x90EE90,    // 薄緑
+            'スポーツジム': 0xF5F5F5, // オフホワイト
+            '図書館': 0xFFFFFF,      // 純白
+            '町の広場': 0xFFFFF0,    // アイボリー
             
             // 中サイズの建物（商業施設）
-            'shop': 0xFF69B4,        // ピンク
-            'restaurant': 0xFF4500,  // オレンジ
-            'office': 0x808080,      // グレー
-            'cafe': 0x8B4513,        // 茶色
-            'bank': 0x32CD32,        // ライムグリーン
-            'post_office': 0x4169E1, // ロイヤルブルー
-            'カフェ': 0x8B4513,      // 茶色
-            'ファミレス': 0xFF4500,  // オレンジ
-            '郵便局': 0x4169E1,      // ロイヤルブルー
+            'shop': 0xF5F5DC,        // ベージュ
+            'restaurant': 0xF5F5DC,  // ベージュ
+            'office': 0xF5F5F5,      // オフホワイト
+            'cafe': 0xF5F5DC,        // ベージュ
+            'bank': 0xFFFFFF,        // 純白
+            'post_office': 0xFFFFFF, // 純白
+            'カフェ': 0xF5F5DC,      // ベージュ
+            'ファミレス': 0xF5F5DC,  // ベージュ
+            '郵便局': 0xFFFFFF,      // 純白
             
             // 小サイズの建物（住宅）
-            'house': 0xFF00FF,       // マゼンタ
-            'apartment': 0x9370DB,   // 紫
-            'cottage': 0xD2691E,     // チョコレート
-            'studio': 0x20B2AA       // ライトシーグリーン
+            'house': 0xF5F5F5,       // オフホワイト
+            'apartment': 0xF5F5F5,   // オフホワイト
+            'cottage': 0xF5F5DC,     // ベージュ
+            'studio': 0xF5F5F5       // オフホワイト
         };
         
-        return colorMap[buildingType] || 0x808080; // デフォルトはグレー
+        return colorMap[buildingType] || 0xF5F5F5; // デフォルトはオフホワイト
     }
     
     // 建物の描画
     drawBuildings() {
         this.buildings.forEach(building => {
+            // 建物の基本構造（透過したカラーで塗る）
             const geometry = new THREE.BoxGeometry(building.size, building.size, building.size);
-            const edges = new THREE.EdgesGeometry(geometry);
             const buildingColor = this.getBuildingColorByType(building.type);
-            const material = new THREE.LineBasicMaterial({ color: buildingColor });
-            const mesh = new THREE.LineSegments(edges, material);
-            mesh.position.set(building.x, building.size/2, building.z);
+            const buildingMaterial = new THREE.MeshBasicMaterial({ 
+                color: buildingColor, 
+                transparent: true, 
+                opacity: 0.3 
+            });
+            const buildingMesh = new THREE.Mesh(geometry, buildingMaterial);
+            buildingMesh.position.set(building.x, building.size/2, building.z);
+            buildingMesh.rotation.y = building.rotation;
+            scene.add(buildingMesh);
             
-            // 建物の向きを設定（入り口が道路に向くように）
-            mesh.rotation.y = building.rotation;
+            // 建物の輪郭線
+            const edges = new THREE.EdgesGeometry(geometry);
+            const edgeMaterial = new THREE.LineBasicMaterial({ 
+                color: buildingColor, 
+                transparent: true, 
+                opacity: 0.8 
+            });
+            const edgeMesh = new THREE.LineSegments(edges, edgeMaterial);
+            edgeMesh.position.set(building.x, building.size/2, building.z);
+            edgeMesh.rotation.y = building.rotation;
+            scene.add(edgeMesh);
+            
+            // 窓の装飾（前面）
+            for(let i = 0; i < 2; i++) {
+                const windowGeometry = new THREE.PlaneGeometry(building.size * 0.15, building.size * 0.4);
+                const windowMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xFFFFFF, 
+                    transparent: true, 
+                    opacity: 0.6 
+                });
+                const window = new THREE.Mesh(windowGeometry, windowMaterial);
+                window.position.set(
+                    building.x + (i === 0 ? -1 : 1) * building.size * 0.25,
+                    building.size * 0.3,
+                    building.z + building.size * 0.5
+                );
+                window.rotation.y = building.rotation;
+                scene.add(window);
+            }
+            
+            // 窓の装飾（側面）
+            for(let i = 0; i < 2; i++) {
+                for(let j = 0; j < 2; j++) {
+                    const sideWindowGeometry = new THREE.PlaneGeometry(building.size * 0.12, building.size * 0.3);
+                    const sideWindowMaterial = new THREE.MeshBasicMaterial({ 
+                        color: 0xFFFFFF, 
+                        transparent: true, 
+                        opacity: 0.6 
+                    });
+                    const sideWindow = new THREE.Mesh(sideWindowGeometry, sideWindowMaterial);
+                    sideWindow.position.set(
+                        building.x + (i === 0 ? -1 : 1) * building.size * 0.5,
+                        building.size * 0.25 + (j - 0.5) * building.size * 0.4,
+                        building.z
+                    );
+                    sideWindow.rotation.y = building.rotation + (i === 0 ? Math.PI / 2 : -Math.PI / 2);
+                    scene.add(sideWindow);
+                }
+            }
+            
+            // 屋根の装飾
+            const roofGeometry = new THREE.BoxGeometry(building.size * 1.1, 0.2, building.size * 1.1);
+            const roofMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xF5F5DC, 
+                transparent: true, 
+                opacity: 0.4 
+            });
+            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+            roof.position.set(building.x, building.size + 0.1, building.z);
+            roof.rotation.y = building.rotation;
+            scene.add(roof);
+            
+            // 屋根の輪郭線
+            const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+            const roofEdgeMaterial = new THREE.LineBasicMaterial({ 
+                color: 0xF5F5DC, 
+                transparent: true, 
+                opacity: 0.8 
+            });
+            const roofEdge = new THREE.LineSegments(roofEdges, roofEdgeMaterial);
+            roofEdge.position.set(building.x, building.size + 0.1, building.z);
+            roofEdge.rotation.y = building.rotation;
+            scene.add(roofEdge);
             
             // 入り口の表示（建物の前面に小さな四角形を追加）
             const entranceSize = building.size * 0.3;
             const entranceGeometry = new THREE.PlaneGeometry(entranceSize, entranceSize);
             const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-            const entranceMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff });
+            const entranceMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
             const entrance = new THREE.LineSegments(entranceEdges, entranceMaterial);
-            entrance.position.set(0, building.size * 0.3, building.size * 0.65);
+            entrance.position.set(
+                building.x + Math.sin(building.rotation) * building.size * 0.65,
+                building.size * 0.3,
+                building.z + Math.cos(building.rotation) * building.size * 0.65
+            );
             entrance.rotation.x = -Math.PI / 2;
-            mesh.add(entrance);
+            entrance.rotation.y = building.rotation;
+            scene.add(entrance);
             
             // 入り口位置のマーカーを表示（デバッグ用）
             const entrancePos = this.getBuildingEntrance(building);
             const markerGeometry = new THREE.SphereGeometry(0.2, 8, 8);
             const markerMaterial = new THREE.MeshBasicMaterial({ 
-                color: 0xff00ff, 
+                color: 0xF5F5F5, 
                 transparent: true, 
                 opacity: 0.7 
             });
             const marker = new THREE.Mesh(markerGeometry, markerMaterial);
             marker.position.set(entrancePos.x, 0.3, entrancePos.z);
             scene.add(marker);
-            /*
-            // デバッグ用：建物から最も近い道路への接続線を表示
-            if (building.nearestRoadIndex !== undefined) {
-                const nearestRoad = this.roads[building.nearestRoadIndex];
-                const nearestPoint = this.findNearestRoadPoint(building.x, building.z);
-                
-                if (nearestPoint) {
-                    // 接続線を描画
-                    const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-                        new THREE.Vector3(building.x, building.size/2, building.z),
-                        new THREE.Vector3(nearestPoint.x, 0.1, nearestPoint.z)
-                    ]);
-                    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
-                    const line = new THREE.Line(lineGeometry, lineMaterial);
-                    scene.add(line);
-                }
-            }
-                */
-            
-            scene.add(mesh);
         });
     }
 

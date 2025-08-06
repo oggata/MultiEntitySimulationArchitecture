@@ -178,7 +178,7 @@ function updateExistingBuildingColors(buildingColors) {
                 const buildingType = identifyBuildingType(child);
                 if (buildingType && buildingColors[buildingType]) {
                     child.material.color.setHex(buildingColors[buildingType]);
-                    console.log(`建物の色を更新: ${currentColor.toString(16)} → ${buildingColors[buildingType].toString(16)}`);
+                    //console.log(`建物の色を更新: ${currentColor.toString(16)} → ${buildingColors[buildingType].toString(16)}`);
                 }
             }
         }

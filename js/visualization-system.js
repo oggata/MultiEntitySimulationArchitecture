@@ -43,7 +43,7 @@ class VisualizationSystem {
             const point = path[i];
             const geometry = new THREE.SphereGeometry(0.3, 8, 8);
             const material = new THREE.MeshBasicMaterial({ 
-                color: i === 0 ? 0xff0000 : i === path.length - 1 ? 0x0000ff : color,
+                color: i === 0 ? 0xF5F5F5 : i === path.length - 1 ? 0xF5F5F5 : color,
                 transparent: true,
                 opacity: 0.7
             });
@@ -83,7 +83,7 @@ class VisualizationSystem {
         for (const intersection of this.roadSystem.intersections) {
             const geometry = new THREE.SphereGeometry(0.5, 8, 8);
             const material = new THREE.MeshBasicMaterial({ 
-                color: 0xffff00,
+                color: 0xF5F5F5,
                 transparent: true,
                 opacity: 0.6
             });
@@ -350,7 +350,7 @@ class VisualizationSystem {
                 // 入り口通路の地面
                 const pathGeometry = new THREE.PlaneGeometry(length, 1.5, Math.ceil(length), 2);
                 const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-                const pathMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
+                const pathMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
                 const path = new THREE.LineSegments(pathEdges, pathMaterial);
                 path.position.set(
                     (connection.start.x + connection.end.x) / 2,
@@ -365,7 +365,7 @@ class VisualizationSystem {
                 // 入り口の階段
                 const stepGeometry = new THREE.BoxGeometry(1.2, 0.1, 0.2);
                 const stepEdges = new THREE.EdgesGeometry(stepGeometry);
-                const stepMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
+                const stepMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
                 const step = new THREE.LineSegments(stepEdges, stepMaterial);
                 step.position.set(
                     connection.start.x,
@@ -389,7 +389,7 @@ class VisualizationSystem {
                 // 入り口通路の地面
                 const pathGeometry = new THREE.PlaneGeometry(length, 2, Math.ceil(length), 2);
                 const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-                const pathMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
+                const pathMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
                 const path = new THREE.LineSegments(pathEdges, pathMaterial);
                 path.position.set(
                     (connection.start.x + connection.end.x) / 2,
@@ -404,7 +404,7 @@ class VisualizationSystem {
                 // 入り口の階段
                 const stepGeometry = new THREE.BoxGeometry(1.5, 0.1, 0.3);
                 const stepEdges = new THREE.EdgesGeometry(stepGeometry);
-                const stepMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
+                const stepMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
                 const step = new THREE.LineSegments(stepEdges, stepMaterial);
                 step.position.set(
                     connection.start.x,

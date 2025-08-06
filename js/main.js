@@ -21,7 +21,7 @@ let cameraKeys = {
 };
 
 // フィールド色設定
-let fieldColor = 0xB8E6B8; // デフォルトは緑
+let fieldColor = 0x2d2d2d; // デフォルトはブラック
 let groundMesh = null;
 let infiniteGroundMesh = null;
 
@@ -249,7 +249,16 @@ const fieldColorPresets = {
 };
 
 // Three.jsの初期化
-function init() {
+async function init() {
+    // ローディング開始
+    updateLoadingProgress(0);
+    
+    // Three.jsライブラリの読み込み確認
+    updateLoadingProgress(1);
+    await new Promise(resolve => setTimeout(resolve, 100)); // 少し待機
+    
+    // シーンの初期化
+    updateLoadingProgress(2);
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87CEEB); // 空色の背景
     
@@ -266,7 +275,8 @@ function init() {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
     
-    // ライティング
+    // ライティングの設定
+    updateLoadingProgress(3);
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
     
@@ -281,11 +291,13 @@ function init() {
     directionalLight.shadow.mapSize.height = 2048;
     scene.add(directionalLight);
     
-    // 街のレイアウトを生成（新しい分割されたシステムを使用）
+    // 街のレイアウトを生成
+    updateLoadingProgress(4);
     cityLayout = new CityLayoutManager(cityLayoutConfig);
     const cityData = cityLayout.generateCity();
     
-    // 自宅を先に生成（建物生成時の重複チェックのため）
+    // 自宅を先に生成
+    updateLoadingProgress(5);
     if (typeof homeManager !== 'undefined') {
         homeManager.initializeHomes();
         console.log('自宅の初期化が完了しました');
@@ -293,6 +305,11 @@ function init() {
     
     console.log('建物と施設の生成が完了しました');
 
+    // 建物と施設の生成
+    updateLoadingProgress(6);
+    
+    // 地面とグリッドの生成
+    updateLoadingProgress(7);
     // 無限大の地面（遠景用）
     const infiniteGroundGeometry = new THREE.PlaneGeometry(1000, 1000, 1, 1);
     const infiniteGroundMaterial = new THREE.MeshBasicMaterial({ 
@@ -359,9 +376,11 @@ function init() {
     scene.add(gridGroup);
     
     // 場所の作成
+    updateLoadingProgress(8);
     createLocations();
     
     // 自宅の3Dオブジェクトを作成
+    updateLoadingProgress(9);
     if (typeof homeManager !== 'undefined' && typeof createAgentHome === 'function') {
         const allHomes = homeManager.getAllHomes();
         allHomes.forEach(home => {
@@ -370,17 +389,21 @@ function init() {
         console.log(`${allHomes.length}軒の自宅の3Dオブジェクトを作成しました`);
     }
     
-    // マウスコントロール
+    // マウスコントロールの設定
+    updateLoadingProgress(10);
     setupMouseControls();
     
     // アニメーションループ
     animate();
 
-    // 都市全体の描画（新しい分割されたシステムを使用）
+    // 都市全体の描画
+    updateLoadingProgress(11);
     cityLayout.drawCity();
     
     // 入り口接続は通常の道路描画に統合済み
 
+    // UIパネルの初期化
+    updateLoadingProgress(12);
     // パネルのHTMLを更新
     updatePanelHTML();
     
@@ -426,17 +449,32 @@ function init() {
     // 手動で「保存されたエージェントを読み込み」ボタンを押してから読み込む
 
     // 天候システムの初期化
+    updateLoadingProgress(13);
     if (typeof initWeatherSystem === 'function') {
         initWeatherSystem();
         createWeatherDisplay();
     }
 
-    // 車両システムの初期化（道路生成後に実行）
+    // 車両システムの初期化
+    updateLoadingProgress(14);
     setTimeout(() => {
         if (typeof initializeVehicleSystem === 'function') {
             initializeVehicleSystem();
         }
     }, 1000); // 1秒後に初期化
+
+    // 道路沿いに木を配置
+    updateLoadingProgress(15, '道路沿いに木を配置中...');
+    if (typeof placeTreesAlongRoads === 'function') {
+        placeTreesAlongRoads();
+    }
+
+    // 最終調整
+    updateLoadingProgress(16);
+    await new Promise(resolve => setTimeout(resolve, 200)); // 少し待機
+    
+    // ローディング画面を非表示
+    hideLoadingScreen();
 
     // シミュレーション制御ボタンのイベント登録
     const startBtn = document.getElementById('startSimulationBtn');
@@ -586,10 +624,10 @@ function init() {
         });
     });
     
-    // デフォルトでグリーンを選択状態にする
-    const greenButton = document.querySelector('[data-color="green"]');
-    if (greenButton) {
-        greenButton.classList.add('selected');
+    // デフォルトでブラックを選択状態にする
+    const blackButton = document.querySelector('[data-color="black"]');
+    if (blackButton) {
+        blackButton.classList.add('selected');
     }
     
     // 初期フィールド色に合わせて道路色を設定
@@ -1083,8 +1121,12 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-    // 初期化
-    init();
+    // 初期化（非同期）
+    document.addEventListener('DOMContentLoaded', async function() {
+        console.log('DOM loaded, starting initialization');
+        await init();
+        console.log('Initialization completed');
+    });
     
     // ボタンのイベントリスナーを設定
     document.addEventListener('DOMContentLoaded', function() {
@@ -1736,4 +1778,73 @@ function updateExistingRoadColors(roadColor) {
     cityLayoutConfig.roadColors.normalRoad = roadColor;
     cityLayoutConfig.roadColors.entranceRoad = roadColor;
     cityLayoutConfig.roadColors.homeRoad = roadColor;
+}
+
+// ローディング画面管理
+let loadingProgress = 0;
+let loadingSteps = [
+    { message: 'Three.jsライブラリを読み込み中...', detail: '3Dレンダリングエンジンの初期化' },
+    { message: 'シーンを初期化中...', detail: '3Dシーンの作成とカメラ設定' },
+    { message: 'ライティングを設定中...', detail: '環境光と指向性ライトの配置' },
+    { message: '都市レイアウトを生成中...', detail: '建物と施設の配置計画' },
+    { message: '自宅を生成中...', detail: 'エージェント用の自宅オブジェクト作成' },
+    { message: '建物と施設を生成中...', detail: '3D建物オブジェクトの配置' },
+    { message: '地面とグリッドを生成中...', detail: '地面メッシュとグリッド線の作成' },
+    { message: '場所データを作成中...', detail: '施設情報の初期化' },
+    { message: '自宅の3Dオブジェクトを作成中...', detail: '自宅メッシュの配置' },
+    { message: 'マウスコントロールを設定中...', detail: 'カメラ操作の初期化' },
+    { message: '都市全体を描画中...', detail: '建物と道路の最終描画' },
+    { message: 'UIパネルを初期化中...', detail: 'コントロールパネルの設定' },
+    { message: '天候システムを初期化中...', detail: '天候エフェクトの準備' },
+    { message: '車両システムを初期化中...', detail: '車両管理システムの準備' },
+    { message: '道路沿いに木を配置中...', detail: '街路樹の配置' },
+    { message: '最終調整中...', detail: 'システム全体の最終チェック' }
+];
+
+// ローディング進捗を更新する関数
+function updateLoadingProgress(step, detail = '') {
+    const progress = Math.round((step / loadingSteps.length) * 100);
+    loadingProgress = progress;
+    
+    const loadingMessage = document.getElementById('loading-message');
+    const loadingProgressElement = document.getElementById('loading-progress');
+    const loadingDetailMessage = document.getElementById('loading-detail-message');
+    
+    if (loadingMessage && step < loadingSteps.length) {
+        loadingMessage.textContent = loadingSteps[step].message;
+    }
+    
+    if (loadingProgressElement) {
+        loadingProgressElement.textContent = `${progress}%`;
+    }
+    
+    if (loadingDetailMessage) {
+        const detailText = detail || (step < loadingSteps.length ? loadingSteps[step].detail : '');
+        loadingDetailMessage.textContent = detailText;
+    }
+    
+    // 進捗に応じてローディング画面の色を変化させる
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        if (progress < 30) {
+            loadingScreen.style.background = 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
+        } else if (progress < 60) {
+            loadingScreen.style.background = 'linear-gradient(135deg, #2a5298 0%, #4a90e2 100%)';
+        } else if (progress < 90) {
+            loadingScreen.style.background = 'linear-gradient(135deg, #4a90e2 0%, #7bb3f0 100%)';
+        } else {
+            loadingScreen.style.background = 'linear-gradient(135deg, #7bb3f0 0%, #a8d8ff 100%)';
+        }
+    }
+}
+
+// ローディング画面を非表示にする関数
+function hideLoadingScreen() {
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        loadingScreen.classList.add('fade-out');
+        setTimeout(() => {
+            loadingScreen.classList.add('hidden');
+        }, 500);
+    }
 }

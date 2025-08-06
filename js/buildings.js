@@ -489,34 +489,7 @@ function createLocations() {
                 break;
         }
 
-        // 看板
-        const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 64;
-        const context = canvas.getContext('2d');
-        context.clearRect(0, 0, 256, 64);
-        // グロー効果
-        context.shadowColor = '#F5F5F5';
-        context.shadowBlur = 16;
-        context.font = 'bold 32px sans-serif';
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
-        context.fillStyle = '#F5F5F5';
-        context.fillText(loc.name, 128, 32);
-        // 背景は透明
-        // テクスチャ生成
-        const texture = new THREE.CanvasTexture(canvas);
-        // 半透明板
-        const signGeometry = new THREE.PlaneGeometry(3 * scale, 0.75 * scale);
-        const signMaterial = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.7 });
-        const signMesh = new THREE.Mesh(signGeometry, signMaterial);
-        signMesh.position.set(0, facilityHeight + 0.5, facilitySize * 0.8);
-        locationGroup.add(signMesh);
-        // 縁取り
-        const signEdges = new THREE.EdgesGeometry(signGeometry);
-        const signLine = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
-        signLine.position.copy(signMesh.position);
-        locationGroup.add(signLine);
+        // 看板は削除
 
         // 場所の位置を設定
         locationGroup.position.set(loc.x, 0, loc.z);
@@ -1256,16 +1229,7 @@ function createSupermarketBuilding(locationGroup, facilitySize, facilityHeight, 
     roofOutline.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roofOutline);
     
-    // 看板
-    const signGeometry = new THREE.BoxGeometry(facilitySize * 0.8, facilityHeight * 0.2, 0.1);
-    const signMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xFFD700, 
-        transparent: true, 
-        opacity: 0.8 
-    });
-    const sign = new THREE.Mesh(signGeometry, signMaterial);
-    sign.position.set(0, facilityHeight + facilityHeight * 0.1, facilitySize * 0.4);
-    locationGroup.add(sign);
+    // 看板は削除
 }
 
 // ファミレスの建物を作成
@@ -1687,29 +1651,7 @@ function createAgentHome(homeData) {
     chimneyEdge.position.copy(chimney.position);
     homeGroup.add(chimneyEdge);
 
-    // 看板（自宅）
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 64;
-    const context = canvas.getContext('2d');
-    context.clearRect(0, 0, 256, 64);
-    context.shadowColor = '#F5F5F5';
-    context.shadowBlur = 16;
-    context.font = 'bold 24px sans-serif';
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillStyle = '#F5F5F5';
-    context.fillText(homeData.name, 128, 32);
-    const texture = new THREE.CanvasTexture(canvas);
-    const signGeometry = new THREE.PlaneGeometry(2, 0.5);
-    const signMaterial = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.7 });
-    const signMesh = new THREE.Mesh(signGeometry, signMaterial);
-    signMesh.position.set(0, homeHeight + 0.5, homeSize * 0.6);
-    homeGroup.add(signMesh);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const signLine = new THREE.LineSegments(signEdges, new THREE.LineBasicMaterial({ color: 0xF5F5DC }));
-    signLine.position.copy(signMesh.position);
-    homeGroup.add(signLine);
+    // 看板（自宅）は削除
 
     // 家の位置を設定
     homeGroup.position.set(homeData.x, 0, homeData.z);
@@ -3455,4 +3397,168 @@ function createCityHallBuilding(locationGroup, facilitySize, facilityHeight, col
         decorations: decorations
     });
 }
+
+// 木を作成する関数
+function createTree(x, z, size = 1) {
+    const treeGroup = new THREE.Group();
+    
+    // 木の幹
+    const trunkGeometry = new THREE.CylinderGeometry(size * 0.1, size * 0.15, size * 0.8, 8);
+    const trunkMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513, // 茶色
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+    trunk.position.set(0, size * 0.4, 0);
+    treeGroup.add(trunk);
+    
+    // 幹の輪郭線
+    const trunkEdges = new THREE.EdgesGeometry(trunkGeometry);
+    const trunkEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x654321 });
+    const trunkEdge = new THREE.LineSegments(trunkEdges, trunkEdgeMaterial);
+    trunkEdge.position.copy(trunk.position);
+    treeGroup.add(trunkEdge);
+    
+    // 木の葉（複数の球体で表現）
+    const leafColors = [0x228B22, 0x32CD32, 0x90EE90, 0x98FB98]; // 緑色のバリエーション
+    const leafCount = 3 + Math.floor(Math.random() * 3); // 3-5個の葉
+    
+    for (let i = 0; i < leafCount; i++) {
+        const leafSize = size * (0.3 + Math.random() * 0.3); // 0.3-0.6のサイズ
+        const leafGeometry = new THREE.SphereGeometry(leafSize, 8, 6);
+        const leafMaterial = new THREE.MeshBasicMaterial({ 
+            color: leafColors[Math.floor(Math.random() * leafColors.length)],
+            transparent: true, 
+            opacity: 0.7 
+        });
+        const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
+        
+        // 葉の位置をランダムに配置
+        const angle = (i / leafCount) * Math.PI * 2;
+        const radius = size * 0.2;
+        const height = size * (0.6 + Math.random() * 0.4);
+        
+        leaf.position.set(
+            Math.cos(angle) * radius,
+            height,
+            Math.sin(angle) * radius
+        );
+        treeGroup.add(leaf);
+        
+        // 葉の輪郭線
+        const leafEdges = new THREE.EdgesGeometry(leafGeometry);
+        const leafEdgeMaterial = new THREE.LineBasicMaterial({ 
+            color: 0x228B22,
+            transparent: true,
+            opacity: 0.5
+        });
+        const leafEdge = new THREE.LineSegments(leafEdges, leafEdgeMaterial);
+        leafEdge.position.copy(leaf.position);
+        treeGroup.add(leafEdge);
+    }
+    
+    // 木の位置を設定
+    treeGroup.position.set(x, 0, z);
+    
+    return treeGroup;
+}
+
+// 道路沿いに木を配置する関数
+function placeTreesAlongRoads() {
+    if (!cityLayout || !cityLayout.roads) return;
+    
+    const trees = [];
+    const roadMargin = 2; // 道路から2単位離れた位置に配置
+    const treeSpacing = 8; // 木の間隔（8単位ごと）
+    
+    cityLayout.roads.forEach(road => {
+        const roadLength = Math.sqrt(
+            Math.pow(road.end.x - road.start.x, 2) + 
+            Math.pow(road.end.z - road.start.z, 2)
+        );
+        
+        // 道路の方向ベクトルを計算
+        const roadDirection = {
+            x: road.end.x - road.start.x,
+            z: road.end.z - road.start.z
+        };
+        
+        // 道路に垂直な方向ベクトルを計算
+        const perpendicular = {
+            x: -roadDirection.z,
+            z: roadDirection.x
+        };
+        
+        // 正規化
+        const perpLength = Math.sqrt(perpendicular.x * perpendicular.x + perpendicular.z * perpendicular.z);
+        perpendicular.x /= perpLength;
+        perpendicular.z /= perpLength;
+        
+        // 道路の長さに沿って木を配置
+        const treeCount = Math.floor(roadLength / treeSpacing);
+        
+        for (let i = 0; i <= treeCount; i++) {
+            const t = i / treeCount;
+            
+            // 道路上の位置を計算
+            const roadPosition = {
+                x: road.start.x + (road.end.x - road.start.x) * t,
+                z: road.start.z + (road.end.z - road.start.z) * t
+            };
+            
+            // 道路の両側に木を配置
+            const leftTreePos = {
+                x: roadPosition.x + perpendicular.x * roadMargin,
+                z: roadPosition.z + perpendicular.z * roadMargin
+            };
+            
+            const rightTreePos = {
+                x: roadPosition.x - perpendicular.x * roadMargin,
+                z: roadPosition.z - perpendicular.z * roadMargin
+            };
+            
+            // 建物との重複をチェック
+            const treeSize = 1.5;
+            if (!isTreeOverlapping(leftTreePos.x, leftTreePos.z, treeSize)) {
+                const leftTree = createTree(leftTreePos.x, leftTreePos.z, 1 + Math.random() * 0.5);
+                scene.add(leftTree);
+                trees.push(leftTree);
+            }
+            
+            if (!isTreeOverlapping(rightTreePos.x, rightTreePos.z, treeSize)) {
+                const rightTree = createTree(rightTreePos.x, rightTreePos.z, 1 + Math.random() * 0.5);
+                scene.add(rightTree);
+                trees.push(rightTree);
+            }
+        }
+    });
+    
+    return trees;
+}
+
+// 木と建物の重複チェック
+function isTreeOverlapping(x, z, treeSize) {
+    // 建物との重複チェック
+    if (locations) {
+        for (const location of locations) {
+            const distance = Math.sqrt(
+                Math.pow(x - location.position.x, 2) + 
+                Math.pow(z - location.position.z, 2)
+            );
+            if (distance < 3) { // 建物から3単位以内は避ける
+                return true;
+            }
+        }
+    }
+    
+    // 他の木との重複チェック
+    // この実装では簡易的にチェック（実際の木の位置は管理していない）
+    
+    return false;
+}
+
+// グローバルスコープに公開
+window.createTree = createTree;
+window.placeTreesAlongRoads = placeTreesAlongRoads;
 

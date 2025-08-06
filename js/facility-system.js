@@ -236,21 +236,7 @@ class FacilitySystem {
             
             scene.add(locationGroup);
             
-            // 施設名の表示
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.width = 256;
-            canvas.height = 64;
-            context.fillStyle = 'white';
-            context.font = '24px Arial';
-            context.fillText(facility.name, 10, 40);
-            
-            const texture = new THREE.CanvasTexture(canvas);
-            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-            const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.position.set(facility.x, facilitySize + 1, facility.z);
-            sprite.scale.set(2, 0.5, 1);
-            scene.add(sprite);
+            // 施設名の表示は削除
             
             // 施設の入り口位置のマーカーを表示（デバッグ用）
             const entrancePos = this.getBuildingEntrance(facility);

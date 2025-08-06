@@ -7,6 +7,26 @@
     <link rel="stylesheet" href="./css/main.css">
 </head>
 <body>
+    <!-- ローディング画面 -->
+    <div id="loading-screen">
+        <div class="loading-container">
+            <div class="loading-logo">
+                <h1>MESA</h1>
+                <p>Multi-Entity Simulation Architecture</p>
+            </div>
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+            </div>
+            <div class="loading-text">
+                <div id="loading-message">フィールドを生成中...</div>
+                <div id="loading-progress">0%</div>
+            </div>
+            <div class="loading-details">
+                <div id="loading-detail-message">初期化中...</div>
+            </div>
+        </div>
+    </div>
+
     <div id="canvas-container"></div>
     
     <div class="time-display" id="time-display">

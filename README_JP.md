@@ -4,6 +4,8 @@ AI搭載の住民が現実的な行動、相互作用、意思決定プロセス
 
 https://oggata.github.io/MultiEntitySimulationArchitecture/
 
+[![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/TdENtAnuuX)
+
 [![](https://img.youtube.com/vi/5NguBippS0c/0.jpg)](https://www.youtube.com/watch?v=5NguBippS0c)
 
 ## 概要

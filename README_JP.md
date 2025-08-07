@@ -147,6 +147,51 @@ AI搭載の住民が現実的な行動、相互作用、意思決定プロセス
 ### サポートされているプロバイダー
 - **OpenAI GPT**: 包括的な推論機能を持つデフォルトプロバイダー
 - **Google Gemini**: エージェント意思決定のための代替プロバイダー
+- **Ollama (ローカル)**: プライバシー重視のローカルAIモデル
+
+### Ollamaを使用したローカルAIセットアップ
+
+#### インストール
+1. **Ollamaのインストール**:
+   ```bash
+   # macOS
+   curl -fsSL https://ollama.ai/install.sh | sh
+   
+   # Linux
+   curl -fsSL https://ollama.ai/install.sh | sh
+   
+   # Windows
+   # https://ollama.ai/download からダウンロード
+   ```
+
+2. **Ollamaサービスの起動**:
+   ```bash
+   ollama serve
+   ```
+
+3. **モデルのダウンロードと実行**:
+   ```bash
+   # llama3.2をダウンロード（推奨）
+   ollama pull llama3.2
+   
+   # 他のモデルも試せます
+   ollama pull llama3.1
+   ollama pull mistral
+   ollama pull codellama
+   ```
+
+#### MESAからの接続
+1. **ローカルプロバイダーの選択**: API設定タブで「Ollama (ローカル)」を選択
+2. **接続設定**:
+   - **URL**: `http://localhost:11434`（デフォルト）
+   - **モデル**: `llama3.2`（またはお好みのモデル）
+3. **シミュレーション開始**: アプリケーションがローカルAIモデルを使用します
+
+#### ローカルAIの利点
+- **プライバシー**: 外部サーバーにデータを送信しません
+- **コスト**: API使用料がかかりません
+- **カスタマイズ**: Ollamaで利用可能な任意のモデルを使用できます
+- **オフライン**: インターネット接続なしで動作します
 
 ## 貢献
 

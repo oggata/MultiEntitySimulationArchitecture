@@ -164,6 +164,51 @@ The application uses AI APIs for realistic agent decision-making. API keys are n
 ### Supported Providers
 - **OpenAI GPT**: Default provider with comprehensive reasoning capabilities
 - **Google Gemini**: Alternative provider for agent decision making
+- **Ollama (Local)**: Local AI models for privacy-focused usage
+
+### Local AI Setup with Ollama
+
+#### Installation
+1. **Install Ollama**:
+   ```bash
+   # macOS
+   curl -fsSL https://ollama.ai/install.sh | sh
+   
+   # Linux
+   curl -fsSL https://ollama.ai/install.sh | sh
+   
+   # Windows
+   # Download from https://ollama.ai/download
+   ```
+
+2. **Start Ollama Service**:
+   ```bash
+   ollama serve
+   ```
+
+3. **Download and Run a Model**:
+   ```bash
+   # Download llama3.2 (recommended)
+   ollama pull llama3.2
+   
+   # Or try other models
+   ollama pull llama3.1
+   ollama pull mistral
+   ollama pull codellama
+   ```
+
+#### Connecting from MESA
+1. **Select Local Provider**: In the API settings tab, choose "Ollama (Local)"
+2. **Configure Connection**:
+   - **URL**: `http://localhost:11434` (default)
+   - **Model**: `llama3.2` (or your preferred model)
+3. **Start Simulation**: The application will now use your local AI model
+
+#### Benefits of Local AI
+- **Privacy**: No data sent to external servers
+- **Cost**: No API usage fees
+- **Customization**: Use any model available in Ollama
+- **Offline**: Works without internet connection
 
 ## Contributing
 

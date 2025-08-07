@@ -1,11 +1,11 @@
-# JavaScript ディレクトリ構造
+# ソースコードディレクトリ構造
 
 このディレクトリは、MESA (Multi-Entity Simulation Architecture) のJavaScriptファイルを用途別に整理したものです。
 
 ## ディレクトリ構造
 
 ```
-js/
+src/
 ├── core/           # コアシステム
 │   ├── main.js     # メインアプリケーション（Three.js初期化、アニメーションループ）
 │   ├── config.js   # アプリケーション設定
@@ -30,7 +30,8 @@ js/
 │   ├── pathfinding-system.js # 経路探索システム
 │   ├── visualization-system.js # 可視化システム
 │   ├── weather.js          # 天候システム
-│   └── vehicles.js         # 車両システム
+│   ├── vehicles.js         # 車両システム
+│   └── video-generation-system.js # 動画生成システム
 ├── ui/             # UI関連
 │   ├── panel.js            # パネルUI
 │   └── character.js        # キャラクター表示

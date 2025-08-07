@@ -4,8 +4,6 @@ A 3D autonomous agent simulation that creates a virtual city where AI-powered re
 
 https://oggata.github.io/MultiEntitySimulationArchitecture/
 
-[![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/TdENtAnuuX)
-
 [![](https://img.youtube.com/vi/5NguBippS0c/0.jpg)](https://www.youtube.com/watch?v=5NguBippS0c)
 
 ## Overview
@@ -264,6 +262,12 @@ Feel free to contribute to this project by:
   - Advanced video editing capabilities
   - Real-time video streaming
   - Collaborative video creation
+
+## Community
+
+Join our community to stay updated with the latest developments, share ideas, and connect with other users:
+
+[![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/TdENtAnuuX)
 
 ## Acknowledgments
 

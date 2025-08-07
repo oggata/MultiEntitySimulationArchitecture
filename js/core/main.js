@@ -45,6 +45,9 @@ let cameraMode = 'free'; // 'free', 'agent', 'facility'
 let cameraRotationX = 0; // 上下の回転
 let cameraRotationY = 0; // 左右の回転
 
+// ターゲットマーカー管理
+let targetMarker = null;
+
 // コミュニケーション機能の変数（新しい管理システムで置き換え）
 
 // 時間制御用の変数
@@ -1111,6 +1114,11 @@ function animate() {
         updateCameraTargetDisplay();
     }
     
+    // ターゲットマーカーのアニメーション
+    if (window.targetMarkerAnimation) {
+        window.targetMarkerAnimation();
+    }
+    
     renderer.render(scene, camera);
 }
 
@@ -1170,6 +1178,51 @@ window.getSelectedApiProvider = getSelectedApiProvider;
 
 // LLMへの問い合わせ回数更新関数をグローバルに公開
 window.updateLlmCallCount = updateLlmCallCount;
+
+// ターゲットマーカーを作成
+function createTargetMarker(position, color = 0xFF0000) {
+    // 既存のマーカーを削除
+    if (targetMarker) {
+        scene.remove(targetMarker);
+    }
+    
+    // 新しいマーカーを作成（より大きく、目立つように）
+    const markerGeometry = new THREE.SphereGeometry(3.0, 16, 16);
+    const markerMaterial = new THREE.MeshBasicMaterial({ 
+        color: color,
+        transparent: true,
+        opacity: 0.9
+    });
+    
+    targetMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+    targetMarker.position.set(position.x, position.y + 10, position.z);
+    scene.add(targetMarker);
+    
+    // アニメーション効果を追加（上下に浮遊、より大きく）
+    const originalY = targetMarker.position.y;
+    const animate = () => {
+        if (targetMarker) {
+            targetMarker.position.y = originalY + Math.sin(Date.now() * 0.003) * 2.0;
+            // マーカーの色も変化させる
+            targetMarker.material.color.setHex(color);
+            targetMarker.material.opacity = 0.7 + Math.sin(Date.now() * 0.005) * 0.3;
+        }
+    };
+    
+    // アニメーションループに追加
+    if (!window.targetMarkerAnimation) {
+        window.targetMarkerAnimation = animate;
+    }
+}
+
+// ターゲットマーカーを削除
+function removeTargetMarker() {
+    if (targetMarker) {
+        scene.remove(targetMarker);
+        targetMarker = null;
+    }
+    window.targetMarkerAnimation = null;
+}
 
 // カメラ追従対象の表示を更新
 function updateCameraTargetDisplay() {
@@ -1231,6 +1284,9 @@ function focusCameraOnAgentByIndex(index) {
     const agent = agents[index % agents.length];
     if (!agent || !agent.mesh) return;
     
+    // ターゲットマーカーを削除
+    removeTargetMarker();
+    
     // カメラモードを設定
     cameraMode = 'agent';
     targetAgent = agent;
@@ -1269,9 +1325,12 @@ function focusCameraOnAgentByIndex(index) {
 }
 
 function focusCameraOnFacilityByIndex(index) {
-    // 施設のみ（isHomeがtrueでないもの）
-    const facilities = locations.filter(loc => !loc.isHome);
-    if (facilities.length === 0) return;
+    // 実際に生成された施設のみを対象にする
+    const facilities = locations.filter(loc => !loc.isHome && loc.mesh);
+    if (facilities.length === 0) {
+        addLog('❌ 生成された施設が見つかりません', 'system');
+        return;
+    }
     
     const facility = facilities[index % facilities.length];
     
@@ -1284,17 +1343,35 @@ function focusCameraOnFacilityByIndex(index) {
     cameraRotationX = 0;
     cameraRotationY = 0;
     
+    // 施設の正しい位置情報を使用
     const pos = facility.position;
-    camera.position.set(pos.x + 10, 10, pos.z + 10);
-    camera.lookAt(pos.x, pos.y, pos.z);
+    
+    // デバッグ: 施設の位置を確認
+    console.log('施設位置:', pos);
+    console.log('施設オブジェクト:', facility);
+    
+    // カメラを施設の正面からより下向きに見下ろすように配置
+    camera.position.set(pos.x, 10, pos.z - 20);
+    camera.lookAt(pos.x, pos.y - 1000, pos.z);
+    
+    // ターゲットマーカーを表示
+    createTargetMarker(pos, 0xFF0000);
+    
+    // デバッグ情報をログに出力
+    addLog(`🎯 ターゲットマーカーを施設位置 (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}) に配置しました`, 'system');
+    addLog(`📷 カメラ位置: (${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`, 'system');
+    addLog(`🏢 施設情報: ${facility.name} - 総施設数: ${facilities.length}`, 'system');
     
     // カメラモード表示を更新
     updateCameraModeDisplay();
     
-    addLog(`🏢 ${facility.name}の視点に切り替えました`, 'system');
+    addLog(`🏢 ${facility.name}の視点に切り替えました（ターゲットマーカー表示）`, 'system');
 }
 
 function resetCamera() {
+    // ターゲットマーカーを削除
+    removeTargetMarker();
+    
     cameraMode = 'free';
     targetAgent = null;
     targetFacility = null;

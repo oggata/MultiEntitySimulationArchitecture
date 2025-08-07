@@ -9,16 +9,8 @@ let timeSpeed = 1;
 let currentTime = 8 * 60; // 8:00 AM in minutes
 const clock = new THREE.Clock();
 
-// カメラ移動制御用変数
-let cameraMoveSpeed = 15.0; // 移動速度
-let cameraKeys = {
-    w: false,
-    a: false,
-    s: false,
-    d: false,
-    q: false, // 上昇
-    e: false  // 下降
-};
+// カメラシステム
+let cameraSystem = null;
 
 // フィールド色設定
 let fieldColor = 0x2d2d2d; // デフォルトはブラック
@@ -32,21 +24,6 @@ window.agents = agents;
 
 // LLMへの問い合わせ回数を管理
 let llmCallCount = 0;
-
-// カメラ制御用インデックス
-let currentAgentIndex = 0;
-let currentFacilityIndex = 0;
-let targetAgent = null;
-let targetFacility = null;
-let cameraFollowEnabled = false;
-let cameraMode = 'free'; // 'free', 'agent', 'facility'
-
-// カメラの回転角度を管理（グローバル変数）
-let cameraRotationX = 0; // 上下の回転
-let cameraRotationY = 0; // 左右の回転
-
-// ターゲットマーカー管理
-let targetMarker = null;
 
 // コミュニケーション機能の変数（新しい管理システムで置き換え）
 
@@ -268,15 +245,18 @@ async function init() {
     // 霧（フォグ）を追加して遠景を自然に（薄めに設定）
     scene.fog = new THREE.Fog(0x87CEEB, 100, 400);
     
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 35, 35);
-    camera.lookAt(0, 0, 0);
+    // カメラシステムの初期化
+    cameraSystem = new CameraSystem(scene);
+    camera = cameraSystem.initializeCamera(window.innerWidth, window.innerHeight);
     
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
+    
+    // レンダラーをカメラシステムに設定
+    cameraSystem.setRenderer(renderer);
     
     // ライティングの設定
     updateLoadingProgress(3);
@@ -392,9 +372,10 @@ async function init() {
         console.log(`${allHomes.length}軒の自宅の3Dオブジェクトを作成しました`);
     }
     
-    // マウスコントロールの設定
+    // カメラコントロールの設定
     updateLoadingProgress(10);
-    setupMouseControls();
+    cameraSystem.setupMouseControls();
+    cameraSystem.setupKeyboardControls();
     
     // アニメーションループ
     animate();
@@ -516,20 +497,20 @@ async function init() {
     if (personBtn) {
         personBtn.addEventListener('click', () => {
             if (agents.length === 0) return;
-            currentAgentIndex = (currentAgentIndex + 1) % agents.length;
-            focusCameraOnAgentByIndex(currentAgentIndex);
+            cameraSystem.currentAgentIndex = (cameraSystem.currentAgentIndex + 1) % agents.length;
+            cameraSystem.focusCameraOnAgentByIndex(cameraSystem.currentAgentIndex, agents);
         });
     }
     if (facilityBtn) {
         facilityBtn.addEventListener('click', () => {
             const facilities = locations.filter(loc => !loc.isHome);
             if (facilities.length === 0) return;
-            currentFacilityIndex = (currentFacilityIndex + 1) % facilities.length;
-            focusCameraOnFacilityByIndex(currentFacilityIndex);
+            cameraSystem.currentFacilityIndex = (cameraSystem.currentFacilityIndex + 1) % facilities.length;
+            cameraSystem.focusCameraOnFacilityByIndex(cameraSystem.currentFacilityIndex, locations);
         });
     }
     if (resetBtn) {
-        resetBtn.addEventListener('click', resetCamera);
+        resetBtn.addEventListener('click', () => cameraSystem.resetCamera());
     }
 
     // 道路表示ボタンのイベント登録
@@ -637,91 +618,12 @@ async function init() {
     updateRoadColorsByField(fieldColor);
 }
 
-// マウスコントロール
-function setupMouseControls() {
-    let mouseX = 0, mouseY = 0;
-    let isMouseDown = false;
-    let isPanelDragging = false; // パネルドラッグ中かどうかのフラグ
-    
-
-    
-    document.addEventListener('mousemove', (event) => {
-        // 人物視点モード中はマウス操作を無効
-        if (cameraMode === 'agent' && cameraFollowEnabled) {
-            return;
-        }
-        
-        if (isMouseDown && !isPanelDragging) { // パネルドラッグ中でない場合のみカメラを回転
-            const deltaX = event.clientX - mouseX;
-            const deltaY = event.clientY - mouseY;
-            
-            // マウスの移動量に応じてカメラの回転角度を更新
-            cameraRotationY -= deltaX * 0.01; // 左右の回転
-            cameraRotationX -= deltaY * 0.01; // 上下の回転
-            
-            // 上下の回転角度を制限（-80度から80度まで）
-            cameraRotationX = Math.max(-Math.PI * 0.4, Math.min(Math.PI * 0.4, cameraRotationX));
-            
-            // カメラの向きを更新
-            updateCameraRotation();
-        }
-        mouseX = event.clientX;
-        mouseY = event.clientY;
-    });
-    
-    document.addEventListener('mousedown', () => {
-        isMouseDown = true;
-    });
-    
-    document.addEventListener('mouseup', () => {
-        isMouseDown = false;
-    });
-    
-    document.addEventListener('wheel', (event) => {
-        // 人物視点モード中はズーム操作を無効
-        if (cameraMode === 'agent' && cameraFollowEnabled) {
-            return;
-        }
-        
-        if (!isPanelDragging) { // パネルドラッグ中でない場合のみズーム可能
-            // カメラの高さ（Y座標）だけを変更
-            const heightChange = event.deltaY > 0 ? 1.0 : -1.0; // 上スクロールで上昇、下スクロールで下降
-            camera.position.y += heightChange;
-            
-            // 高さの制限を設定（10から50の範囲）
-            camera.position.y = Math.max(10, Math.min(50, camera.position.y));
-            
-            // カメラの向きを維持
-            window.updateCameraRotation();
-        }
-    });
-
-    // カメラの回転を更新する関数
-    window.updateCameraRotation = function() {
-        // カメラの前方ベクトルを計算
-        const forward = new THREE.Vector3(
-            Math.sin(cameraRotationY) * Math.cos(cameraRotationX),
-            Math.sin(cameraRotationX),
-            Math.cos(cameraRotationY) * Math.cos(cameraRotationX)
-        );
-        
-        // カメラの位置から前方に向けてlookAt
-        const targetPosition = camera.position.clone().add(forward);
-        camera.lookAt(targetPosition);
-    };
-
-    // パネルドラッグ状態を監視する関数をグローバルに公開
-    window.setPanelDragging = function(dragging) {
-        isPanelDragging = dragging;
-    };
-    
-    // カメラ回転角度をリセットする関数をグローバルに公開
-    window.resetCameraRotation = function() {
-        cameraRotationX = 0;
-        cameraRotationY = 0;
-        window.updateCameraRotation();
-    };
-}
+// パネルドラッグ状態を監視する関数をグローバルに公開
+window.setPanelDragging = function(dragging) {
+    if (cameraSystem) {
+        cameraSystem.setPanelDragging(dragging);
+    }
+};
 
 // エージェントの作成
 function createAgents() {
@@ -1103,15 +1005,13 @@ function animate() {
         }
     }
     
-    // カメラ追従の更新
-    updateCameraFollow();
-    
-    // フリーカメラモードでのWASD移動
-    updateCameraMovement(deltaTime);
+    // カメラシステムの更新
+    cameraSystem.updateCameraFollow();
+    cameraSystem.updateCameraMovement(deltaTime);
     
     // 追従対象の表示を更新（0.5秒ごと）
     if (Math.floor(clock.getElapsedTime() * 2) % 1 === 0) {
-        updateCameraTargetDisplay();
+        cameraSystem.updateCameraTargetDisplay();
     }
     
     // ターゲットマーカーのアニメーション
@@ -1124,9 +1024,7 @@ function animate() {
 
 // ウィンドウリサイズ対応
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    cameraSystem.onWindowResize(window.innerWidth, window.innerHeight);
 });
 
     // 初期化（非同期）
@@ -1179,248 +1077,9 @@ window.getSelectedApiProvider = getSelectedApiProvider;
 // LLMへの問い合わせ回数更新関数をグローバルに公開
 window.updateLlmCallCount = updateLlmCallCount;
 
-// ターゲットマーカーを作成
-function createTargetMarker(position, color = 0xFF0000) {
-    // 既存のマーカーを削除
-    if (targetMarker) {
-        scene.remove(targetMarker);
-    }
-    
-    // 新しいマーカーを作成（より大きく、目立つように）
-    const markerGeometry = new THREE.SphereGeometry(3.0, 16, 16);
-    const markerMaterial = new THREE.MeshBasicMaterial({ 
-        color: color,
-        transparent: true,
-        opacity: 0.9
-    });
-    
-    targetMarker = new THREE.Mesh(markerGeometry, markerMaterial);
-    targetMarker.position.set(position.x, position.y + 10, position.z);
-    scene.add(targetMarker);
-    
-    // アニメーション効果を追加（上下に浮遊、より大きく）
-    const originalY = targetMarker.position.y;
-    const animate = () => {
-        if (targetMarker) {
-            targetMarker.position.y = originalY + Math.sin(Date.now() * 0.003) * 2.0;
-            // マーカーの色も変化させる
-            targetMarker.material.color.setHex(color);
-            targetMarker.material.opacity = 0.7 + Math.sin(Date.now() * 0.005) * 0.3;
-        }
-    };
-    
-    // アニメーションループに追加
-    if (!window.targetMarkerAnimation) {
-        window.targetMarkerAnimation = animate;
-    }
-}
 
-// ターゲットマーカーを削除
-function removeTargetMarker() {
-    if (targetMarker) {
-        scene.remove(targetMarker);
-        targetMarker = null;
-    }
-    window.targetMarkerAnimation = null;
-}
 
-// カメラ追従対象の表示を更新
-function updateCameraTargetDisplay() {
-    const targetDisplay = document.getElementById('cameraTargetDisplay');
-    const targetName = document.getElementById('cameraTargetName');
-    
-    if (!targetDisplay || !targetName) return;
-    
-    if (cameraMode === 'agent' && targetAgent) {
-        targetDisplay.style.display = 'block';
-        
-        // 人物の移動状態を確認
-        const isMoving = targetAgent.movementTarget !== null;
-        const movementStatus = isMoving ? ' (移動中)' : ' (停止中)';
-        
-        targetName.textContent = `👤 ${targetAgent.name} を追従中${movementStatus}`;
-        targetName.style.color = isMoving ? '#4CAF50' : '#888';
-    } else if (cameraMode === 'facility' && targetFacility) {
-        targetDisplay.style.display = 'block';
-        targetName.textContent = `🏢 ${targetFacility.name} を表示中`;
-        targetName.style.color = '#FFC107';
-    } else {
-        targetDisplay.style.display = 'none';
-    }
-}
 
-// カメラモード表示を更新
-function updateCameraModeDisplay() {
-    const display = document.getElementById('cameraModeDisplay');
-    if (!display) return;
-    
-    switch (cameraMode) {
-        case 'agent':
-            if (targetAgent) {
-                display.textContent = `${targetAgent.name}の視点`;
-                display.style.color = '#4CAF50';
-            }
-            break;
-        case 'facility':
-            if (targetFacility) {
-                display.textContent = `${targetFacility.name}の視点`;
-                display.style.color = '#FFC107';
-            }
-            break;
-        case 'free':
-        default:
-            display.textContent = '全体表示';
-            display.style.color = '#fff';
-            break;
-    }
-    
-    // 追従対象の表示も更新
-    updateCameraTargetDisplay();
-}
-
-function focusCameraOnAgentByIndex(index) {
-    if (agents.length === 0) return;
-    
-    const agent = agents[index % agents.length];
-    if (!agent || !agent.mesh) return;
-    
-    // ターゲットマーカーを削除
-    removeTargetMarker();
-    
-    // カメラモードを設定
-    cameraMode = 'agent';
-    targetAgent = agent;
-    cameraFollowEnabled = true;
-    
-    // カメラの回転角度をリセット（人物視点では固定の角度を使用）
-    cameraRotationX = 0;
-    cameraRotationY = 0;
-    
-    // カメラを人物の後ろに配置
-    const pos = agent.mesh.position;
-    const agentRotation = agent.mesh.rotation.y;
-    
-    // 人物の後ろ16単位、上12単位の位置にカメラを配置（より遠くに）
-    const cameraOffsetX = -Math.sin(agentRotation) * 16;
-    const cameraOffsetZ = -Math.cos(agentRotation) * 16;
-    
-    camera.position.set(
-        pos.x + cameraOffsetX,
-        pos.y + 12,
-        pos.z + cameraOffsetZ
-    );
-    // カメラを人物の少し下の位置に向ける（より下向きに）
-    camera.lookAt(pos.x, pos.y - 1.0, pos.z);
-    
-    // カメラモード表示を更新
-    updateCameraModeDisplay();
-    
-    // エージェント情報パネルで該当エージェントまでスクロール
-    scrollToAgentInfo(agent);
-    
-    // コミュニケーションボタンの状態を更新
-    updateCommunicationButtons();
-    
-    addLog(`👁️ ${agent.name}の視点に切り替えました（追従モード有効）`, 'system');
-}
-
-function focusCameraOnFacilityByIndex(index) {
-    // 実際に生成された施設のみを対象にする
-    const facilities = locations.filter(loc => !loc.isHome && loc.mesh);
-    if (facilities.length === 0) {
-        addLog('❌ 生成された施設が見つかりません', 'system');
-        return;
-    }
-    
-    const facility = facilities[index % facilities.length];
-    
-    // カメラモードを設定
-    cameraMode = 'facility';
-    targetFacility = facility;
-    cameraFollowEnabled = false; // 施設は固定なので追従不要
-    
-    // カメラの回転角度をリセット（施設視点では固定の角度を使用）
-    cameraRotationX = 0;
-    cameraRotationY = 0;
-    
-    // 施設の正しい位置情報を使用
-    const pos = facility.position;
-    
-    // デバッグ: 施設の位置を確認
-    console.log('施設位置:', pos);
-    console.log('施設オブジェクト:', facility);
-    
-    // カメラを施設の正面からより下向きに見下ろすように配置
-    camera.position.set(pos.x, 10, pos.z - 20);
-    camera.lookAt(pos.x, pos.y - 1000, pos.z);
-    
-    // ターゲットマーカーを表示
-    createTargetMarker(pos, 0xFF0000);
-    
-    // デバッグ情報をログに出力
-    addLog(`🎯 ターゲットマーカーを施設位置 (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}) に配置しました`, 'system');
-    addLog(`📷 カメラ位置: (${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`, 'system');
-    addLog(`🏢 施設情報: ${facility.name} - 総施設数: ${facilities.length}`, 'system');
-    
-    // カメラモード表示を更新
-    updateCameraModeDisplay();
-    
-    addLog(`🏢 ${facility.name}の視点に切り替えました（ターゲットマーカー表示）`, 'system');
-}
-
-function resetCamera() {
-    // ターゲットマーカーを削除
-    removeTargetMarker();
-    
-    cameraMode = 'free';
-    targetAgent = null;
-    targetFacility = null;
-    cameraFollowEnabled = false;
-    
-    // カメラの回転角度をリセット（全体表示では自由な角度を許可）
-    cameraRotationX = 0;
-    cameraRotationY = 0;
-    
-    camera.position.set(0, 30, 30);
-    camera.lookAt(0, 0, 0);
-    
-    // カメラモード表示を更新
-    updateCameraModeDisplay();
-    
-    // コミュニケーションボタンの状態を更新
-    updateCommunicationButtons();
-    
-    addLog(`🗺️ 全体表示に切り替えました`, 'system');
-}
-
-// カメラ追従更新関数
-function updateCameraFollow() {
-    if (!cameraFollowEnabled || cameraMode !== 'agent' || !targetAgent || !targetAgent.mesh) {
-        return;
-    }
-    
-    const agent = targetAgent;
-    const pos = agent.mesh.position;
-    const agentRotation = agent.mesh.rotation.y;
-    
-    // 人物の後ろ16単位、上12単位の位置にカメラを配置（より遠くに）
-    const cameraOffsetX = -Math.sin(agentRotation) * 16;
-    const cameraOffsetZ = -Math.cos(agentRotation) * 16;
-    
-    // スムーズな追従のための補間
-    const targetX = pos.x + cameraOffsetX;
-    const targetY = pos.y + 12;
-    const targetZ = pos.z + cameraOffsetZ;
-    
-    // 現在のカメラ位置から目標位置への補間
-    const lerpFactor = 0.1; // 補間係数（小さいほどスムーズ）
-    camera.position.x += (targetX - camera.position.x) * lerpFactor;
-    camera.position.y += (targetY - camera.position.y) * lerpFactor;
-    camera.position.z += (targetZ - camera.position.z) * lerpFactor;
-    
-    // カメラの向きを人物の少し下の位置に向ける（より下向きに）
-    camera.lookAt(pos.x, pos.y - 1.0, pos.z);
-}
 
 // エージェント情報パネルで指定されたエージェントまでスクロール
 function scrollToAgentInfo(targetAgent) {
@@ -1698,56 +1357,7 @@ async function generateAgentResponse(userMessage) {
     }
 }
 
-// カメラ移動更新関数
-function updateCameraMovement(deltaTime) {
-    if (cameraMode === 'free' || cameraMode === 'agent' || cameraMode === 'facility') {
-        // カメラの前方・右方向ベクトルを計算
-        const forward = new THREE.Vector3();
-        camera.getWorldDirection(forward);
-        
-        // 水平移動用のベクトル（Y成分を0にする）
-        const forwardHorizontal = forward.clone();
-        forwardHorizontal.y = 0;
-        forwardHorizontal.normalize();
 
-        const right = new THREE.Vector3();
-        right.crossVectors(forwardHorizontal, camera.up).normalize();
-        
-        const up = new THREE.Vector3(0, 1, 0);
-        
-        // 移動量を計算
-        const moveAmount = cameraMoveSpeed * deltaTime;
-        
-        // 人物視点や施設視点でカメラ移動が開始された時に追従モードを一時的に無効
-        if ((cameraMode === 'agent' || cameraMode === 'facility') && 
-            (cameraKeys.w || cameraKeys.s || cameraKeys.a || cameraKeys.d || cameraKeys.q || cameraKeys.e)) {
-            cameraFollowEnabled = false;
-        }
-        
-        // 各キーの押下状態に応じて移動
-        if (cameraKeys.w) {
-            camera.position.add(forwardHorizontal.clone().multiplyScalar(moveAmount));
-        }
-        if (cameraKeys.s) {
-            camera.position.add(forwardHorizontal.clone().multiplyScalar(-moveAmount));
-        }
-        if (cameraKeys.a) {
-            camera.position.add(right.clone().multiplyScalar(-moveAmount));
-        }
-        if (cameraKeys.d) {
-            camera.position.add(right.clone().multiplyScalar(moveAmount));
-        }
-        if (cameraKeys.q) {
-            camera.position.add(up.clone().multiplyScalar(moveAmount));
-        }
-        if (cameraKeys.e) {
-            camera.position.add(up.clone().multiplyScalar(-moveAmount));
-        }
-        
-                    // カメラの向きを維持（マウスで設定された角度を保持）
-            window.updateCameraRotation();
-    }
-}
 
 // 遠景の山々を作成する関数
 function createDistantMountains() {
@@ -1784,26 +1394,7 @@ function createDistantMountains() {
     scene.add(mountainGroup);
 }
 
-// キーイベントリスナー
-window.addEventListener('keydown', function(e) {
-    if (cameraMode !== 'free' && cameraMode !== 'agent' && cameraMode !== 'facility') return;
-    
-    const key = e.key.toLowerCase();
-    if (cameraKeys.hasOwnProperty(key)) {
-        cameraKeys[key] = true;
-        e.preventDefault(); // デフォルトの動作を防ぐ
-    }
-});
 
-window.addEventListener('keyup', function(e) {
-    if (cameraMode !== 'free' && cameraMode !== 'agent' && cameraMode !== 'facility') return;
-    
-    const key = e.key.toLowerCase();
-    if (cameraKeys.hasOwnProperty(key)) {
-        cameraKeys[key] = false;
-        e.preventDefault(); // デフォルトの動作を防ぐ
-    }
-});
 
 // フィールド色を変更する関数
 function changeFieldColor(colorHex) {

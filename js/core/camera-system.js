@@ -65,41 +65,24 @@ class CameraSystem {
         const agent = this.targetAgent;
         const pos = agent.mesh.position;
         
-        // 人物の向いている方向を取得
-        let agentDirection;
-        
-        if (agent.movementTarget) {
-            // 移動中は実際の移動方向を使用
-            agentDirection = new THREE.Vector3()
-                .subVectors(agent.movementTarget, pos)
-                .normalize();
-        } else {
-            // 停止中は現在の回転角度を使用
-            const agentRotation = agent.mesh.rotation.y;
-            agentDirection = new THREE.Vector3(
-                Math.sin(agentRotation),
-                0,
-                Math.cos(agentRotation)
-            );
-        }
-        
-        // カメラの位置を計算（人物の後ろ16単位、上8単位）
-        const cameraOffsetX = -agentDirection.x * 16;
-        const cameraOffsetZ = -agentDirection.z * 16;
+        // シンプルに人物の後ろに固定位置でカメラを配置
+        const cameraOffsetX = -8; // 人物の後ろ8単位（距離を短縮）
+        const cameraOffsetZ = 0;   // 左右のオフセットなし
+        const cameraOffsetY = 4;   // 人物の上4単位（高さを下げる）
         
         // スムーズな追従のための補間
         const targetX = pos.x + cameraOffsetX;
-        const targetY = pos.y + 8;
+        const targetY = pos.y + cameraOffsetY;
         const targetZ = pos.z + cameraOffsetZ;
         
-        // 現在のカメラ位置から目標位置への補間（より滑らかに）
+        // 現在のカメラ位置から目標位置への補間
         const lerpFactor = 0.05;
         this.camera.position.x += (targetX - this.camera.position.x) * lerpFactor;
         this.camera.position.y += (targetY - this.camera.position.y) * lerpFactor;
         this.camera.position.z += (targetZ - this.camera.position.z) * lerpFactor;
         
-        // カメラの向きを人物の位置に向ける
-        this.camera.lookAt(pos.x, pos.y + 1.0, pos.z);
+        // カメラの向きを人物の位置に向ける（より自然な視点）
+        this.camera.lookAt(pos.x, pos.y + 2.0, pos.z);
     }
     
     // カメラ移動更新関数
@@ -196,35 +179,18 @@ class CameraSystem {
         // カメラを人物の後ろに配置
         const pos = agent.mesh.position;
         
-        // 人物の向いている方向を取得
-        let agentDirection;
-        
-        if (agent.movementTarget) {
-            // 移動中は実際の移動方向を使用
-            agentDirection = new THREE.Vector3()
-                .subVectors(agent.movementTarget, pos)
-                .normalize();
-        } else {
-            // 停止中は現在の回転角度を使用
-            const agentRotation = agent.mesh.rotation.y;
-            agentDirection = new THREE.Vector3(
-                Math.sin(agentRotation),
-                0,
-                Math.cos(agentRotation)
-            );
-        }
-        
-        // カメラの位置を計算（人物の後ろ16単位、上8単位）
-        const cameraOffsetX = -agentDirection.x * 16;
-        const cameraOffsetZ = -agentDirection.z * 16;
+        // シンプルに人物の後ろに固定位置でカメラを配置
+        const cameraOffsetX = -8; // 人物の後ろ8単位（距離を短縮）
+        const cameraOffsetZ = 0;   // 左右のオフセットなし
+        const cameraOffsetY = 4;   // 人物の上4単位（高さを下げる）
         
         this.camera.position.set(
             pos.x + cameraOffsetX,
-            pos.y + 8,
+            pos.y + cameraOffsetY,
             pos.z + cameraOffsetZ
         );
-        // カメラを人物の位置に向ける
-        this.camera.lookAt(pos.x, pos.y + 1.0, pos.z);
+        // カメラを人物の位置に向ける（より自然な視点）
+        this.camera.lookAt(pos.x, pos.y + 2.0, pos.z);
         
         // カメラモード表示を更新
         this.updateCameraModeDisplay();

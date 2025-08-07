@@ -34,6 +34,15 @@ async function generateNewAgent() {
             alert('Gemini APIキーを入力してください。');
             return;
         }
+    } else if (provider === 'ollama') {
+        // Ollamaの場合はURLとモデル名をチェック
+        const ollamaUrl = document.getElementById('ollamaUrl') ? document.getElementById('ollamaUrl').value.trim() : '';
+        const ollamaModel = document.getElementById('ollamaModel') ? document.getElementById('ollamaModel').value.trim() : '';
+        
+        if (!ollamaUrl || !ollamaModel) {
+            alert('Ollama URLとモデル名を入力してください。');
+            return;
+        }
     }
     try {
         // ユーザーの希望条件を取得

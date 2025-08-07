@@ -373,7 +373,12 @@ class Agent {
     }
     
     async think() {
-        if (!apiKey || !simulationRunning || simulationPaused) return;
+        const provider = window.getSelectedApiProvider ? window.getSelectedApiProvider() : 'openai';
+        const apiKey = document.getElementById('apiKey') ? document.getElementById('apiKey').value.trim() : '';
+        
+        // ollamaの場合はAPIキーが不要
+        if (provider !== 'ollama' && !apiKey) return;
+        if (!simulationRunning || simulationPaused) return;
         this.isThinking = true;
         const timeOfDay = this.getTimeOfDay();
         const nearbyAgents = this.getNearbyAgents();

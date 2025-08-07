@@ -118,7 +118,11 @@ async function callLLM({ prompt, systemPrompt = '', maxTokens = 150, temperature
     
     const provider = window.getSelectedApiProvider ? window.getSelectedApiProvider() : 'openai';
     const apiKey = document.getElementById('apiKey') ? document.getElementById('apiKey').value.trim() : '';
-    if (!apiKey) throw new Error('APIキーが入力されていません');
+    
+    // ollamaの場合はAPIキーが不要
+    if (provider !== 'ollama' && !apiKey) {
+        throw new Error('APIキーが入力されていません');
+    }
 
     // LLMへの問い合わせ回数をカウント
     if (window.updateLlmCallCount) {
@@ -185,6 +189,45 @@ async function callLLM({ prompt, systemPrompt = '', maxTokens = 150, temperature
         }
         
         return data.candidates[0].content.parts[0].text;
+    } else if (provider === 'ollama') {
+        // Ollama API (ローカル)
+        const ollamaUrl = document.getElementById('ollamaUrl') ? document.getElementById('ollamaUrl').value.trim() : 'http://localhost:11434';
+        const ollamaModel = document.getElementById('ollamaModel') ? document.getElementById('ollamaModel').value.trim() : 'llama3.2';
+        
+        if (!ollamaUrl || !ollamaModel) {
+            throw new Error('Ollama URLとモデル名を入力してください');
+        }
+        
+        // systemPromptとpromptを組み合わせてOllama用のプロンプトを作成
+        const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
+        
+        const body = {
+            model: ollamaModel,
+            prompt: fullPrompt,
+            stream: false,
+            options: {
+                temperature: temperature,
+                num_predict: maxTokens
+            }
+        };
+        
+        const response = await fetch(`${ollamaUrl}/api/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        
+        const data = await response.json();
+        if (!response.ok) {
+            console.error('Ollama API エラー:', data);
+            throw new Error(data.error || 'Ollama API呼び出しに失敗しました');
+        }
+        
+        if (!data.response) {
+            throw new Error('Ollama APIからの応答が不正です');
+        }
+        
+        return data.response;
     } else {
         throw new Error('不明なAPIプロバイダーです');
     }

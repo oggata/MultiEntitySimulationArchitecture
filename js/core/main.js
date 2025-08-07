@@ -38,11 +38,32 @@ function loadApiKeyFromStorage() {
         document.getElementById('apiKey').value = savedApiKey;
         apiKey = savedApiKey;
     }
+    
+    // Ollama設定も読み込み
+    const savedOllamaUrl = localStorage.getItem('ollama_url');
+    const savedOllamaModel = localStorage.getItem('ollama_model');
+    if (savedOllamaUrl) {
+        const ollamaUrlInput = document.getElementById('ollamaUrl');
+        if (ollamaUrlInput) ollamaUrlInput.value = savedOllamaUrl;
+    }
+    if (savedOllamaModel) {
+        const ollamaModelInput = document.getElementById('ollamaModel');
+        if (ollamaModelInput) ollamaModelInput.value = savedOllamaModel;
+    }
 }
 
 // APIキーをlocalStorageに保存
 function saveApiKeyToStorage(key) {
     localStorage.setItem('openai_api_key', key);
+}
+
+// Ollama設定をlocalStorageに保存
+function saveOllamaSettingsToStorage() {
+    const ollamaUrl = document.getElementById('ollamaUrl') ? document.getElementById('ollamaUrl').value.trim() : '';
+    const ollamaModel = document.getElementById('ollamaModel') ? document.getElementById('ollamaModel').value.trim() : '';
+    
+    if (ollamaUrl) localStorage.setItem('ollama_url', ollamaUrl);
+    if (ollamaModel) localStorage.setItem('ollama_model', ollamaModel);
 }
 
 // localStorageからプロンプトを読み込み
@@ -411,6 +432,41 @@ async function init() {
         });
     }
 
+    // APIプロバイダーの変更を監視してollama設定の表示/非表示を切り替え
+    const apiProviderRadios = document.querySelectorAll('input[name="apiProvider"]');
+    apiProviderRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const ollamaSettings = document.getElementById('ollamaSettings');
+            const apiKeyInput = document.getElementById('apiKey');
+            
+            if (e.target.value === 'ollama') {
+                ollamaSettings.style.display = 'block';
+                apiKeyInput.placeholder = 'APIキーは不要です（ローカル接続）';
+                apiKeyInput.disabled = true;
+            } else {
+                ollamaSettings.style.display = 'none';
+                apiKeyInput.placeholder = 'APIキーを入力';
+                apiKeyInput.disabled = false;
+            }
+        });
+    });
+
+    // Ollama設定の変更を監視してlocalStorageに保存
+    const ollamaUrlInput = document.getElementById('ollamaUrl');
+    const ollamaModelInput = document.getElementById('ollamaModel');
+    
+    if (ollamaUrlInput) {
+        ollamaUrlInput.addEventListener('input', () => {
+            saveOllamaSettingsToStorage();
+        });
+    }
+    
+    if (ollamaModelInput) {
+        ollamaModelInput.addEventListener('input', () => {
+            saveOllamaSettingsToStorage();
+        });
+    }
+
     // localStorageからプロンプトを読み込み
     loadPromptFromStorage();
 
@@ -428,6 +484,19 @@ async function init() {
     
     // APIアクセス回数の表示を初期化
     updateLlmCallCountDisplay();
+
+    // 初期化時にollama設定の表示状態を設定
+    const currentProvider = getSelectedApiProvider();
+    const ollamaSettings = document.getElementById('ollamaSettings');
+    const apiKeyInputElement = document.getElementById('apiKey');
+    
+    if (currentProvider === 'ollama') {
+        if (ollamaSettings) ollamaSettings.style.display = 'block';
+        if (apiKeyInputElement) {
+            apiKeyInputElement.placeholder = 'APIキーは不要です（ローカル接続）';
+            apiKeyInputElement.disabled = true;
+        }
+    }
 
     // 保存されたエージェントの自動読み込みは無効化
     // 手動で「保存されたエージェントを読み込み」ボタンを押してから読み込む
@@ -889,6 +958,15 @@ function startSimulation() {
         // GeminiのAPIキーは任意の形式を許可
         if (!apiKey || apiKey.trim() === '') {
             alert('Gemini APIキーを入力してください。');
+            return;
+        }
+    } else if (provider === 'ollama') {
+        // Ollamaの場合はURLとモデル名をチェック
+        const ollamaUrl = document.getElementById('ollamaUrl') ? document.getElementById('ollamaUrl').value.trim() : '';
+        const ollamaModel = document.getElementById('ollamaModel') ? document.getElementById('ollamaModel').value.trim() : '';
+        
+        if (!ollamaUrl || !ollamaModel) {
+            alert('Ollama URLとモデル名を入力してください。');
             return;
         }
     }

@@ -59,10 +59,18 @@
             <!-- APIキー設定タブ -->
             <div id="api-settings" class="tab-pane active">
                 <div class="api-key-section">
-                    <input type="password" id="apiKey" placeholder="OpenAI APIキーを入力">
+                    <input type="password" id="apiKey" placeholder="APIキーまたはURLを入力">
                     <div class="input-group">
                         <label><input type="radio" name="apiProvider" value="openai" checked> OpenAI</label>
                         <label><input type="radio" name="apiProvider" value="gemini"> Gemini</label>
+                        <label><input type="radio" name="apiProvider" value="ollama"> Ollama (ローカル)</label>
+                    </div>
+                    
+                    <div id="ollamaSettings" style="display: none; margin-top: 10px;">
+                        <label for="ollamaUrl">Ollama URL:</label>
+                        <input type="text" id="ollamaUrl" placeholder="http://localhost:11434" value="http://localhost:11434">
+                        <label for="ollamaModel">モデル名:</label>
+                        <input type="text" id="ollamaModel" placeholder="llama3.2" value="llama3.2">
                     </div>
 
                     <div class="warning">

@@ -51,6 +51,7 @@
             <button class="tab-button" data-tab="agent-management">エージェント管理</button>
             <button class="tab-button" data-tab="camera-settings">視点設定</button>
             <button class="tab-button" data-tab="road-settings">道路設定</button>
+            <button class="tab-button" data-tab="video-generation">動画生成</button>
             <button class="tab-button" data-tab="other-settings">その他</button>
         </div>
         
@@ -146,6 +147,127 @@
                     <div class="vehicle-buttons">
                         <button id="clearAllVehiclesBtn">全車両削除</button>
                         <button id="toggleVehicleSystemBtn">車両システムON/OFF</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 動画生成タブ -->
+            <div id="video-generation" class="tab-pane">
+                <div class="video-generation-panel">
+                    <h3>動画生成設定</h3>
+                    
+                    <div class="setting-group">
+                        <h4>Veo Server設定</h4>
+                        <div class="input-group">
+                            <label for="veoServerUrl">Veo Server URL:</label>
+                            <input type="text" id="veoServerUrl" placeholder="http://localhost:3000" />
+                        </div>
+                        <div class="input-group">
+                            <label for="veoApiKey">API Key (オプション):</label>
+                            <input type="password" id="veoApiKey" placeholder="APIキーを入力" />
+                        </div>
+                        <button id="testVeoConnection" class="btn btn-secondary">接続テスト</button>
+                        <div id="connectionStatus" class="status-indicator"></div>
+                    </div>
+
+                    <div class="setting-group">
+                        <h4>録画設定</h4>
+                        <div class="input-group">
+                            <label for="recordingDuration">録画時間 (秒):</label>
+                            <input type="number" id="recordingDuration" value="10" min="5" max="60" />
+                        </div>
+                        <div class="input-group">
+                            <label for="frameRate">フレームレート (fps):</label>
+                            <input type="number" id="frameRate" value="30" min="15" max="60" />
+                        </div>
+                        <div class="input-group">
+                            <label for="videoQuality">画質:</label>
+                            <select id="videoQuality">
+                                <option value="low">低画質 (推奨)</option>
+                                <option value="medium">中画質</option>
+                                <option value="high">高画質</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <h4>録画対象</h4>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" id="recordAgents" checked />
+                                エージェントの動き
+                            </label>
+                            <label>
+                                <input type="checkbox" id="recordVehicles" checked />
+                                車両の動き
+                            </label>
+                            <label>
+                                <input type="checkbox" id="recordWeather" checked />
+                                天候エフェクト
+                            </label>
+                            <label>
+                                <input type="checkbox" id="recordUI" />
+                                UI要素
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <h4>動画生成指示</h4>
+                        <div class="input-group">
+                            <label for="videoStyle">動画スタイル:</label>
+                            <select id="videoStyle">
+                                <option value="auto">自動選択</option>
+                                <option value="documentary">ドキュメンタリー風</option>
+                                <option value="cinematic">映画風</option>
+                                <option value="news">ニュース風</option>
+                                <option value="vlog">Vlog風</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="videoFocus">焦点:</label>
+                            <select id="videoFocus">
+                                <option value="auto">自動選択</option>
+                                <option value="agents">エージェントの行動</option>
+                                <option value="interactions">エージェント間の交流</option>
+                                <option value="locations">場所の活動</option>
+                                <option value="daily">日常の風景</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="videoMood">雰囲気:</label>
+                            <select id="videoMood">
+                                <option value="auto">自動選択</option>
+                                <option value="warm">温かみのある</option>
+                                <option value="lively">活気に満ちた</option>
+                                <option value="peaceful">静かな</option>
+                                <option value="dynamic">動的な</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="customVideoPrompt">カスタム指示 (任意):</label>
+                            <textarea id="customVideoPrompt" placeholder="例: この街の朝の風景を、温かみのある雰囲気で撮影してください&#10;例: エージェントの交流を中心に、活気に満ちた街の様子を表現してください" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="recording-controls">
+                        <button id="startRecording" class="btn btn-primary">録画開始</button>
+                        <button id="stopRecording" class="btn btn-danger" disabled>録画停止</button>
+                        <button id="generateVideo" class="btn btn-success" disabled>動画生成</button>
+                    </div>
+
+                    <div class="recording-status">
+                        <div id="recordingProgress" class="progress-bar">
+                            <div id="recordingProgressFill" class="progress-fill"></div>
+                        </div>
+                        <div id="recordingInfo" class="recording-info"></div>
+                    </div>
+
+                    <div class="video-preview">
+                        <h4>生成された動画</h4>
+                        <div id="videoPreview" class="video-preview-container">
+                            <p>録画が完了すると、ここに動画が表示されます。</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -324,6 +446,7 @@
     <script src="./js/systems/visualization-system.js"></script>
     <script src="./js/systems/weather.js"></script>
     <script src="./js/systems/vehicles.js"></script>
+    <script src="./js/systems/video-generation-system.js"></script>
     
     <!-- UIシステム -->
     <script src="./js/ui/character.js"></script>

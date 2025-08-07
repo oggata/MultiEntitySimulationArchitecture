@@ -516,14 +516,20 @@ async function init() {
         }
     }, 1000); // 1秒後に初期化
 
+    // 動画生成システムの初期化
+    updateLoadingProgress(15, '動画生成システムを初期化中...');
+    if (typeof initializeVideoGenerationSystem === 'function') {
+        initializeVideoGenerationSystem();
+    }
+
     // 道路沿いに木を配置
-    updateLoadingProgress(15, '道路沿いに木を配置中...');
+    updateLoadingProgress(16, '道路沿いに木を配置中...');
     if (typeof placeTreesAlongRoads === 'function') {
         placeTreesAlongRoads();
     }
 
     // 最終調整
-    updateLoadingProgress(16);
+    updateLoadingProgress(17);
     await new Promise(resolve => setTimeout(resolve, 200)); // 少し待機
     
     // ローディング画面を非表示
@@ -1071,6 +1077,11 @@ function animate() {
     // 車両システムの更新
     updateVehicleSystem(deltaTime);
     
+    // 動画生成システムの更新
+    if (videoGenerationSystem) {
+        videoGenerationSystem.update(deltaTime);
+    }
+    
     // エージェントの更新
     if (agents.length > 0) {
         agents.forEach(agent => {
@@ -1543,6 +1554,7 @@ let loadingSteps = [
     { message: 'UIパネルを初期化中...', detail: 'コントロールパネルの設定' },
     { message: '天候システムを初期化中...', detail: '天候エフェクトの準備' },
     { message: '車両システムを初期化中...', detail: '車両管理システムの準備' },
+    { message: '動画生成システムを初期化中...', detail: '動画生成機能の準備' },
     { message: '道路沿いに木を配置中...', detail: '街路樹の配置' },
     { message: '最終調整中...', detail: 'システム全体の最終チェック' }
 ];

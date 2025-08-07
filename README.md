@@ -2,6 +2,8 @@
 
 A 3D autonomous agent simulation that creates a virtual city where AI-powered residents live their daily lives with realistic behaviors, interactions, and decision-making processes.
 
+https://oggata.github.io/MultiEntitySimulationArchitecture/
+
 [![](https://img.youtube.com/vi/5NguBippS0c/0.jpg)](https://www.youtube.com/watch?v=5NguBippS0c)
 
 ## Overview
@@ -57,6 +59,14 @@ This application simulates a small city populated with autonomous agents (reside
 - **Agent Information Panel**: View current status, thoughts, and relationships of each agent
 - **Live Updates**: Real-time display of agent locations, moods, and activities
 - **Communication Log**: Track phone calls and email exchanges between agents
+
+### 🎬 Video Generation System
+- **AI-Powered Video Creation**: Generate videos of simulation events using Google Veo MCP Server
+- **Detailed Data Recording**: Capture agent actions, interactions, and location activities
+- **Customizable Video Instructions**: Set video style, focus, mood, and custom prompts
+- **Comprehensive Metadata**: Include agent relationships, personality distributions, and event summaries
+- **Multiple Video Styles**: Documentary, cinematic, news, and vlog styles
+- **Real-time Recording**: Capture simulation frames with configurable duration and frame rate
 
 ## Getting Started
 
@@ -138,6 +148,7 @@ The simulation features a realistic time system:
 - `config.js`: Agent personalities and city configuration
 - `character.js`: 3D character models and animations
 - `communication.js`: Phone and email communication systems
+- `video-generation-system.js`: Video recording and generation system
 
 ## Customization
 
@@ -157,6 +168,14 @@ Enhance agent capabilities by modifying:
 - Memory system and relationship dynamics
 - Communication patterns and preferences
 
+### Video Generation Customization
+Customize video generation by:
+- Adjusting recording duration and frame rate
+- Setting video style and focus preferences
+- Configuring Veo Server connection settings
+- Creating custom video generation prompts
+- Modifying data capture parameters
+
 ## API Usage
 
 The application uses AI APIs for realistic agent decision-making. API keys are not stored and are only used for real-time requests.
@@ -165,6 +184,7 @@ The application uses AI APIs for realistic agent decision-making. API keys are n
 - **OpenAI GPT**: Default provider with comprehensive reasoning capabilities
 - **Google Gemini**: Alternative provider for agent decision making
 - **Ollama (Local)**: Local AI models for privacy-focused usage
+- **Google Veo MCP Server**: AI-powered video generation from simulation data
 
 ### Local AI Setup with Ollama
 
@@ -237,6 +257,11 @@ Feel free to contribute to this project by:
   - Multi-modal AI (text, voice, image understanding)
   - Emotion recognition and response
   - Learning and adaptation over time
+- **Video Generation Enhancements**:
+  - Multiple video format support
+  - Advanced video editing capabilities
+  - Real-time video streaming
+  - Collaborative video creation
 
 ## Acknowledgments
 

@@ -205,7 +205,7 @@ MESAでは、シミュレーション結果をリアルな動画としてレン�
 
 **生成動画:**
 
-[![歩行シミュレーション2動画](./images/walk2-movie.png)](./images/walk2-movie.mp4)
+[![歩行シミュレーション2動画](./images/walk2-movie.gif)](./images/walk2-movie.mp4)
 
 *↑ クリックして動画を再生*
 
@@ -229,7 +229,7 @@ MESAでは、シミュレーション結果をリアルな動画としてレン�
 
 **生成動画:**
 
-[![会話シミュレーション動画](./images/talk-movie.png)](./images/talk-movie.mp4)
+[![会話シミュレーション動画](./images/talk-movie.gif)](./images/talk-movie.mp4)
 
 *↑ クリックして動画を再生*
 

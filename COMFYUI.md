@@ -61,7 +61,7 @@
 
 
 ![画面](./images/comfy005.png)
-![画面](./images/comfy004.png)
+![画面](./images/test3.gif)
 
 ### 2.3 マルチモーダル条件付け
 

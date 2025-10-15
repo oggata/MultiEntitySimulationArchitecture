@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>街マップエディター</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .editor {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .palette {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            width: 250px;
+        }
+        
+        .palette h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .tile-button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+        
+        .tile-button:hover {
+            background: #f0f0f0;
+        }
+        
+        .tile-button.selected {
+            border-color: #2196F3;
+            background: #E3F2FD;
+        }
+        
+        .tile-color {
+            width: 24px;
+            height: 24px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        .controls {
+            margin-top: 20px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-export {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-export:hover {
+            background: #45a049;
+        }
+        
+        .btn-import {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .btn-import:hover {
+            background: #1976D2;
+        }
+        
+        .btn-clear {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-clear:hover {
+            background: #d32f2f;
+        }
+        
+        .canvas-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .canvas-info {
+            margin-bottom: 10px;
+            color: #666;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .zoom-btn {
+            padding: 5px 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .zoom-btn:hover {
+            background: #f0f0f0;
+        }
+        
+        .zoom-level {
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .canvas-wrapper {
+            overflow: auto;
+            max-width: 100%;
+            max-height: 80vh;
+            border: 1px solid #ccc;
+        }
+        
+        canvas {
+            cursor: crosshair;
+            image-rendering: pixelated;
+            display: block;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>街マップエディター</h1>
+        
+        <div class="editor">
+            <div class="palette">
+                <h2>配置タイル</h2>
+                <div id="tileButtons"></div>
+                
+                <div class="controls">
+                    <button class="btn btn-export" onclick="exportToJSON()">JSONで出力</button>
+                    <button class="btn btn-import" onclick="document.getElementById('fileInput').click()">JSONを読み込み</button>
+                    <input type="file" id="fileInput" accept=".json" onchange="importFromJSON(event)">
+                    <button class="btn btn-clear" onclick="clearMap()">マップをクリア</button>
+                </div>
+            </div>
+            
+            <div class="canvas-container">
+                <div class="canvas-info">1024 × 1024 グリッド（クリック＆ドラッグで配置）</div>
+                <canvas id="mapCanvas" width="8192" height="8192"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GRID_SIZE = 1024;
+        const CELL_SIZE = 8;
+        
+        const TILE_TYPES = {
+            empty: { name: '空地', color: '#FFFFFF' },
+            road: { name: '道路', color: '#808080' },
+            railway: { name: '鉄道', color: '#4A4A4A' },
+            park: { name: '公園', color: '#90EE90' },
+            residential: { name: '住宅地', color: '#FFE4B5' },
+            supermarket: { name: 'スーパー', color: '#FF8C00' },
+            office: { name: 'オフィス', color: '#4169E1' },
+            convenience: { name: 'コンビニ', color: '#FFA500' },
+            industrial: { name: '工業地', color: '#A9A9A9' },
+            agricultural: { name: '農業地', color: '#9ACD32' },
+            school: { name: '学校', color: '#FFD700' },
+            police: { name: '警察署', color: '#0000CD' },
+            hospital: { name: '病院', color: '#FF0000' }
+        };
+        
+        let selectedTile = 'road';
+        let isDrawing = false;
+        let gridData = [];
+        
+        const canvas = document.getElementById('mapCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // グリッドデータの初期化
+        function initGrid() {
+            gridData = [];
+            for (let i = 0; i < GRID_SIZE; i++) {
+                gridData[i] = [];
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    gridData[i][j] = 'empty';
+                }
+            }
+        }
+        
+        // タイルボタンの生成
+        function createTileButtons() {
+            const container = document.getElementById('tileButtons');
+            for (const [key, value] of Object.entries(TILE_TYPES)) {
+                const button = document.createElement('button');
+                button.className = 'tile-button';
+                if (key === selectedTile) button.classList.add('selected');
+                button.onclick = () => selectTile(key);
+                
+                const colorDiv = document.createElement('div');
+                colorDiv.className = 'tile-color';
+                colorDiv.style.backgroundColor = value.color;
+                
+                const span = document.createElement('span');
+                span.textContent = value.name;
+                
+                button.appendChild(colorDiv);
+                button.appendChild(span);
+                container.appendChild(button);
+            }
+        }
+        
+        // タイル選択
+        function selectTile(tileKey) {
+            selectedTile = tileKey;
+            const buttons = document.querySelectorAll('.tile-button');
+            buttons.forEach((btn, index) => {
+                const key = Object.keys(TILE_TYPES)[index];
+                if (key === tileKey) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+        }
+        
+        // キャンバスの描画
+        function drawCanvas() {
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const tileType = gridData[i][j];
+                    ctx.fillStyle = TILE_TYPES[tileType].color;
+                    ctx.fillRect(j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                }
+            }
+        }
+        
+        // タイルの配置
+        function placeTile(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+            const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+            
+            if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
+                gridData[y][x] = selectedTile;
+                ctx.fillStyle = TILE_TYPES[selectedTile].color;
+                ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            }
+        }
+        
+        // マウスイベント
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            placeTile(e);
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDrawing) {
+                placeTile(e);
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isDrawing = false;
+        });
+        
+        // JSON出力
+        function exportToJSON() {
+            const json = JSON.stringify(gridData);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'city_map.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // JSON読み込み
+        function importFromJSON(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const json = JSON.parse(event.target.result);
+                    
+                    if (!Array.isArray(json) || json.length !== GRID_SIZE) {
+                        alert('無効なJSONデータです。1024x1024のグリッドデータが必要です。');
+                        return;
+                    }
+                    
+                    for (let i = 0; i < json.length; i++) {
+                        if (!Array.isArray(json[i]) || json[i].length !== GRID_SIZE) {
+                            alert('無効なJSONデータです。1024x1024のグリッドデータが必要です。');
+                            return;
+                        }
+                    }
+                    
+                    gridData = json;
+                    drawCanvas();
+                    alert('マップを読み込みました！');
+                } catch (error) {
+                    alert('JSONファイルの読み込みに失敗しました。');
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        }
+        
+        // マップをクリア
+        function clearMap() {
+            if (confirm('マップをクリアしますか？')) {
+                initGrid();
+                drawCanvas();
+            }
+        }
+        
+        // 初期化
+        initGrid();
+        createTileButtons();
+        drawCanvas();
+    </script>
+</body>
+</html>

@@ -57,6 +57,78 @@ function saveApiKeyToStorage(key) {
     localStorage.setItem('openai_api_key', key);
 }
 
+// エディタのチャンクデータから復元
+function loadEditorMapDataFromChunks() {
+    const chunkCount = parseInt(localStorage.getItem('mesa_editor_map_chunks') || '0');
+    if (chunkCount === 0) return null;
+    
+    console.log(`チャンクデータを復元中... (${chunkCount}個のチャンク)`);
+    
+    let dataString = '';
+    for (let i = 0; i < chunkCount; i++) {
+        const chunk = localStorage.getItem(`mesa_editor_map_chunk_${i}`);
+        if (chunk) {
+            dataString += chunk;
+        } else {
+            console.error(`チャンク ${i} が見つかりません`);
+            return null;
+        }
+    }
+    
+    try {
+        const compressedData = JSON.parse(dataString);
+        console.log('圧縮データを解凍中...');
+        
+        // 解凍処理
+        const gridData = [];
+        let index = 0;
+        const GRID_SIZE = 1024;
+        
+        for (let y = 0; y < GRID_SIZE; y++) {
+            gridData[y] = [];
+            for (let x = 0; x < GRID_SIZE; x++) {
+                if (index >= compressedData.length) {
+                    gridData[y][x] = 'empty';
+                    continue;
+                }
+                
+                const segment = compressedData[index];
+                if (segment.count <= 0) {
+                    index++;
+                    x--; // この位置を再処理
+                    continue;
+                }
+                
+                gridData[y][x] = segment.tile;
+                segment.count--;
+                
+                if (segment.count === 0) {
+                    index++;
+                }
+            }
+        }
+        
+        console.log('データの復元が完了しました');
+        return gridData;
+    } catch (error) {
+        console.error('チャンクデータの復元に失敗しました:', error);
+        return null;
+    }
+}
+
+// エディタデータをクリア
+function clearEditorMapData() {
+    // チャンクデータをクリア
+    const chunkCount = parseInt(localStorage.getItem('mesa_editor_map_chunks') || '0');
+    for (let i = 0; i < chunkCount; i++) {
+        localStorage.removeItem(`mesa_editor_map_chunk_${i}`);
+    }
+    localStorage.removeItem('mesa_editor_map_chunks');
+    localStorage.removeItem('mesa_editor_map_info');
+    localStorage.removeItem('mesa_editor_map_data'); // 後方互換性のため
+    console.log('エディタデータをクリアしました');
+}
+
 // Ollama設定をlocalStorageに保存
 function saveOllamaSettingsToStorage() {
     const ollamaUrl = document.getElementById('ollamaUrl') ? document.getElementById('ollamaUrl').value.trim() : '';
@@ -298,7 +370,74 @@ async function init() {
     // 街のレイアウトを生成
     updateLoadingProgress(4);
     cityLayout = new CityLayoutManager(cityLayoutConfig);
-    const cityData = cityLayout.generateCity();
+    
+    // エディタデータが利用可能かチェック
+    let cityData;
+    const editorMapInfo = localStorage.getItem('mesa_editor_map_info');
+    
+    if (editorMapInfo) {
+        try {
+            const mapInfo = JSON.parse(editorMapInfo);
+            console.log('エディタデータからマップを生成します');
+            
+            let editorMapData;
+            if (mapInfo.compressed) {
+                // 圧縮されたチャンクデータから復元
+                editorMapData = loadEditorMapDataFromChunks();
+            } else {
+                // 従来の形式（後方互換性）
+                const editorMapDataJson = localStorage.getItem('mesa_editor_map_data');
+                if (editorMapDataJson) {
+                    editorMapData = JSON.parse(editorMapDataJson);
+                }
+            }
+            
+            if (editorMapData) {
+                const mapLoader = new MapEditorLoader(cityLayoutConfig);
+                cityData = mapLoader.loadFromEditorData(editorMapData);
+                
+                // エディタデータの統計情報を表示
+                const stats = mapLoader.getStatistics();
+                console.log('エディタデータ統計:', stats);
+                
+                // 道路データの詳細を確認
+                console.log('生成された道路データ:', cityData.roads.length, '本');
+                if (cityData.roads.length > 0) {
+                    console.log('最初の道路:', cityData.roads[0]);
+                    console.log('道路の座標範囲:');
+                    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+                    cityData.roads.forEach(road => {
+                        minX = Math.min(minX, road.start.x, road.end.x);
+                        maxX = Math.max(maxX, road.start.x, road.end.x);
+                        minZ = Math.min(minZ, road.start.z, road.end.z);
+                        maxZ = Math.max(maxZ, road.start.z, road.end.z);
+                    });
+                    console.log(`X: ${minX.toFixed(2)} ～ ${maxX.toFixed(2)}`);
+                    console.log(`Z: ${minZ.toFixed(2)} ～ ${maxZ.toFixed(2)}`);
+                }
+                
+                // エディタデータをcityLayoutに設定
+                cityLayout.roads = cityData.roads;
+                cityLayout.buildings = cityData.buildings;
+                cityLayout.facilities = cityData.facilities;
+                cityLayout.intersections = cityData.intersections;
+                
+                // 使用済みのデータをクリア
+                clearEditorMapData();
+            } else {
+                throw new Error('エディタデータの復元に失敗しました');
+            }
+        } catch (error) {
+            console.error('エディタデータの読み込みに失敗しました:', error);
+            console.log('プログラム生成でマップを生成します');
+            cityData = cityLayout.generateCity();
+            // エラーの場合もクリア
+            clearEditorMapData();
+        }
+    } else {
+        console.log('プログラム生成でマップを生成します');
+        cityData = cityLayout.generateCity();
+    }
     
     // 自宅を先に生成
     updateLoadingProgress(5);

@@ -3,7 +3,7 @@ class MapEditorLoader {
     constructor(config) {
         this.config = config;
         this.gridData = null;
-        this.gridSize = 1024; // エディタのグリッドサイズ
+        this.gridSize = 0; // 受け取り時に決定
         
         // エディタの1マス = MESAの自宅サイズ（small: 2）
         this.homeSize = config.buildingSizes.small; // 2
@@ -15,6 +15,10 @@ class MapEditorLoader {
     // エディタのJSONデータを読み込み
     loadFromEditorData(jsonData) {
         this.gridData = jsonData;
+        this.gridSize = Array.isArray(jsonData) ? jsonData.length : 0;
+        if (this.gridSize === 0) {
+            throw new Error('エディタデータのサイズが不正です');
+        }
         console.log(`エディタデータを読み込みました: ${this.gridSize}x${this.gridSize}`);
         return this.convertToMesaFormat();
     }
@@ -364,10 +368,10 @@ class MapEditorLoader {
 
     // グリッド座標をMESA座標に変換
     gridToMesaCoords(gridX, gridY) {
-        // エディタのグリッド座標（0-1023）をMESA座標に変換
-        // エディタの中心(512, 512)をMESAの中心(0, 0)に対応
-        const centerX = this.gridSize / 2; // 512
-        const centerY = this.gridSize / 2; // 512
+        // エディタのグリッド座標（0 ～ gridSize-1）をMESA座標に変換
+        // エディタの中心(gridSize/2, gridSize/2)をMESAの中心(0, 0)に対応
+        const centerX = this.gridSize / 2;
+        const centerY = this.gridSize / 2;
         
         // 中心からの相対位置を計算し、スケールファクターを適用
         const mesaX = (gridX - centerX) * this.scaleFactor;

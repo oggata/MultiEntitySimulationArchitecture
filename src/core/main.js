@@ -82,7 +82,17 @@ function loadEditorMapDataFromChunks() {
         // 解凍処理
         const gridData = [];
         let index = 0;
-        const GRID_SIZE = 1024;
+        // 情報からグリッドサイズを取得（なければ従来の1024）
+        let GRID_SIZE = 1024;
+        try {
+            const infoRaw = localStorage.getItem('mesa_editor_map_info');
+            if (infoRaw) {
+                const info = JSON.parse(infoRaw);
+                if (info && typeof info.gridSize === 'number' && info.gridSize > 0) {
+                    GRID_SIZE = info.gridSize;
+                }
+            }
+        } catch (_) {}
         
         for (let y = 0; y < GRID_SIZE; y++) {
             gridData[y] = [];

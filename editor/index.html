@@ -190,19 +190,20 @@
                     <button class="btn btn-import" onclick="document.getElementById('fileInput').click()">JSONを読み込み</button>
                     <input type="file" id="fileInput" accept=".json" onchange="importFromJSON(event)">
                     <button class="btn btn-clear" onclick="clearMap()">マップをクリア</button>
+                    <button class="btn btn-export" onclick="saveForMesaAndOpen()">MESAで開く</button>
                 </div>
             </div>
             
             <div class="canvas-container">
-                <div class="canvas-info">1024 × 1024 グリッド（クリック＆ドラッグで配置）</div>
-                <canvas id="mapCanvas" width="8192" height="8192"></canvas>
+                <div id="canvasInfo" class="canvas-info">読み込み中...</div>
+                <canvas id="mapCanvas"></canvas>
             </div>
         </div>
     </div>
 
     <script>
-        const GRID_SIZE = 1024;
-        const CELL_SIZE = 8;
+        const GRID_SIZE = 128;
+        const CELL_SIZE = 12;
         
         const TILE_TYPES = {
             empty: { name: '空地', color: '#FFFFFF' },
@@ -226,6 +227,17 @@
         
         const canvas = document.getElementById('mapCanvas');
         const ctx = canvas.getContext('2d');
+        const canvasInfoEl = document.getElementById('canvasInfo');
+
+        // キャンバスサイズと情報表示の更新
+        function updateCanvasSize() {
+            const pixelSize = GRID_SIZE * CELL_SIZE;
+            canvas.width = pixelSize;
+            canvas.height = pixelSize;
+            if (canvasInfoEl) {
+                canvasInfoEl.textContent = `${GRID_SIZE} × ${GRID_SIZE} グリッド（クリック＆ドラッグで配置）`;
+            }
+        }
         
         // グリッドデータの初期化
         function initGrid() {
@@ -341,13 +353,13 @@
                     const json = JSON.parse(event.target.result);
                     
                     if (!Array.isArray(json) || json.length !== GRID_SIZE) {
-                        alert('無効なJSONデータです。1024x1024のグリッドデータが必要です。');
+                        alert(`無効なJSONデータです。${GRID_SIZE}x${GRID_SIZE}のグリッドデータが必要です。`);
                         return;
                     }
                     
                     for (let i = 0; i < json.length; i++) {
                         if (!Array.isArray(json[i]) || json[i].length !== GRID_SIZE) {
-                            alert('無効なJSONデータです。1024x1024のグリッドデータが必要です。');
+                            alert(`無効なJSONデータです。${GRID_SIZE}x${GRID_SIZE}のグリッドデータが必要です。`);
                             return;
                         }
                     }
@@ -363,6 +375,51 @@
             reader.readAsText(file);
             e.target.value = '';
         }
+
+        // MESA用にローカルストレージへ保存して本体を開く
+        function saveForMesaAndOpen() {
+            try {
+                // RLE圧縮（連続する同一タイルをまとめる）
+                const segments = [];
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    let currentTile = gridData[y][0];
+                    let count = 1;
+                    for (let x = 1; x < GRID_SIZE; x++) {
+                        const tile = gridData[y][x];
+                        if (tile === currentTile) {
+                            count++;
+                        } else {
+                            segments.push({ tile: currentTile, count });
+                            currentTile = tile;
+                            count = 1;
+                        }
+                    }
+                    segments.push({ tile: currentTile, count });
+                }
+
+                const serialized = JSON.stringify(segments);
+                const chunkSize = 500000; // 500KB相当（文字数ベース）
+                const chunkCount = Math.ceil(serialized.length / chunkSize);
+
+                for (let i = 0; i < chunkCount; i++) {
+                    const chunk = serialized.slice(i * chunkSize, (i + 1) * chunkSize);
+                    localStorage.setItem(`mesa_editor_map_chunk_${i}`, chunk);
+                }
+                localStorage.setItem('mesa_editor_map_chunks', String(chunkCount));
+                localStorage.setItem('mesa_editor_map_info', JSON.stringify({
+                    compressed: true,
+                    gridSize: GRID_SIZE,
+                    timestamp: Date.now()
+                }));
+
+                alert('MESA本体で地図を読み込めるように保存しました。MESAを開きます。');
+                // ルートのindex.htmlへ遷移
+                window.location.href = '../index.html';
+            } catch (err) {
+                console.error(err);
+                alert('MESA用データの保存に失敗しました。');
+            }
+        }
         
         // マップをクリア
         function clearMap() {
@@ -375,6 +432,7 @@
         // 初期化
         initGrid();
         createTileButtons();
+        updateCanvasSize();
         drawCanvas();
     </script>
 </body>

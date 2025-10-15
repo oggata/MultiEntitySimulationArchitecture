@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
-"""AnimateDiff LCM - HLSストリーミング版（アイドルバリエーション付き完全版）
-リアルタイムアバター会話システム - 多様なアイドルモーション対応
-"""
+"""AnimateDiff LCM - HLSストリーミング完全版(修正済み)"""
 
 # ============================================
-# 1. 環境セットアップ
+# 1. 必要なライブラリのインストール
 # ============================================
 
-# 必要なライブラリのインストール
-!pip install -q diffusers transformers accelerate imageio[ffmpeg] pillow torch torchvision gtts
+!pip install -q imageio[ffmpeg] pillow gtts
 !pip install -q ipywidgets flask flask-cors pyngrok
-!apt-get install -y ffmpeg
+!apt-get install -y ffmpeg > /dev/null 2>&1
 
 import torch
 from diffusers import MotionAdapter, AnimateDiffPipeline, LCMScheduler
-from diffusers.utils import load_image
+from diffusers import AutoencoderKL, UNet2DConditionModel
+from transformers import CLIPTextModel, CLIPTokenizer
 from PIL import Image
 import imageio
 from google.colab import files
@@ -24,29 +22,31 @@ import ipywidgets as widgets
 from IPython.display import display, HTML, clear_output, Image as IPImage
 import time
 import random
-import base64
 import threading
 import subprocess
 import os
-import shutil
 from pathlib import Path
-from flask import Flask, send_from_directory, jsonify, Response, request, make_response
+
+# ★★★ ここが重要！ request を追加 ★★★
+from flask import Flask, send_from_directory, jsonify, make_response, request
 from flask_cors import CORS
 from pyngrok import ngrok
 
 print("✅ ライブラリのインストール完了")
 
-# ngrok認証設定
+# ============================================
+# 2. ngrok認証設定
+# ============================================
+
 print("\n🔑 ngrok認証トークンを設定してください")
 authtoken = input("ngrokのauthtokenを入力してください: ")
 ngrok.set_auth_token(authtoken)
 print("✅ ngrok認証完了")
 
 # ============================================
-# 2. HLSストリーミング設定
+# 3. HLSストリーミング設定
 # ============================================
 
-# HLS出力ディレクトリの設定
 HLS_DIR = Path("/content/hls_output")
 HLS_DIR.mkdir(exist_ok=True)
 
@@ -58,8 +58,6 @@ print(f"📁 HLS出力ディレクトリ: {HLS_DIR}")
 
 # Flaskアプリの設定
 app = Flask(__name__)
-
-# CORS設定を強化
 CORS(app, 
      resources={r"/*": {"origins": "*"}},
      allow_headers=["Content-Type", "ngrok-skip-browser-warning"],
@@ -142,8 +140,6 @@ idle_state = {
     "transition_frame": None
 }
 
-# スレッド用の変数
-streaming_thread = None
 streaming_lock = threading.Lock()
 
 @app.after_request
@@ -323,11 +319,6 @@ def serve_hls(filename):
     
     return response
 
-@app.route('/hls/<path:filename>', methods=['OPTIONS', 'HEAD'])
-def serve_hls_options(filename):
-    """OPTIONSとHEADリクエストに対応"""
-    return make_response('', 204)
-
 @app.route('/api/stream-status')
 def stream_status():
     """ストリーム状態を返す"""
@@ -375,7 +366,7 @@ print(f"📺 ストリーミングプレイヤー: {public_url_str}")
 print(f"🎯 HLSストリームURL: {public_url_str}/hls/stream.m3u8")
 
 # ============================================
-# 3. モデルのロード
+# 4. モデルのロード(修正版)
 # ============================================
 
 print("\n📄 モデルをロード中...")
@@ -383,32 +374,83 @@ print("\n📄 モデルをロード中...")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"使用デバイス: {device}")
 
+# MotionAdapter
+print("1/5: MotionAdapter をロード...")
 adapter = MotionAdapter.from_pretrained(
     "wangfuyun/AnimateLCM",
     torch_dtype=torch.float16
-).to(device)
+)
 
-pipe = AnimateDiffPipeline.from_pretrained(
-    "emilianJR/epiCRealism",
-    motion_adapter=adapter,
+# 各コンポーネントを個別にロード
+print("2/5: VAE をロード...")
+vae = AutoencoderKL.from_pretrained(
+    "runwayml/stable-diffusion-v1-5",
+    subfolder="vae",
     torch_dtype=torch.float16
-).to(device)
+)
 
-pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config, beta_schedule="linear")
+print("3/5: Tokenizer をロード...")
+tokenizer = CLIPTokenizer.from_pretrained(
+    "runwayml/stable-diffusion-v1-5",
+    subfolder="tokenizer"
+)
 
-pipe.load_ip_adapter("h94/IP-Adapter", subfolder="models", weight_name="ip-adapter_sd15.bin")
-pipe.set_ip_adapter_scale(0.8)
+print("4/5: Text Encoder をロード...")
+text_encoder = CLIPTextModel.from_pretrained(
+    "runwayml/stable-diffusion-v1-5",
+    subfolder="text_encoder",
+    torch_dtype=torch.float16
+)
+
+print("5/5: UNet をロード...")
+unet = UNet2DConditionModel.from_pretrained(
+    "runwayml/stable-diffusion-v1-5",
+    subfolder="unet",
+    torch_dtype=torch.float16
+)
+
+# パイプラインを手動で組み立て
+pipe = AnimateDiffPipeline(
+    vae=vae,
+    text_encoder=text_encoder,
+    tokenizer=tokenizer,
+    unet=unet,
+    motion_adapter=adapter,
+    scheduler=LCMScheduler.from_pretrained(
+        "runwayml/stable-diffusion-v1-5",
+        subfolder="scheduler"
+    )
+)
+
+pipe.scheduler = LCMScheduler.from_config(
+    pipe.scheduler.config,
+    beta_schedule="linear"
+)
+
+pipe = pipe.to(device)
+
+# IP Adapter (オプション)
+try:
+    pipe.load_ip_adapter(
+        "h94/IP-Adapter",
+        subfolder="models",
+        weight_name="ip-adapter_sd15.bin"
+    )
+    pipe.set_ip_adapter_scale(0.8)
+    print("✅ IP-Adapter有効")
+except Exception as e:
+    print(f"⚠️ IP-Adapterスキップ: {e}")
 
 pipe.enable_vae_slicing()
 
 print("✅ モデルのロード完了")
 
 # ============================================
-# 4. HLSストリーミング関数
+# 5. HLSストリーミング関数
 # ============================================
 
 def frames_to_hls_stream(frames, fps=24, append=False):
-    """フレームをHLS形式でストリーミング配信（修正版）"""
+    """フレームをHLS形式でストリーミング配信"""
     global streaming_state
     
     print(f"\n🎬 HLSストリーミング {'追加' if append else '開始'} ({len(frames)} フレーム, {fps}fps)")
@@ -553,7 +595,7 @@ def generate_idle_variation_seed():
     return variation_seed
 
 def generate_avatar_animation_simple(expression_type="talking", emotion="neutral"):
-    """簡易版アニメーション生成（アイドル時にバリエーション追加）"""
+    """簡易版アニメーション生成(アイドル時にバリエーション追加)"""
     global last_frame, fixed_seed, idle_state
     
     with streaming_lock:
@@ -648,8 +690,6 @@ def generate_avatar_animation_simple(expression_type="talking", emotion="neutral
         
         pipe.set_ip_adapter_scale(0.95)
         
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        
         output = pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
@@ -669,10 +709,10 @@ def generate_avatar_animation_simple(expression_type="talking", emotion="neutral
         return frames, fps
 
 def continuous_idle_streaming():
-    """連続的にアイドル動画を生成してストリーミング（バリエーション版）"""
+    """連続的にアイドル動画を生成してストリーミング(バリエーション版)"""
     global streaming_state, idle_state
     
-    print("🔄 連続アイドルストリーミング開始（バリエーション対応）...")
+    print("🔄 連続アイドルストリーミング開始(バリエーション対応)...")
     
     last_generation_time = time.time()
     min_interval = 1.5
@@ -717,124 +757,8 @@ def continuous_idle_streaming():
     
     print("🛑 連続ストリーミング停止")
 
-def generate_avatar_animation_with_progress(expression_type="talking", emotion="neutral"):
-    """アバターアニメーションを生成してHLS配信"""
-    global last_frame, fixed_seed
-    
-    if fixed_seed is None:
-        fixed_seed = random.randint(0, 2147483647)
-        print(f"🎲 シードを生成: {fixed_seed}")
-    
-    with progress_area:
-        clear_output(wait=True)
-        progress_bar = widgets.IntProgress(
-            value=0,
-            min=0,
-            max=100,
-            description='生成中:',
-            bar_style='info',
-            orientation='horizontal',
-            layout=widgets.Layout(width='90%')
-        )
-        progress_label = widgets.HTML(value='<p>🎬 アニメーション生成を開始...</p>')
-        display(widgets.VBox([progress_label, progress_bar]))
-    
-    emotion_prompts = {
-        "happy": "smiling face, happy expression, bright eyes, gentle smile",
-        "sad": "sad expression, slightly downcast eyes, subtle frown, melancholic look",
-        "angry": "angry expression, furrowed brows, intense gaze, stern look",
-        "excited": "laughing, joyful expression, wide smile, cheerful, animated happiness",
-        "neutral": "calm expression, neutral face, composed look",
-        "thinking": "thoughtful expression, slight head tilt, contemplative look"
-    }
-    
-    emotion_desc = emotion_prompts.get(emotion, emotion_prompts["neutral"])
-    
-    if expression_type == "talking":
-        prompt = f"""
-        A person speaking and talking, mouth opening and closing rhythmically,
-        lips moving up and down, jaw moving, mouth open mouth close repeatedly,
-        talking motion, speaking animation, lip sync motion,
-        natural blinking during speech, eyes blinking occasionally,
-        {emotion_desc},
-        subtle facial expressions, natural lip movements, animated face,
-        photorealistic, high quality, 8K resolution, smooth animation, motion
-        """
-        num_frames = 32
-        num_inference_steps = 4
-        guidance_scale = 1.5
-        fps = 16
-        
-    else:
-        prompt = f"""
-        A person in idle state, subtle breathing motion,
-        natural blinking, eyes blinking gently and naturally,
-        {emotion_desc},
-        mouth closed, lips relaxed, no mouth movement,
-        slight head movement, natural resting face, gentle animation,
-        photorealistic, high quality, 8K resolution, smooth animation, subtle motion
-        """
-        num_frames = 24
-        num_inference_steps = 4
-        guidance_scale = 1.2
-        fps = 12
-    
-    negative_prompt = """
-    low quality, worst quality, blurry, distorted, deformed,
-    static, frozen, unnatural movements, artificial, stiff, motionless,
-    eyes wide open without blinking, static eyes, no eye movement,
-    mouth closed when talking, static mouth, no lip movement when speaking
-    """
-    
-    progress_bar.value = 10
-    progress_label.value = f'<p>📝 プロンプト設定完了 [感情: {emotion}]</p>'
-    
-    progress_bar.value = 30
-    
-    start_image = last_frame if last_frame is not None else init_image
-    
-    if last_frame is not None:
-        progress_label.value = '<p>🔄 前のフレームから継続してアニメーション生成中...</p>'
-    else:
-        progress_label.value = '<p>🔄 初期画像からアニメーション生成中...</p>'
-    
-    pipe.set_ip_adapter_scale(0.9)
-    
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    output = pipe(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        ip_adapter_image=init_image,
-        num_frames=num_frames,
-        num_inference_steps=num_inference_steps,
-        guidance_scale=guidance_scale,
-        generator=torch.Generator(device=device).manual_seed(fixed_seed)
-    )
-    
-    progress_bar.value = 70
-    progress_label.value = '<p>✅ 生成完了! HLSストリーミング準備中...</p>'
-    
-    frames = output.frames[0]
-    last_frame = frames[-1]
-    
-    progress_bar.value = 85
-    progress_label.value = '<p>📡 HLSストリーミング配信中...</p>'
-    
-    success = frames_to_hls_stream(frames, fps=fps)
-    
-    if success:
-        progress_bar.value = 100
-        progress_bar.bar_style = 'success'
-        progress_label.value = '<p>✨ ストリーミング配信開始!</p>'
-    else:
-        progress_bar.bar_style = 'danger'
-        progress_label.value = '<p>❌ ストリーミング配信エラー</p>'
-    
-    return frames, fps
-
 # ============================================
-# 5. 画像アップロード
+# 6. 画像アップロード
 # ============================================
 
 print("\n📤 アバターの初期画像をアップロードしてください")
@@ -842,8 +766,7 @@ uploaded = files.upload()
 
 uploaded_filename = list(uploaded.keys())[0]
 init_image = Image.open(io.BytesIO(uploaded[uploaded_filename]))
-
-init_image = init_image.convert("RGB").resize((256, 256))
+init_image = init_image.convert("RGB").resize((512, 512))
 
 print(f"✅ 画像アップロード完了: {uploaded_filename}")
 print(f"   画像サイズ: {init_image.size}")
@@ -851,7 +774,7 @@ print(f"   画像サイズ: {init_image.size}")
 display(init_image)
 
 # ============================================
-# 6. アバター会話システムのセットアップ
+# 7. チャットシステムのセットアップ
 # ============================================
 
 demo_responses = [
@@ -868,15 +791,15 @@ demo_responses = [
 ]
 
 DEBUG_COMMANDS = {
-    "/happy": {"emotion": "happy", "text": "😊 嬉しい表情で話します！"},
-    "/angry": {"emotion": "angry", "text": "😠 怒った表情で話します！"},
+    "/happy": {"emotion": "happy", "text": "😊 嬉しい表情で話します!"},
+    "/angry": {"emotion": "angry", "text": "😠 怒った表情で話します!"},
     "/sad": {"emotion": "sad", "text": "😢 悲しい表情で話します..."},
-    "/excited": {"emotion": "excited", "text": "😆 笑顔で話します！"},
-    "/smile": {"emotion": "happy", "text": "😄 笑顔です！"},
+    "/excited": {"emotion": "excited", "text": "😆 笑顔で話します!"},
+    "/smile": {"emotion": "happy", "text": "😄 笑顔です!"},
     "/thinking": {"emotion": "thinking", "text": "🤔 考え中..."},
     "/neutral": {"emotion": "neutral", "text": "😐 普通の表情です"},
-    "/dance": {"emotion": "excited", "text": "💃 楽しく踊ります！", "motion": "dance"},
-    "/talk": {"emotion": "neutral", "text": "💬 普通に話します", "motion": "talk"},
+    "/dance": {"emotion": "excited", "text": "💃 楽しく踊ります!", "motion": "dance"},
+    "/talk": {"emotion": "neutral", "text": "💬 普通に話します", "motion": "talking"},
     "/idle": {"emotion": "neutral", "text": "😌 待機状態です", "motion": "idle"},
     "/help": {"emotion": None, "text": "📋 利用可能なコマンド:\n/happy, /angry, /sad, /excited, /smile, /thinking, /neutral, /dance, /talk, /idle"}
 }
@@ -926,7 +849,7 @@ last_frame = None
 fixed_seed = None
 
 # ============================================
-# 7. チャットインターフェース構築
+# 8. チャットインターフェース構築
 # ============================================
 
 print("\n" + "="*50)
@@ -942,7 +865,7 @@ streaming_link = widgets.HTML(
             {public_url_str}
         </a>
         <p style="margin-top:10px; font-size:14px;">
-            <strong>HLSストリームURL（外部プレイヤー用）:</strong><br>
+            <strong>HLSストリームURL(外部プレイヤー用):</strong><br>
             <code style="background:#f0f0f0; padding:5px; border-radius:3px;">{public_url_str}/hls/stream.m3u8</code>
         </p>
         <p style="margin-top:10px; font-size:12px; color:#666;">
@@ -954,13 +877,16 @@ streaming_link = widgets.HTML(
 )
 
 print("\n🎬 初期idle動画を生成中...")
-idle_frames, idle_fps = generate_avatar_animation_with_progress("idle", "neutral")
+
+# 初回のアイドル動画生成
+idle_frames, idle_fps = generate_avatar_animation_simple("idle", "neutral")
 
 print("📡 初回ストリーミング開始...")
 frames_to_hls_stream(idle_frames, fps=idle_fps, append=False)
 
 print("✅ 初期idle動画の配信開始")
 
+# バックグラウンドでの連続生成を開始
 streaming_state["should_stop"] = False
 streaming_state["mode"] = "idle"
 streaming_thread = threading.Thread(target=continuous_idle_streaming, daemon=True)
@@ -1015,6 +941,7 @@ def on_send_clicked(b):
     current_history = current_history.replace('</div>', f'<p><b>あなた:</b> {user_message}</p></div>')
     chat_history.value = current_history
     
+    # アイドルモードから会話モードに切り替え
     streaming_state["mode"] = "talking"
     
     print("\n" + "="*50)
@@ -1022,6 +949,7 @@ def on_send_clicked(b):
     
     result = process_chat_message(user_message)
     
+    # ヘルプコマンドの場合
     if len(result) == 2 and result[1] is None:
         response_text = result[0]
         
@@ -1038,13 +966,42 @@ def on_send_clicked(b):
     
     response_text, emotion, motion_type = result
     
-    print(f"   📹 アニメーション生成中... [感情: {emotion}, モーション: {motion_type}]")
-    talking_frames, talking_fps = generate_avatar_animation_with_progress(motion_type, emotion)
+    print(f"   🔹 アニメーション生成中... [感情: {emotion}, モーション: {motion_type}]")
     
+    # プログレス表示
+    with progress_area:
+        clear_output(wait=True)
+        progress_bar = widgets.IntProgress(
+            value=0,
+            min=0,
+            max=100,
+            description='生成中:',
+            bar_style='info',
+            orientation='horizontal',
+            layout=widgets.Layout(width='90%')
+        )
+        progress_label = widgets.HTML(value='<p>🎬 アニメーション生成を開始...</p>')
+        display(widgets.VBox([progress_label, progress_bar]))
+    
+    progress_bar.value = 30
+    progress_label.value = f'<p>🎭 感情: {emotion}, モーション: {motion_type}</p>'
+    
+    # アニメーション生成
+    talking_frames, talking_fps = generate_avatar_animation_simple(motion_type, emotion)
+    
+    progress_bar.value = 70
+    progress_label.value = '<p>📡 HLSストリーミング配信中...</p>'
+    
+    # HLS配信
     frames_to_hls_stream(talking_frames, fps=talking_fps, append=True)
+    
+    progress_bar.value = 100
+    progress_bar.bar_style = 'success'
+    progress_label.value = '<p>✅ 配信完了!</p>'
     
     print("="*50 + "\n")
     
+    # アイドルモードに戻る
     streaming_state["mode"] = "idle"
     
     with progress_area:
@@ -1083,7 +1040,7 @@ interface_box = widgets.VBox([
 display(interface_box)
 
 # ============================================
-# 8. 使い方ガイド
+# 9. 使い方ガイド
 # ============================================
 
 print("\n" + "="*50)
@@ -1095,9 +1052,14 @@ print(f"\n2. プレイヤーが「ストリーム待機中...」と表示され�
 print(f"\n3. このColab画面でメッセージを送信すると...")
 print(f"   → アバターがアニメーション生成")
 print(f"   → 自動的にHLS配信開始")
-print(f"   → プレイヤーで再生が始まる（約2-3秒後）")
+print(f"   → プレイヤーで再生が始まる(約2-3秒後)")
+print(f"\n4. メッセージ送信がない間は...")
+print(f"   → 自動的にidleアニメーションを連続生成")
+print(f"   → {len(IDLE_MOTION_PATTERNS)}種類のパターンからランダム選択")
+print(f"   → 同じパターンが連続しないよう調整")
+print(f"   → シードも変化して自然なバリエーション")
 print(f"\n💡 Tips:")
-print(f"   - アイドル状態は10種類のパターンから自動選択")
+print(f"   - アイドル状態は{len(IDLE_MOTION_PATTERNS)}種類のパターンから自動選択")
 print(f"   - 同じパターンが連続しないよう工夫されています")
 print(f"   - シードも変化して、自然な変化を実現")
 print(f"\n🛠 デバッグコマンド:")
@@ -1107,3 +1069,7 @@ print(f"   /dance, /talk, /idle - モーションの変更")
 print(f"\n📋 アイドルパターン確認:")
 print(f"   show_idle_patterns() を実行すると確認できます")
 print("="*50)
+
+print("\n✅ すべてのセットアップ完了!")
+print("💬 メッセージを送信してアバターと会話を始めましょう!")
+print(f"📺 ストリーミング視聴: {public_url_str}")

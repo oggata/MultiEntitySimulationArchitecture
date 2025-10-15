@@ -76,6 +76,10 @@ class VisualizationSystem {
     
     // 道路ネットワークの視覚化（デバッグ用）
     visualizeRoadNetwork() {
+        if (window.isEditorMap) {
+            // エディタ地図ではデバッグ可視化を抑制
+            return;
+        }
         this.clearRoadNetworkVisualization();
         
         // 交差点を表示
@@ -150,13 +154,14 @@ class VisualizationSystem {
                     opacity: 0.9
                 });
                 const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
+                roadMesh.userData.isRoad = true;
                 roadMesh.position.set(
                     (connection.start.x + connection.end.x) / 2,
                     0.15, // 地面より少し上に配置
                     (connection.start.z + connection.end.z) / 2
                 );
                 roadMesh.rotation.x = -Math.PI / 2;
-                roadMesh.rotation.z = angle;
+                roadMesh.rotation.y = angle;
                 scene.add(roadMesh);
                 this.entranceConnections.push(roadMesh);
                 

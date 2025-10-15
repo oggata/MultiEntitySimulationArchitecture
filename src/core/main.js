@@ -389,6 +389,7 @@ async function init() {
         try {
             const mapInfo = JSON.parse(editorMapInfo);
             console.log('エディタデータからマップを生成します');
+            window.isEditorMap = true;
             
             let editorMapData;
             if (mapInfo.compressed) {
@@ -405,6 +406,11 @@ async function init() {
             if (editorMapData) {
                 const mapLoader = new MapEditorLoader(cityLayoutConfig);
                 cityData = mapLoader.loadFromEditorData(editorMapData);
+
+                // エディタの1マス=自宅サイズに合わせてワールドサイズを設定
+                const worldSize = mapLoader.gridSize * mapLoader.scaleFactor;
+                cityLayout.gridSize = worldSize;
+                console.log(`エディタ地図に合わせてcityLayout.gridSizeを設定: ${worldSize}`);
                 
                 // エディタデータの統計情報を表示
                 const stats = mapLoader.getStatistics();
@@ -431,6 +437,57 @@ async function init() {
                 cityLayout.buildings = cityData.buildings;
                 cityLayout.facilities = cityData.facilities;
                 cityLayout.intersections = cityData.intersections;
+
+                // エディタ反映直後に道路を強制描画して存在をログ
+                if (cityLayout && cityLayout.getRoadSystem) {
+                    try {
+                        const rs = cityLayout.getRoadSystem();
+                        if (rs && typeof rs.drawRoads === 'function') {
+                            // RoadSystem にエディタ道路を同期してから描画
+                            clearRoadMeshes();
+                            rs.roads = Array.isArray(cityLayout.roads) ? cityLayout.roads : [];
+                            rs.intersections = Array.isArray(cityLayout.intersections) ? cityLayout.intersections : [];
+                            rs.drawRoads();
+                            console.log('forced drawRoads after editor import');
+                            if (typeof updateExistingRoadColors === 'function') {
+                                updateExistingRoadColors(cityLayoutConfig.roadColors.normalRoad);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('forced drawRoads failed:', e);
+                        // フォールバック: シンプル描画
+                        try {
+                            if (Array.isArray(cityLayout.roads)) {
+                                clearRoadMeshes();
+                                if (!window.roadMeshes) window.roadMeshes = [];
+                                cityLayout.roads.forEach(road => {
+                                    const dx = road.end.x - road.start.x;
+                                    const dz = road.end.z - road.start.z;
+                                    // エディタでは斜めは描かない
+                                    if (window.isEditorMap && Math.abs(dx) > 1e-3 && Math.abs(dz) > 1e-3) return;
+                                    const length = Math.sqrt(dx * dx + dz * dz) || 2;
+                                    const angle = Math.atan2(dz, dx);
+                                    const width = cityLayoutConfig.roadWidth * (road.isMain ? 3 : 1);
+                                    const geom = new THREE.PlaneGeometry(length, width);
+                                    const mat = new THREE.MeshBasicMaterial({ color: cityLayoutConfig.roadColors.normalRoad, side: THREE.DoubleSide });
+                                    const mesh = new THREE.Mesh(geom, mat);
+                                    mesh.userData.isRoad = true;
+                                    mesh.position.set((road.start.x + road.end.x)/2, 0.2, (road.start.z + road.end.z)/2);
+                                    mesh.rotation.x = -Math.PI/2;
+                                    mesh.rotation.y = angle;
+                                    scene.add(mesh);
+                                    window.roadMeshes.push(mesh);
+                                });
+                                console.log(`fallback simple draw: roadMeshes=${window.roadMeshes.length}`);
+                                if (typeof updateExistingRoadColors === 'function') {
+                                    updateExistingRoadColors(cityLayoutConfig.roadColors.normalRoad);
+                                }
+                            }
+                        } catch (ee) {
+                            console.warn('fallback simple draw failed:', ee);
+                        }
+                    }
+                }
                 
                 // 使用済みのデータをクリア
                 clearEditorMapData();
@@ -446,6 +503,7 @@ async function init() {
         }
     } else {
         console.log('プログラム生成でマップを生成します');
+        window.isEditorMap = false;
         cityData = cityLayout.generateCity();
     }
     
@@ -461,72 +519,73 @@ async function init() {
     // 建物と施設の生成
     updateLoadingProgress(6);
     
-    // 地面とグリッドの生成
+    // 地面とグリッドの生成（一時停止用フラグ）
+    const SHOW_GROUND = true;
     updateLoadingProgress(7);
-    // 無限大の地面（遠景用）
-    const infiniteGroundGeometry = new THREE.PlaneGeometry(1000, 1000, 1, 1);
-    const infiniteGroundMaterial = new THREE.MeshBasicMaterial({ 
-        color: fieldColor, // 設定可能な色
-        transparent: false // 透過を無効化
-    });
-    infiniteGroundMesh = new THREE.Mesh(infiniteGroundGeometry, infiniteGroundMaterial);
-    infiniteGroundMesh.rotation.x = -Math.PI / 2;
-    infiniteGroundMesh.position.y = -0.02; // 現在の地面より少し下に配置
-    scene.add(infiniteGroundMesh);
-    
-    // 遠景の山々は削除（シンプルな遠景に）
-    // createDistantMountains();
-    
-    // 地面（塗りつぶし）
-    const groundSize = cityLayout.gridSize;
-    const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize, 1, 1);
-    const groundMaterial = new THREE.MeshBasicMaterial({ 
-        color: fieldColor, // 設定可能な色
-        transparent: true,
-        opacity: 0.6
-    });
-    groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
-    groundMesh.rotation.x = -Math.PI / 2;
-    groundMesh.position.y = 0.01; // 少し上に配置
-    scene.add(groundMesh);
-    
-    // 地面のグリッド線（手動で作成）
-    const gridGroup = new THREE.Group();
-    const gridSize = groundSize;
-    const gridSpacing = 2; // グリッドの間隔を小さく
-    
-    // 縦線
-    for (let x = -gridSize/2; x <= gridSize/2; x += gridSpacing) {
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(x, 0, -gridSize/2),
-            new THREE.Vector3(x, 0, gridSize/2)
-        ]);
-        const lineMaterial = new THREE.LineBasicMaterial({ 
-            color: 0xFFFFFF, 
-            transparent: true, 
-            opacity: 0.8 
+    if (SHOW_GROUND) {
+        // 無限大の地面（遠景用）
+        const infiniteGroundGeometry = new THREE.PlaneGeometry(1000, 1000, 1, 1);
+        const infiniteGroundMaterial = new THREE.MeshBasicMaterial({ 
+            color: fieldColor,
+            transparent: false,
+            depthWrite: false
         });
-        const line = new THREE.Line(lineGeometry, lineMaterial);
-        gridGroup.add(line);
-    }
-    
-    // 横線
-    for (let z = -gridSize/2; z <= gridSize/2; z += gridSpacing) {
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(-gridSize/2, 0, z),
-            new THREE.Vector3(gridSize/2, 0, z)
-        ]);
-        const lineMaterial = new THREE.LineBasicMaterial({ 
-            color: 0xFFFFFF, 
-            transparent: true, 
-            opacity: 0.8 
+        infiniteGroundMesh = new THREE.Mesh(infiniteGroundGeometry, infiniteGroundMaterial);
+        infiniteGroundMesh.rotation.x = -Math.PI / 2;
+        infiniteGroundMesh.position.y = -0.02;
+        scene.add(infiniteGroundMesh);
+        
+        // 地面（塗りつぶし）
+        const groundSize = cityLayout.gridSize;
+        const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize, 1, 1);
+        const groundMaterial = new THREE.MeshBasicMaterial({ 
+            color: fieldColor,
+            transparent: true,
+            opacity: 0.5,
+            depthWrite: false
         });
-        const line = new THREE.Line(lineGeometry, lineMaterial);
-        gridGroup.add(line);
+        groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+        groundMesh.rotation.x = -Math.PI / 2;
+        groundMesh.position.y = 0.01;
+        scene.add(groundMesh);
+        
+        // 地面のグリッド線
+        const gridGroup = new THREE.Group();
+        const gridSize = groundSize;
+        const gridSpacing = 2;
+        
+        for (let x = -gridSize/2; x <= gridSize/2; x += gridSpacing) {
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(x, 0, -gridSize/2),
+                new THREE.Vector3(x, 0, gridSize/2)
+            ]);
+            const lineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0xFFFFFF, 
+                transparent: true, 
+                opacity: 0.8 
+            });
+            const line = new THREE.Line(lineGeometry, lineMaterial);
+            gridGroup.add(line);
+        }
+        
+        for (let z = -gridSize/2; z <= gridSize/2; z += gridSpacing) {
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-gridSize/2, 0, z),
+                new THREE.Vector3(gridSize/2, 0, z)
+            ]);
+            const lineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0xFFFFFF, 
+                transparent: true, 
+                opacity: 0.8 
+            });
+            const line = new THREE.Line(lineGeometry, lineMaterial);
+            gridGroup.add(line);
+        }
+        
+        gridGroup.position.y = 0.03;
+        gridGroup.renderOrder = 1;
+        scene.add(gridGroup);
     }
-    
-    gridGroup.position.y = 0.03; // 床より少し上に配置
-    scene.add(gridGroup);
     
     // 場所の作成
     updateLoadingProgress(8);
@@ -1648,8 +1707,9 @@ function changeFieldColor(colorHex) {
         infiniteGroundMesh.material.color.setHex(colorHex);
     }
     
-    // フィールド色に合わせて道路色を更新
+    // フィールド色に合わせて道路色を更新（更新対象の件数もログ）
     updateRoadColorsByField(colorHex);
+    console.log(`after changeFieldColor: roadMeshes=${window.roadMeshes ? window.roadMeshes.length : 0}`);
     
     console.log(`フィールド色を変更しました: ${colorHex.toString(16)}`);
 }
@@ -1659,25 +1719,33 @@ window.changeFieldColor = changeFieldColor;
 
 // 既存の道路の色を更新する関数
 function updateExistingRoadColors(roadColor) {
-    // シーン内の全ての道路メッシュを更新
-    scene.children.forEach(child => {
-        if (child.material && child.material.color) {
-            // 現在の道路色と比較して、道路メッシュかどうかを判定
-            const currentColor = child.material.color.getHex();
-            if (currentColor === cityLayoutConfig.roadColors.mainRoad ||
-                currentColor === cityLayoutConfig.roadColors.normalRoad ||
-                currentColor === cityLayoutConfig.roadColors.entranceRoad ||
-                currentColor === cityLayoutConfig.roadColors.homeRoad ||
-                // 以前の色設定も含める
-                currentColor === 0x444444 ||
-                currentColor === 0x666666 ||
-                currentColor === 0x808080 ||
-                currentColor === 0x333333) {
-                child.material.color.setHex(roadColor);
-                console.log(`道路の色を更新: ${currentColor.toString(16)} → ${roadColor.toString(16)}`);
+    // シーン全体を走査して道路フラグ付きオブジェクトを更新（ネスト対応）
+    let updatedCount = 0;
+    if (scene && typeof scene.traverse === 'function') {
+        scene.traverse(obj => {
+            if (obj && obj.userData && obj.userData.isRoad && obj.material && obj.material.color) {
+                obj.material.color.setHex(roadColor);
+                updatedCount++;
             }
-        }
-    });
+        });
+    }
+    // フォールバック: 収集配列があれば直接更新
+    if (updatedCount === 0 && window.roadMeshes && window.roadMeshes.length > 0) {
+        window.roadMeshes.forEach(mesh => {
+            if (mesh && mesh.material && mesh.material.color) {
+                mesh.material.color.setHex(roadColor);
+                updatedCount++;
+            }
+        });
+    }
+    if (window.roadEdgeLines && window.roadEdgeLines.length > 0) {
+        window.roadEdgeLines.forEach(line => {
+            if (line && line.material && line.material.color) {
+                line.material.color.setHex(0xFFFFFF);
+            }
+        });
+    }
+    console.log(`updateExistingRoadColors: ${updatedCount}個の道路メッシュを更新`);
     
     // 設定ファイルの道路色も更新
     cityLayoutConfig.roadColors.mainRoad = roadColor;
@@ -1754,4 +1822,23 @@ function hideLoadingScreen() {
             loadingScreen.classList.add('hidden');
         }, 500);
     }
+}
+
+// 既存の道路メッシュを全削除（エディタ再描画時の残存物を除去）
+function clearRoadMeshes() {
+    if (!scene || typeof scene.traverse !== 'function') return;
+    const toRemove = [];
+    scene.traverse(obj => {
+        if (obj && obj.userData && obj.userData.isRoad) {
+            toRemove.push(obj);
+        }
+    });
+    toRemove.forEach(obj => {
+        if (obj.parent) obj.parent.remove(obj);
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) obj.material.dispose();
+    });
+    if (window.roadMeshes) window.roadMeshes = [];
+    if (window.roadEdgeLines) window.roadEdgeLines = [];
+    console.log(`clearRoadMeshes: ${toRemove.length}件を削除`);
 }

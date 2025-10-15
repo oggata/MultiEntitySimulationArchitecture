@@ -3,7 +3,7 @@ const homeManager = {
     homes: new Map(), // 自宅名 -> 自宅データ
     availableHomes: [], // 利用可能な自宅のリスト
     
-    // 事前に自宅を作成（施設と同じ配置ロジックを使用）
+    // 事前に自宅を作成（エディタ住宅を優先）
     initializeHomes() {
         // 既存の自宅をクリア
         this.homes.clear();
@@ -19,11 +19,44 @@ const homeManager = {
             "本田家", "原田家", "岡本家", "野村家", "高田家", "河野家", "荒木家", "石田家"
         ];
         
-        // 自宅のサイズを定義（施設より少し小さい）
-        const homeSize = cityLayoutConfig.buildingSize * 0.8;
+        // 自宅のサイズ（エディタの1マス=自宅サイズに合わせる）
+        const homeSize = cityLayoutConfig.buildingSizes.small;
+
+        // エディタ由来の住宅（house）を自宅候補として取り込む
+        if (window.isEditorMap && cityLayout && Array.isArray(cityLayout.buildings)) {
+            const editorHomes = cityLayout.buildings.filter(b => b.type === 'house');
+            editorHomes.forEach((b, idx) => {
+                const name = `${['田中','佐藤','鈴木','高橋','渡辺','伊藤','山本','中村'][idx % 8]}家`;
+                const nearestRoad = cityLayout.findNearestRoad(b.x, b.z);
+                const roadIndex = nearestRoad ? cityLayout.roads.indexOf(nearestRoad) : -1;
+                const homeData = {
+                    name,
+                    x: b.x,
+                    z: b.z,
+                    type: 'home',
+                    size: homeSize,
+                    rotation: nearestRoad ? cityLayout.calculateBuildingRotation(b.x, b.z, nearestRoad) : 0,
+                    roadIndex,
+                    distanceToRoad: cityLayout.calculateMinDistanceToRoads(b.x, b.z),
+                    nearestRoadIndex: roadIndex,
+                    color: "0x" + Math.floor(Math.random()*16777215).toString(16),
+                    isOccupied: false,
+                    occupant: null
+                };
+                this.homes.set(name, homeData);
+                this.availableHomes.push(homeData);
+            });
+            console.log(`エディタ由来の自宅候補を取り込み: ${editorHomes.length}軒`);
+            // エディタモードではランダム配置を行わない
+            return;
+        }
         
-        // 自宅データを作成（施設と同じ配置ロジックを使用）
+        /*
+        // 通常モード: ランダム配置（施設と同じ配置ロジック）
         homeNames.forEach((name, index) => {
+            if (this.homes.has(name)) {
+                return; // 既にエディタ由来で存在
+            }
             let attempts = 0;
             let homeX, homeZ;
             let placed = false;
@@ -129,8 +162,8 @@ const homeManager = {
                 }
             }
         });
-        
-        console.log(`${this.homes.size}軒の自宅を事前に作成しました。`);
+        */
+        //console.log(`${this.homes.size}軒の自宅を事前に作成しました。`);
     },
     
     // 自宅の重複チェック

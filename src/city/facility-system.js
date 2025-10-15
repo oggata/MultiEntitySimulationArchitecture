@@ -15,6 +15,11 @@ class FacilitySystem {
 
     // 施設の配置を道路の位置関係を考慮して生成
     generateFacilities() {
+        // エディタ地図では自動施設配置を行わず、取り込んだ施設のみ使用
+        if (window.isEditorMap && Array.isArray(this.buildingSystem.buildings)) {
+            this.facilities = (Array.isArray(cityLayout.facilities) ? cityLayout.facilities : []).filter(f => !!f);
+            return this.facilities;
+        }
         const facilities = [];
         
         // config.jsのlocationDataの施設タイプを使用してランダム配置

@@ -15,6 +15,11 @@ class BuildingSystem {
 
     // 建物の配置を道路の位置関係を考慮して生成
     generateBuildings() {
+        // エディタ地図では自動建物配置をスキップし、取り込み済みのbuildingsを使用
+        if (window.isEditorMap && Array.isArray(this.buildingSystem?.buildings)) {
+            this.buildings = this.buildingSystem.buildings;
+            return this.buildings;
+        }
         this.buildings = [];
         const intersectionBuffer = this.buildingSize * 3;
         

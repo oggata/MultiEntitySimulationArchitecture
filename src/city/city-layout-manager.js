@@ -63,8 +63,29 @@ class CityLayoutManager {
 
     // 都市全体の描画
     drawCity() {
+        // エディタ等で外部から設定されたデータを各システムへ同期
+        if (Array.isArray(this.roads)) {
+            this.roadSystem.roads = this.roads;
+        }
+        if (Array.isArray(this.intersections)) {
+            this.roadSystem.intersections = this.intersections;
+        }
+        if (Array.isArray(this.buildings)) {
+            this.buildingSystem.buildings = this.buildings;
+        }
+        if (Array.isArray(this.facilities)) {
+            this.facilitySystem.facilities = this.facilities;
+        }
+
         // 道路の描画
         this.roadSystem.drawRoads();
+        // 収集配列の件数をログ
+        console.log(`after roadSystem.drawRoads: roadMeshes=${window.roadMeshes ? window.roadMeshes.length : 0}`);
+        // 道路が生成された直後に色を再設定（更新対象に確実に含めるため）
+        if (typeof updateExistingRoadColors === 'function') {
+            updateExistingRoadColors(cityLayoutConfig.roadColors.normalRoad);
+        }
+        console.log(`drawCity after drawRoads: roadMeshes=${window.roadMeshes ? window.roadMeshes.length : 0}`);
         
         // 建物の描画
         this.buildingSystem.drawBuildings();
@@ -72,8 +93,10 @@ class CityLayoutManager {
         // 施設の描画
         this.facilitySystem.drawFacilities();
         
-        // 入り口接続を道路として描画
-        this.visualizationSystem.drawEntranceConnectionsAsRoads();
+        // 入り口接続を道路として描画（エディタ地図では抑制）
+        if (!window.isEditorMap) {
+            this.visualizationSystem.drawEntranceConnectionsAsRoads();
+        }
     }
 
     // 経路探索

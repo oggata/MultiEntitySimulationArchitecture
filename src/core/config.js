@@ -30,7 +30,7 @@ const cityLayoutConfig = {
     buildingSizes: {
         large: 8,                     // 大：公園、学校、スーパーなど
         medium: 4,                    // 中：ファミレス、商店など
-        small: 2                      // 小：個人の自宅など
+        small: 1                      // 小：個人の自宅など
     },
     
     // 安全マージン設定（建物サイズに応じて）

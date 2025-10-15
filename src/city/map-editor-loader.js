@@ -93,7 +93,8 @@ class MapEditorLoader {
             start: this.gridToMesaCoords(startX, startY),
             end: null,
             type: tileType === 'railway' ? 'railway' : 'main',
-            isMain: this.isMainRoad(startX, startY),
+            // 既存の描画ロジックに合わせ、視認性を担保するため主要道路扱いにする
+            isMain: true,
             isShort: false
         };
 
@@ -104,7 +105,7 @@ class MapEditorLoader {
             // 水平道路の場合、右端まで追跡
             let endX = startX;
             while (endX + 1 < this.gridSize && 
-                   this.gridData[startY][endX + 1] === tileType) {
+                   (this.gridData[startY][endX + 1] === tileType || this.gridData[startY][endX + 1] === 'road')) {
                 endX++;
                 visited.add(`${endX},${startY}`);
             }
@@ -113,14 +114,22 @@ class MapEditorLoader {
             // 垂直道路の場合、下端まで追跡
             let endY = startY;
             while (endY + 1 < this.gridSize && 
-                   this.gridData[endY + 1][startX] === tileType) {
+                   (this.gridData[endY + 1][startX] === tileType || this.gridData[endY + 1][startX] === 'road')) {
                 endY++;
                 visited.add(`${startX},${endY}`);
             }
             segment.end = this.gridToMesaCoords(startX, endY);
         } else {
-            // 単一セルの道路
-            segment.end = segment.start;
+            // 単一セルは水平優先で1マス延長
+            const preferHorizontal = true;
+            if (preferHorizontal) {
+                const endX = Math.min(this.gridSize - 1, startX + 1);
+                segment.end = this.gridToMesaCoords(endX, startY);
+            } else {
+                const endY = Math.min(this.gridSize - 1, startY + 1);
+                segment.end = this.gridToMesaCoords(startX, endY);
+            }
+            segment.isShort = true;
         }
 
         visited.add(`${startX},${startY}`);
@@ -158,9 +167,22 @@ class MapEditorLoader {
                 const key = `${x},${y}`;
                 
                 if (this.isBuildingTile(tileType) && !visited.has(key)) {
-                    const building = this.extractBuilding(x, y, tileType, visited);
-                    if (building) {
-                        buildings.push(building);
+                    if (tileType === 'residential') {
+                        // 住宅は1マス=1軒として個別に出力
+                        const center = this.gridToMesaCoords(x, y);
+                        buildings.push({
+                            x: center.x,
+                            z: center.z,
+                            size: 1 * this.scaleFactor,
+                            rotation: 0,
+                            type: this.mapTileTypeToBuildingType('residential')
+                        });
+                        visited.add(key);
+                    } else {
+                        const building = this.extractBuilding(x, y, tileType, visited);
+                        if (building) {
+                            buildings.push(building);
+                        }
                     }
                 }
             }
@@ -250,13 +272,14 @@ class MapEditorLoader {
 
     // タイルタイプを建物タイプにマッピング
     mapTileTypeToBuildingType(tileType) {
+        // BuildingSystemの期待する型に寄せる
         const mapping = {
-            'residential': 'home',
-            'office': 'office',
-            'industrial': 'industrial',
-            'convenience': 'convenience'
+            'residential': 'house',        // 住宅は house
+            'office': 'office',            // 中サイズ相当
+            'industrial': 'industrial',    // 追加対応
+            'convenience': 'shop'          // コンビニは shop として扱う
         };
-        return mapping[tileType] || 'home';
+        return mapping[tileType] || 'house';
     }
 
     // 施設を抽出
@@ -304,10 +327,20 @@ class MapEditorLoader {
             }
         }
 
+        // FacilitySystem/buildings.js 側は name を用いるため、日本語名に揃える
+        const nameMap = {
+            'park': '公園',
+            'supermarket': 'スーパーマーケット',
+            'school': '学校',
+            'hospital': '病院',
+            'police': '警察署'
+        };
+        const facilityName = nameMap[tileType] || '公園';
         return {
+            name: facilityName,
             x: this.gridToMesaCoords(centerX, 0).x,
             z: this.gridToMesaCoords(0, centerY).z,
-            type: this.mapTileTypeToFacilityType(tileType),
+            type: 'facility',
             size: Math.max(maxX - minX + 1, maxY - minY + 1) * this.scaleFactor
         };
     }

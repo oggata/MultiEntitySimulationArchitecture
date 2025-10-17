@@ -19,15 +19,27 @@ class CityLayoutManager {
 
     // 都市全体の生成
     generateCity() {
-        // 道路の生成
-        this.roads = this.roadSystem.generateRoads();
-        this.intersections = this.roadSystem.intersections;
+        console.log('CityLayoutManager.generateCity called, isEditorMap =', window.isEditorMap);
         
-        // 建物の生成
-        this.buildings = this.buildingSystem.generateBuildings();
+        // エディタ地図の場合は既存のデータを保持
+        if (window.isEditorMap) {
+            console.log('エディタ地図: 既存のデータを保持');
+            console.log('既存の道路:', this.roads.length);
+            console.log('既存の建物:', this.buildings.length);
+            console.log('既存の施設:', this.facilities.length);
+        } else {
+            // 道路の生成
+            this.roads = this.roadSystem.generateRoads();
+            this.intersections = this.roadSystem.intersections;
+            
+            // 建物の生成
+            this.buildings = this.buildingSystem.generateBuildings();
+        }
         
         // 施設の生成
+        console.log('CityLayoutManager.generateCity: calling facilitySystem.generateFacilities');
         this.facilities = this.facilitySystem.generateFacilities();
+        console.log('CityLayoutManager.generateCity: facilities generated =', this.facilities.length);
         
         // エージェントの自宅の入り口接続も道路として追加
         if (window.agents && window.agents.length > 0) {

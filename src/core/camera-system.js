@@ -41,12 +41,24 @@ class CameraSystem {
     // カメラの初期化
     initializeCamera(width, height) {
         this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-        this.camera.position.set(0, 35, 35);
-        this.camera.lookAt(0, 0, 0);
         
-        // デフォルトの回転角度を設定
-        this.cameraRotationX = 0;
-        this.cameraRotationY = 0;
+        // エディターマップの場合は北向き、少し高い位置から見下ろす
+        if (window.isEditorMap) {
+            this.camera.position.set(0, 50, 60);  // 高めの位置から
+            this.camera.lookAt(0, 0, -20);        // 北方向を見る
+            
+            // 見下ろす角度を設定
+            this.cameraRotationX = -0.3;  // 少し下向き
+            this.cameraRotationY = Math.PI;  // 北向き（180度回転）
+        } else {
+            // 通常モードのカメラ位置
+            this.camera.position.set(0, 35, 35);
+            this.camera.lookAt(0, 0, 0);
+            
+            // デフォルトの回転角度を設定
+            this.cameraRotationX = 0;
+            this.cameraRotationY = 0;
+        }
         
         return this.camera;
     }
@@ -244,12 +256,23 @@ class CameraSystem {
         this.targetFacility = null;
         this.cameraFollowEnabled = false;
         
-        // カメラの回転角度をリセット（全体表示では自由な角度を許可）
-        this.cameraRotationX = 0;
-        this.cameraRotationY = 0;
-        
-        this.camera.position.set(0, 30, 30);
-        this.camera.lookAt(0, 0, 0);
+        // エディターマップの場合は北向き、少し高い位置から見下ろす
+        if (window.isEditorMap) {
+            this.camera.position.set(0, 50, 60);
+            this.camera.lookAt(0, 0, -20);
+            
+            // 見下ろす角度を設定
+            this.cameraRotationX = -0.3;  // 少し下向き
+            this.cameraRotationY = Math.PI;  // 北向き（180度回転）
+        } else {
+            // 通常モードのカメラ位置
+            this.camera.position.set(0, 30, 30);
+            this.camera.lookAt(0, 0, 0);
+            
+            // カメラの回転角度をリセット（全体表示では自由な角度を許可）
+            this.cameraRotationX = 0;
+            this.cameraRotationY = 0;
+        }
         
         // カメラモード表示を更新
         this.updateCameraModeDisplay();

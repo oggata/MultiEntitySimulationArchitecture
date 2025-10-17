@@ -665,6 +665,14 @@ function createDetailedBuilding(locationGroup, loc, facilitySize, facilityHeight
             createCityHallBuilding(locationGroup, facilitySize, facilityHeight, loc.color, scale);
             break;
             
+        case "公園":
+            createParkBuilding(locationGroup, facilitySize, facilityHeight, loc.color, scale);
+            break;
+            
+        case "町の広場":
+            createTownSquareBuilding(locationGroup, facilitySize, facilityHeight, loc.color, scale);
+            break;
+            
         default:
             // デフォルトの建物（より詳細な立方体）
             createDefaultBuilding(locationGroup, facilitySize, facilityHeight, loc.color, scale);
@@ -3396,6 +3404,117 @@ function createCityHallBuilding(locationGroup, facilitySize, facilityHeight, col
         sign: sign,
         decorations: decorations
     });
+}
+
+// 公園を作成する関数
+function createParkBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // 公園は建物ではなく、緑地と装飾物で表現
+    
+    // 地面（芝生）
+    const groundGeometry = new THREE.BoxGeometry(facilitySize, 0.1, facilitySize);
+    const groundMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x228B22, // 緑
+        transparent: true, 
+        opacity: 0.6 
+    });
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.position.y = 0.05;
+    locationGroup.add(ground);
+    
+    // 木を配置
+    for(let i = 0; i < 3; i++) {
+        const angle = (i * Math.PI * 2) / 3;
+        const radius = facilitySize * 0.25;
+        
+        // 木の幹
+        const trunkGeometry = new THREE.CylinderGeometry(0.2 * scale, 0.3 * scale, 1.5 * scale, 8);
+        const trunkMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x8B4513,
+            transparent: true, 
+            opacity: 0.8 
+        });
+        const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+        trunk.position.set(
+            Math.cos(angle) * radius,
+            0.75 * scale,
+            Math.sin(angle) * radius
+        );
+        locationGroup.add(trunk);
+        
+        // 木の葉
+        const leavesGeometry = new THREE.SphereGeometry(1 * scale, 8, 8);
+        const leavesMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x228B22,
+            transparent: true, 
+            opacity: 0.7 
+        });
+        const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+        leaves.position.set(
+            Math.cos(angle) * radius,
+            2 * scale,
+            Math.sin(angle) * radius
+        );
+        locationGroup.add(leaves);
+    }
+    
+    // ベンチ
+    const benchGeometry = new THREE.BoxGeometry(2 * scale, 0.2 * scale, 0.5 * scale);
+    const benchMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x8B4513,
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const bench = new THREE.Mesh(benchGeometry, benchMaterial);
+    bench.position.set(0, 0.1 * scale, facilitySize * 0.3);
+    locationGroup.add(bench);
+}
+
+// 町の広場を作成する関数
+function createTownSquareBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // 町の広場も建物ではなく、石畳と装飾物で表現
+    
+    // 地面（石畳）
+    const groundGeometry = new THREE.BoxGeometry(facilitySize, 0.1, facilitySize);
+    const groundMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xA9A9A9, // 灰色
+        transparent: true, 
+        opacity: 0.6 
+    });
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.position.y = 0.05;
+    locationGroup.add(ground);
+    
+    // 中央の噴水（簡易版）
+    const fountainGeometry = new THREE.CylinderGeometry(scale * 0.8, scale, scale * 1.5, 8);
+    const fountainMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x87CEEB, // 水色
+        transparent: true, 
+        opacity: 0.6 
+    });
+    const fountain = new THREE.Mesh(fountainGeometry, fountainMaterial);
+    fountain.position.y = scale * 0.75;
+    locationGroup.add(fountain);
+    
+    // 周囲にベンチを配置
+    for(let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI * 2) / 4;
+        const radius = facilitySize * 0.35;
+        
+        const benchGeometry = new THREE.BoxGeometry(1.5 * scale, 0.2 * scale, 0.5 * scale);
+        const benchMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x8B4513,
+            transparent: true, 
+            opacity: 0.8 
+        });
+        const bench = new THREE.Mesh(benchGeometry, benchMaterial);
+        bench.position.set(
+            Math.cos(angle) * radius,
+            0.1 * scale,
+            Math.sin(angle) * radius
+        );
+        bench.rotation.y = angle + Math.PI / 2;
+        locationGroup.add(bench);
+    }
 }
 
 // 木を作成する関数

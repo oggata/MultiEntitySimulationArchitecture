@@ -15,8 +15,9 @@ class FacilitySystem {
 
     // 施設の配置を道路の位置関係を考慮して生成
     generateFacilities() {
+        console.log('FacilitySystem.generateFacilities called, isEditorMap =', window.isEditorMap);
         // エディタ地図では自動施設配置を行わず、取り込んだ施設のみ使用
-        if (window.isEditorMap && Array.isArray(this.buildingSystem.buildings)) {
+        if (window.isEditorMap) {
             this.facilities = (Array.isArray(cityLayout.facilities) ? cityLayout.facilities : []).filter(f => !!f);
             console.log('FacilitySystem.generateFacilities: editor facilities =', this.facilities.length, this.facilities);
             return this.facilities;
@@ -229,6 +230,7 @@ class FacilitySystem {
             const facilityInfo = getFacilityInfo(facility.name);
             const facilitySize = getFacilitySize(facility.name);
             const facilityHeight = facilitySize * 0.8;
+            console.log(`Facility ${index}: name=${facility.name}, info=`, facilityInfo, 'size=', facilitySize);
             
             // 詳細な建物を作成
             createDetailedBuilding(locationGroup, {

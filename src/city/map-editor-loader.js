@@ -168,6 +168,11 @@ class MapEditorLoader {
                 const tileType = typeof raw === 'string' ? raw.split('|')[0] : raw;
                 const key = `${x},${y}`;
                 
+                // 施設タイルを除外
+                if (this.isFacilityTile(tileType)) {
+                    continue;
+                }
+                
                 if (this.isBuildingTile(tileType) && !visited.has(key)) {
                     if (tileType === 'residential') {
                         // 住宅は1マス=1軒として個別に出力
@@ -358,7 +363,8 @@ class MapEditorLoader {
         // facility:名称 の場合は名称をそのまま採用
         let facilityName;
         if (typeof tileType === 'string' && tileType.startsWith('facility:')) {
-            facilityName = tileType.replace('facility:', '');
+            // "facility:公園" → "公園" に変換し、さらに |dir: 以降を削除
+            facilityName = tileType.replace('facility:', '').split('|')[0];
         } else {
             // 既存の英名→日本語名マッピング
             const nameMap = {
@@ -370,6 +376,7 @@ class MapEditorLoader {
             };
             facilityName = nameMap[tileType] || '公園';
         }
+        
         const base = {
             name: facilityName,
             x: this.gridToMesaCoords(centerX, 0).x,

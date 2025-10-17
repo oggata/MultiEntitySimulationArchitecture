@@ -265,7 +265,7 @@
             canvas.width = pixelSize;
             canvas.height = pixelSize;
             if (canvasInfoEl) {
-                canvasInfoEl.textContent = `${GRID_SIZE} × ${GRID_SIZE} グリッド（クリック＆ドラッグで配置）`;
+                canvasInfoEl.textContent = `${GRID_SIZE} × ${GRID_SIZE} グリッド（左クリック: 配置 / 右クリック: 削除）`;
             }
         }
         
@@ -465,6 +465,63 @@
             return true;
         }
         
+        // タイルの削除（右クリック）
+        function deleteTile(e) {
+            e.preventDefault(); // コンテキストメニューを無効化
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+            const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+            
+            if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
+                const raw = gridData[y][x];
+                
+                // 空地の場合は何もしない
+                if (raw === 'empty') {
+                    return;
+                }
+                
+                // このタイルのサイズを取得
+                const tileSize = getTileSize(raw);
+                
+                // 建物の左上隅を探す（同じタイルデータを持つ連続したセルの最小座標）
+                let startX = x, startY = y;
+                
+                // 左上に向かって同じタイルを探す
+                for (let checkY = y; checkY >= 0 && checkY > y - tileSize; checkY--) {
+                    if (gridData[checkY][x] === raw) {
+                        startY = checkY;
+                    } else {
+                        break;
+                    }
+                }
+                
+                for (let checkX = x; checkX >= 0 && checkX > x - tileSize; checkX--) {
+                    if (gridData[y][checkX] === raw) {
+                        startX = checkX;
+                    } else {
+                        break;
+                    }
+                }
+                
+                // 建物全体を削除（empty に設定）
+                for (let dy = 0; dy < tileSize; dy++) {
+                    for (let dx = 0; dx < tileSize; dx++) {
+                        if (startY + dy < GRID_SIZE && startX + dx < GRID_SIZE) {
+                            if (gridData[startY + dy][startX + dx] === raw) {
+                                gridData[startY + dy][startX + dx] = 'empty';
+                            }
+                        }
+                    }
+                }
+                
+                // キャンバスを再描画
+                drawCanvas();
+                
+                console.log(`削除: (${startX}, ${startY}) から ${tileSize}x${tileSize} の建物を削除しました`);
+            }
+        }
+        
         // タイルの配置
         function placeTile(e) {
             const rect = canvas.getBoundingClientRect();
@@ -545,8 +602,10 @@
         
         // マウスイベント
         canvas.addEventListener('mousedown', (e) => {
-            isDrawing = true;
-            placeTile(e);
+            if (e.button === 0) { // 左クリック
+                isDrawing = true;
+                placeTile(e);
+            }
         });
         
         canvas.addEventListener('mousemove', (e) => {
@@ -557,6 +616,11 @@
         
         canvas.addEventListener('mouseup', () => {
             isDrawing = false;
+        });
+        
+        // 右クリックで削除
+        canvas.addEventListener('contextmenu', (e) => {
+            deleteTile(e);
         });
         
         canvas.addEventListener('mouseleave', () => {

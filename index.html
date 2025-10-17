@@ -100,6 +100,7 @@
                 </div>
                 <div class="agent-storage-controls">
                     <button onclick="loadSavedAgents()" id="loadAgentsBtn">保存されたエージェントを読み込み</button>
+                    <button onclick="loadDebugAgents()" id="loadDebugAgentsBtn" style="background-color: #FF9800; color: white;">🐛 デバッグ用エージェント30人を作成</button>
                     <button onclick="clearAllAgents()" id="clearAgentsBtn">全エージェントを削除</button>
                     <button id="exportAgentsBtn">エージェント書き出し</button>
                     <button id="importAgentsBtn">エージェント読み込み</button>
@@ -119,6 +120,7 @@
                     </div>
                     <button id="personViewBtn">人物視点切り替え</button>
                     <button id="facilityViewBtn">施設視点切り替え</button>
+                    <button id="autoViewBtn" style="background-color: #4CAF50; color: white;">🎬 自動視点 (5秒)</button>
                     <button id="resetCamera">全体表示</button>
                 </div>
                 <div class="communication-controls">

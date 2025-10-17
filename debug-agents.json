@@ -1,0 +1,213 @@
+[
+  {
+    "name": "佐藤太郎",
+    "age": 35,
+    "occupation": "会社員",
+    "personality": "責任感が強く、真面目な性格",
+    "interests": ["読書", "ジョギング", "料理"]
+  },
+  {
+    "name": "田中花子",
+    "age": 28,
+    "occupation": "看護師",
+    "personality": "明るく社交的で、人の世話をするのが好き",
+    "interests": ["カフェ巡り", "映画鑑賞", "ヨガ"]
+  },
+  {
+    "name": "鈴木健太",
+    "age": 22,
+    "occupation": "大学生",
+    "personality": "好奇心旺盛で活発、新しいことに挑戦するのが好き",
+    "interests": ["ゲーム", "スポーツ", "音楽"]
+  },
+  {
+    "name": "山田美咲",
+    "age": 42,
+    "occupation": "主婦",
+    "personality": "温厚で穏やか、地域活動に熱心",
+    "interests": ["ガーデニング", "料理", "ボランティア"]
+  },
+  {
+    "name": "伊藤隆",
+    "age": 55,
+    "occupation": "教師",
+    "personality": "知的で思慮深い、教育に情熱を持つ",
+    "interests": ["歴史", "将棋", "散歩"]
+  },
+  {
+    "name": "渡辺さくら",
+    "age": 31,
+    "occupation": "デザイナー",
+    "personality": "創造的で繊細、芸術に対する感性が高い",
+    "interests": ["絵画", "美術館巡り", "カメラ"]
+  },
+  {
+    "name": "中村大輔",
+    "age": 45,
+    "occupation": "自営業",
+    "personality": "行動力があり、前向きで明るい",
+    "interests": ["ビジネス", "ゴルフ", "旅行"]
+  },
+  {
+    "name": "小林麻衣",
+    "age": 26,
+    "occupation": "カフェ店員",
+    "personality": "親しみやすく、笑顔が素敵",
+    "interests": ["コーヒー", "お菓子作り", "ファッション"]
+  },
+  {
+    "name": "加藤優",
+    "age": 38,
+    "occupation": "エンジニア",
+    "personality": "論理的で冷静、問題解決能力が高い",
+    "interests": ["プログラミング", "ガジェット", "SF映画"]
+  },
+  {
+    "name": "吉田愛",
+    "age": 29,
+    "occupation": "保育士",
+    "personality": "優しく面倒見がよい、子供が大好き",
+    "interests": ["絵本", "ピアノ", "手芸"]
+  },
+  {
+    "name": "高橋誠",
+    "age": 50,
+    "occupation": "医師",
+    "personality": "真摯で献身的、患者思い",
+    "interests": ["医学研究", "クラシック音楽", "ワイン"]
+  },
+  {
+    "name": "松本結衣",
+    "age": 24,
+    "occupation": "アパレル店員",
+    "personality": "おしゃれで流行に敏感、明るい",
+    "interests": ["ショッピング", "SNS", "ダンス"]
+  },
+  {
+    "name": "木村浩二",
+    "age": 33,
+    "occupation": "消防士",
+    "personality": "勇敢で体力があり、正義感が強い",
+    "interests": ["筋トレ", "サッカー", "キャンプ"]
+  },
+  {
+    "name": "林夏美",
+    "age": 27,
+    "occupation": "ライター",
+    "personality": "観察力が鋭く、表現力豊か",
+    "interests": ["読書", "カフェ", "旅行"]
+  },
+  {
+    "name": "斉藤悟",
+    "age": 41,
+    "occupation": "料理人",
+    "personality": "職人気質で真剣、食へのこだわりが強い",
+    "interests": ["料理", "食べ歩き", "日本酒"]
+  },
+  {
+    "name": "清水彩香",
+    "age": 23,
+    "occupation": "美容師",
+    "personality": "おしゃべり好きで社交的、トレンドに敏感",
+    "interests": ["美容", "メイク", "ネイルアート"]
+  },
+  {
+    "name": "森田修",
+    "age": 48,
+    "occupation": "建築士",
+    "personality": "几帳面で計画的、美的センスが高い",
+    "interests": ["建築", "インテリア", "写真"]
+  },
+  {
+    "name": "池田真理",
+    "age": 36,
+    "occupation": "薬剤師",
+    "personality": "丁寧で親切、健康に関する知識が豊富",
+    "interests": ["健康", "ヨガ", "ハーブティー"]
+  },
+  {
+    "name": "橋本龍一",
+    "age": 30,
+    "occupation": "警察官",
+    "personality": "責任感が強く冷静、地域の安全を守る",
+    "interests": ["武道", "バイク", "推理小説"]
+  },
+  {
+    "name": "青木奈々",
+    "age": 25,
+    "occupation": "受付",
+    "personality": "礼儀正しく丁寧、笑顔が素敵",
+    "interests": ["フラワーアレンジメント", "紅茶", "音楽"]
+  },
+  {
+    "name": "山口拓也",
+    "age": 39,
+    "occupation": "運送業",
+    "personality": "タフで粘り強い、体力に自信がある",
+    "interests": ["ドライブ", "釣り", "野球観戦"]
+  },
+  {
+    "name": "石川優子",
+    "age": 44,
+    "occupation": "会計士",
+    "personality": "几帳面で正確、数字に強い",
+    "interests": ["資格取得", "クラシックバレエ", "ワイン"]
+  },
+  {
+    "name": "長谷川陽太",
+    "age": 21,
+    "occupation": "フリーター",
+    "personality": "自由奔放で楽観的、将来を模索中",
+    "interests": ["音楽", "バンド活動", "映画"]
+  },
+  {
+    "name": "藤田美穂",
+    "age": 32,
+    "occupation": "営業",
+    "personality": "社交的で話し上手、交渉力が高い",
+    "interests": ["ゴルフ", "ワイン", "旅行"]
+  },
+  {
+    "name": "岡田健",
+    "age": 53,
+    "occupation": "税理士",
+    "personality": "誠実で信頼できる、細かい作業が得意",
+    "interests": ["囲碁", "園芸", "歴史"]
+  },
+  {
+    "name": "上田千春",
+    "age": 28,
+    "occupation": "図書館司書",
+    "personality": "物静かで知的、本が大好き",
+    "interests": ["読書", "クラシック音楽", "茶道"]
+  },
+  {
+    "name": "村上亮",
+    "age": 37,
+    "occupation": "システムエンジニア",
+    "personality": "合理的で効率重視、テクノロジーに詳しい",
+    "interests": ["プログラミング", "ゲーム開発", "アニメ"]
+  },
+  {
+    "name": "前田理沙",
+    "age": 29,
+    "occupation": "イラストレーター",
+    "personality": "想像力豊かで繊細、自分の世界観を持つ",
+    "interests": ["イラスト", "漫画", "カフェ巡り"]
+  },
+  {
+    "name": "野村翔太",
+    "age": 26,
+    "occupation": "スポーツインストラクター",
+    "personality": "元気で明るい、健康的なライフスタイルを大切にする",
+    "interests": ["フィットネス", "マラソン", "栄養学"]
+  },
+  {
+    "name": "坂本由美",
+    "age": 47,
+    "occupation": "ピアノ教師",
+    "personality": "上品で優雅、音楽への愛情が深い",
+    "interests": ["クラシック音楽", "コンサート", "読書"]
+  }
+]
+

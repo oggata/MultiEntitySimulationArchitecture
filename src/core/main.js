@@ -441,6 +441,10 @@ async function init() {
                 // エディタ地図でもgenerateCity()を呼び出してFacilitySystemを初期化
                 console.log('エディタ地図でgenerateCity()を呼び出します');
                 cityLayout.generateCity();
+                
+                // エディターマップ用にカメラをリセット
+                console.log('エディターマップ用にカメラをリセット');
+                cameraSystem.resetCamera();
 
                 // エディタ反映直後に道路を強制描画して存在をログ
                 if (cityLayout && cityLayout.getRoadSystem) {
@@ -779,6 +783,7 @@ async function init() {
     // カメラ制御ボタンのイベント登録
     const personBtn = document.getElementById('personViewBtn');
     const facilityBtn = document.getElementById('facilityViewBtn');
+    const autoViewBtn = document.getElementById('autoViewBtn');
     const resetBtn = document.getElementById('resetCamera');
 
     if (personBtn) {
@@ -796,8 +801,42 @@ async function init() {
             cameraSystem.focusCameraOnFacilityByIndex(cameraSystem.currentFacilityIndex, locations);
         });
     }
+    if (autoViewBtn) {
+        autoViewBtn.addEventListener('click', () => {
+            console.log('自動視点ボタンがクリックされました');
+            console.log('現在の状態:', cameraSystem.autoViewEnabled);
+            console.log('エージェント数:', window.agents ? window.agents.length : 0);
+            
+            if (cameraSystem.autoViewEnabled) {
+                // 自動視点を停止
+                console.log('自動視点を停止します');
+                cameraSystem.stopAutoView();
+                autoViewBtn.style.backgroundColor = '#4CAF50';
+                autoViewBtn.textContent = '🎬 自動視点 (5秒)';
+            } else {
+                // 自動視点を開始
+                if (!window.agents || window.agents.length === 0) {
+                    alert('エージェントが存在しません。先にエージェントを作成してください。');
+                    return;
+                }
+                console.log('自動視点を開始します');
+                cameraSystem.startAutoView();
+                autoViewBtn.style.backgroundColor = '#f44336';
+                autoViewBtn.textContent = '⏹️ 自動視点停止';
+            }
+        });
+    } else {
+        console.error('autoViewBtn が見つかりません');
+    }
     if (resetBtn) {
-        resetBtn.addEventListener('click', () => cameraSystem.resetCamera());
+        resetBtn.addEventListener('click', () => {
+            cameraSystem.resetCamera();
+            // 自動視点ボタンのスタイルもリセット
+            if (autoViewBtn) {
+                autoViewBtn.style.backgroundColor = '#4CAF50';
+                autoViewBtn.textContent = '🎬 自動視点 (5秒)';
+            }
+        });
     }
 
     // 道路表示ボタンのイベント登録
@@ -1036,6 +1075,8 @@ function updateAgentInfo() {
     agents.forEach(agent => {
         const agentCard = document.createElement('div');
         agentCard.className = 'agent-card';
+        // エージェントカードに一意のIDを設定（自動スクロール用）
+        agentCard.id = `agent-card-${agent.name.replace(/\s/g, '_')}`;
         
         // 基本情報
         const nameDiv = document.createElement('div');

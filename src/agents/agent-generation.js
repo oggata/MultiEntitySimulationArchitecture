@@ -649,4 +649,316 @@ function validateAgentData(data) {
     }
 
     return true;
+}
+
+// デバッグ用エージェントを一括読み込み
+async function loadDebugAgents() {
+    if (!confirm('デバッグ用エージェント30人を作成します。\n既存のエージェントは削除されます。\nよろしいですか？')) {
+        return;
+    }
+
+    // 既存のエージェントをクリア
+    clearAllAgents();
+
+    const generationStatus = document.getElementById('generationStatus');
+    const generationMessage = document.getElementById('generationMessage');
+    const generationProgress = document.getElementById('generationProgress');
+    const loadDebugAgentsBtn = document.getElementById('loadDebugAgentsBtn');
+    
+    generationStatus.style.display = 'block';
+    generationMessage.textContent = 'デバッグ用エージェントを読み込み中...';
+    generationProgress.textContent = '';
+    loadDebugAgentsBtn.disabled = true;
+
+    try {
+        // JSONファイルを読み込み
+        const response = await fetch('./debug-agents.json');
+        if (!response.ok) {
+            throw new Error('debug-agents.jsonの読み込みに失敗しました');
+        }
+        const debugAgents = await response.json();
+
+        // 各エージェントを生成
+        for (let i = 0; i < debugAgents.length; i++) {
+            const agentData = debugAgents[i];
+            generationProgress.textContent = `${i + 1} / ${debugAgents.length} 人目を作成中...`;
+
+            // 自宅を割り当て
+            const assignedHome = homeManager.getRandomAvailableHome();
+            if (!assignedHome) {
+                console.error(`エージェント「${agentData.name}」に自宅を割り当てできませんでした。`);
+                continue;
+            }
+            
+            assignedHome.occupant = agentData.name;
+
+            // エージェントデータを構築
+            const fullAgentData = {
+                name: agentData.name,
+                age: agentData.age,
+                background: {
+                    birthplace: "日本",
+                    education: generateEducation(agentData.age, agentData.occupation),
+                    career: agentData.occupation,
+                    hobbies: agentData.interests,
+                    religion: "特になし",
+                    family: generateFamilyInfo(agentData.age)
+                },
+                personality: {
+                    description: agentData.personality,
+                    traits: generatePersonalityTraits(agentData.personality, agentData.occupation),
+                    values: generateValues(agentData.personality),
+                    goals: generateGoals(agentData.occupation, agentData.age)
+                },
+                dailyRoutine: generateDefaultDailyRoutine(agentData.occupation),
+                home: assignedHome,
+                color: Math.random() * 0xffffff  // ランダムな色
+            };
+
+            // エージェントを作成
+            const agent = new Agent(fullAgentData, agents.length);
+            agents.push(agent);
+
+            // 少し待機（アニメーション効果）
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+
+        // エージェント情報を更新
+        updateAgentInfo();
+
+        generationMessage.textContent = `✅ ${debugAgents.length}人のデバッグ用エージェントを作成しました！`;
+        generationProgress.textContent = 'シミュレーションを開始してください';
+        
+        // 3秒後にメッセージを消す
+        setTimeout(() => {
+            generationStatus.style.display = 'none';
+        }, 3000);
+
+        addLog(`🐛 デバッグ用エージェント${debugAgents.length}人を作成しました`, 'system');
+
+    } catch (error) {
+        console.error('デバッグエージェントの読み込みエラー:', error);
+        generationMessage.textContent = '❌ エラーが発生しました';
+        generationProgress.textContent = error.message;
+        
+        setTimeout(() => {
+            generationStatus.style.display = 'none';
+        }, 5000);
+    } finally {
+        loadDebugAgentsBtn.disabled = false;
+    }
+}
+
+// 年齢と職業から学歴を生成
+function generateEducation(age, occupation) {
+    const educationMap = {
+        '医師': '医学部卒業',
+        '看護師': '看護専門学校卒業',
+        '教師': '教育学部卒業',
+        '建築士': '工学部建築学科卒業',
+        '薬剤師': '薬学部卒業',
+        '会計士': '商学部卒業、公認会計士資格取得',
+        '税理士': '商学部卒業、税理士資格取得',
+        '警察官': '警察学校卒業',
+        '消防士': '消防学校卒業',
+        'エンジニア': '工学部卒業',
+        'システムエンジニア': '情報工学部卒業',
+        'デザイナー': '芸術大学卒業',
+        'イラストレーター': '美術大学卒業',
+        '大学生': '大学在学中',
+        'フリーター': '高校卒業'
+    };
+    
+    return educationMap[occupation] || (age >= 22 ? '大学卒業' : '高校卒業');
+}
+
+// 年齢から家族構成を生成
+function generateFamilyInfo(age) {
+    if (age < 25) {
+        return '両親と同居または一人暮らし';
+    } else if (age < 35) {
+        return Math.random() > 0.5 ? '独身' : '配偶者と二人暮らし';
+    } else if (age < 50) {
+        return Math.random() > 0.3 ? '配偶者と子供' : '配偶者と二人暮らし';
+    } else {
+        return Math.random() > 0.4 ? '配偶者と子供（独立した子供もいる）' : '配偶者と二人暮らし';
+    }
+}
+
+// 性格から価値観を生成
+function generateValues(personalityDescription) {
+    const desc = personalityDescription.toLowerCase();
+    const values = [];
+    
+    if (desc.includes('真面目') || desc.includes('責任感')) {
+        values.push('誠実さ');
+        values.push('責任');
+    }
+    if (desc.includes('社交') || desc.includes('明るい')) {
+        values.push('人間関係');
+        values.push('コミュニケーション');
+    }
+    if (desc.includes('創造') || desc.includes('芸術')) {
+        values.push('創造性');
+        values.push('自己表現');
+    }
+    if (desc.includes('優し') || desc.includes('思いやり')) {
+        values.push('思いやり');
+        values.push('他者への配慮');
+    }
+    if (desc.includes('挑戦') || desc.includes('好奇心')) {
+        values.push('成長');
+        values.push('チャレンジ精神');
+    }
+    
+    // 最低2つの価値観を保証
+    if (values.length < 2) {
+        values.push('家族');
+        values.push('健康');
+    }
+    
+    return values.slice(0, 3).join('、');
+}
+
+// 職業と年齢から目標を生成
+function generateGoals(occupation, age) {
+    const goalMap = {
+        '会社員': '昇進してマネージャーになる',
+        '看護師': '患者に寄り添える看護師になる',
+        '教師': '生徒たちの成長を支える',
+        '医師': '多くの患者を救う名医になる',
+        'エンジニア': '革新的なシステムを開発する',
+        'デザイナー': '人々の心に残る作品を創る',
+        '料理人': '自分の店を持つ',
+        '営業': 'トップセールスになる',
+        'スポーツインストラクター': '多くの人に健康を届ける',
+        'ピアノ教師': '生徒を一流の演奏家に育てる',
+        '大学生': '将来の夢を見つける',
+        'フリーター': '自分の道を見つける'
+    };
+    
+    let goal = goalMap[occupation] || '充実した人生を送る';
+    
+    // 年齢による目標の調整
+    if (age > 50) {
+        goal = '経験を活かして後進を育てる';
+    }
+    
+    return goal;
+}
+
+// 性格と職業から性格特性を生成
+function generatePersonalityTraits(personalityDescription, occupation) {
+    // 性格説明から特性値を推定
+    const traits = {
+        sociability: 0.5,  // デフォルト値
+        energy: 0.5,
+        routine: 0.5,
+        curiosity: 0.5,
+        empathy: 0.5
+    };
+    
+    // 性格説明のキーワードから特性を調整
+    const desc = personalityDescription.toLowerCase();
+    
+    // 社交性
+    if (desc.includes('社交的') || desc.includes('明るい') || desc.includes('おしゃべり')) {
+        traits.sociability = 0.7 + Math.random() * 0.2;
+    } else if (desc.includes('内向') || desc.includes('物静か') || desc.includes('静か')) {
+        traits.sociability = 0.2 + Math.random() * 0.2;
+    }
+    
+    // 活動的さ
+    if (desc.includes('活発') || desc.includes('元気') || desc.includes('活動的') || desc.includes('行動力')) {
+        traits.energy = 0.7 + Math.random() * 0.2;
+    } else if (desc.includes('穏やか') || desc.includes('落ち着') || desc.includes('ゆったり')) {
+        traits.energy = 0.2 + Math.random() * 0.2;
+    }
+    
+    // ルーチン重視
+    if (desc.includes('几帳面') || desc.includes('真面目') || desc.includes('計画的') || desc.includes('責任感')) {
+        traits.routine = 0.7 + Math.random() * 0.2;
+    } else if (desc.includes('自由') || desc.includes('楽観') || desc.includes('奔放')) {
+        traits.routine = 0.2 + Math.random() * 0.2;
+    }
+    
+    // 好奇心
+    if (desc.includes('好奇心') || desc.includes('挑戦') || desc.includes('創造') || desc.includes('知的')) {
+        traits.curiosity = 0.7 + Math.random() * 0.2;
+    } else if (desc.includes('保守') || desc.includes('慎重')) {
+        traits.curiosity = 0.2 + Math.random() * 0.2;
+    }
+    
+    // 共感性
+    if (desc.includes('優しい') || desc.includes('思いやり') || desc.includes('共感') || desc.includes('面倒見')) {
+        traits.empathy = 0.7 + Math.random() * 0.2;
+    } else if (desc.includes('冷静') || desc.includes('論理')) {
+        traits.empathy = 0.3 + Math.random() * 0.2;
+    }
+    
+    // 職業による調整
+    const occupationTraits = {
+        '看護師': { empathy: 0.8, sociability: 0.7 },
+        '教師': { empathy: 0.7, sociability: 0.7, routine: 0.7 },
+        '保育士': { empathy: 0.9, sociability: 0.8, energy: 0.8 },
+        '医師': { routine: 0.8, curiosity: 0.7 },
+        '警察官': { routine: 0.8, energy: 0.7 },
+        '消防士': { energy: 0.9, routine: 0.8 },
+        'エンジニア': { curiosity: 0.8, routine: 0.7 },
+        'デザイナー': { curiosity: 0.9, empathy: 0.6 },
+        'イラストレーター': { curiosity: 0.8, empathy: 0.7 },
+        'カフェ店員': { sociability: 0.7, empathy: 0.6 },
+        '営業': { sociability: 0.9, energy: 0.7 },
+        'スポーツインストラクター': { energy: 0.9, sociability: 0.8 },
+        'ピアノ教師': { empathy: 0.7, routine: 0.7 }
+    };
+    
+    if (occupationTraits[occupation]) {
+        Object.assign(traits, occupationTraits[occupation]);
+    }
+    
+    // 値を0-1の範囲に制限
+    for (const key in traits) {
+        traits[key] = Math.max(0, Math.min(1, traits[key]));
+    }
+    
+    return traits;
+}
+
+// 職業に応じたデフォルトの日課を生成
+function generateDefaultDailyRoutine(occupation) {
+    const routines = {
+        '会社員': '朝7時に起床し、8時に出勤。午前中はデスクワーク、昼休みはカフェでランチ。午後は会議や資料作成。18時に退社し、帰宅後は夕食を取り、趣味の時間を過ごす。23時に就寝。',
+        '看護師': '朝6時に起床し、病院へ出勤。午前中は患者のケアや薬の準備。昼休みは病院内の食堂で食事。午後も引き続き患者のケア。17時に退勤し、帰宅後はリラックスタイム。22時に就寝。',
+        '大学生': '朝8時に起床し、大学へ。午前中は講義を受け、昼休みは学食で友人と食事。午後も講義や図書館で勉強。夕方はサークル活動やアルバイト。帰宅後は夕食を取り、深夜まで勉強や趣味。1時に就寝。',
+        '主婦': '朝6時に起床し、朝食の準備と家事。午前中は買い物や洗濯、掃除。昼は自宅で軽く食事。午後は地域のボランティアや趣味の時間。夕方は夕食の準備。家族と食事後、片付けを済ませて22時に就寝。',
+        '教師': '朝6時30分に起床し、学校へ出勤。午前中は授業や生徒指導。昼休みは職員室で昼食。午後も授業や部活動の指導。17時に退勤し、帰宅後は授業の準備や採点。22時30分に就寝。',
+        'デザイナー': '朝8時に起床し、出勤。午前中はクライアントとの打ち合わせやデザイン作業。昼はおしゃれなカフェでランチ。午後も引き続きデザイン作業。19時に退社し、帰宅後は趣味の時間。24時に就寝。',
+        '自営業': '朝7時に起床し、店舗へ。午前中は仕入れや店の準備。昼休みは軽く食事。午後は接客や経理作業。18時に閉店し、帰宅後は夕食と家族との時間。23時に就寝。',
+        'カフェ店員': '朝8時に起床し、カフェへ出勤。午前中は開店準備と接客。昼は交代で休憩。午後も接客とコーヒーの提供。17時に退勤し、帰宅後は趣味の時間。23時に就寝。',
+        'エンジニア': '朝9時に起床し、出勤またはリモートワーク。午前中はコーディングや設計。昼は自宅やオフィスで食事。午後も開発作業や会議。19時に業務終了。夕食後は技術書を読んだり、個人プロジェクト。1時に就寝。',
+        '保育士': '朝6時30分に起床し、保育園へ出勤。午前中は子供たちと遊びや学習。昼は子供たちと一緒に給食。午後も活動や昼寝の時間。17時に退勤し、帰宅後はゆっくり夕食。22時に就寝。',
+        '医師': '朝6時に起床し、病院へ。午前中は診察や手術。昼は短い休憩で軽食。午後も診察や患者の回診。19時に退勤（緊急時は夜勤も）。帰宅後は医学文献を読んだり、家族との時間。23時30分に就寝。',
+        'アパレル店員': '朝9時30分に起床し、店舗へ出勤。午前中は開店準備と接客。昼は交代で休憩。午後も接客やディスプレイの変更。19時に退勤し、帰宅後はSNSチェックや友人との交流。24時に就寝。',
+        '消防士': '朝5時30分に起床し、消防署へ。午前中は訓練や装備の点検。昼は署内で食事。午後も訓練や出動準備。17時に退勤（24時間勤務の日も）。帰宅後は筋トレや家族との時間。22時に就寝。',
+        'ライター': '朝8時に起床し、自宅やカフェで執筆。午前中は取材や資料収集。昼はカフェでランチ。午後も執筆作業。18時頃に作業終了。夕食後は読書や情報収集。24時に就寝。',
+        '料理人': '朝9時に起床し、レストランへ。午前中は仕込みや食材の準備。昼は軽く食事。午後も調理や接客準備。夜は営業で調理。22時に退勤し、帰宅後は軽く夕食。1時に就寝。',
+        '美容師': '朝8時30分に起床し、美容室へ出勤。午前中は予約客の施術。昼は交代で休憩。午後も施術や接客。18時に退勤し、帰宅後は趣味の時間。23時30分に就寝。',
+        '建築士': '朝8時に起床し、事務所へ出勤。午前中は設計図の作成や打ち合わせ。昼は近くのレストランで食事。午後も設計作業や現場視察。18時に退勤し、帰宅後は建築雑誌を読んだり、趣味の時間。23時に就寝。',
+        '薬剤師': '朝8時に起床し、薬局へ出勤。午前中は処方箋の調剤や接客。昼は休憩室で食事。午後も調剤や在庫管理。17時30分に退勤し、帰宅後はヨガや読書。22時30分に就寝。',
+        '警察官': '朝6時に起床し、警察署へ出勤。午前中はパトロールや事務作業。昼は署内で食事。午後もパトロールや事件対応。18時に退勤（夜勤もあり）。帰宅後は武道の練習や家族との時間。22時に就寝。',
+        '受付': '朝8時に起床し、オフィスへ出勤。午前中は来客対応や電話応対。昼は近くのカフェで食事。午後も受付業務や事務作業。17時に退勤し、帰宅後は趣味の時間。23時に就寝。',
+        '運送業': '朝5時に起床し、配送センターへ。午前中は荷物の積み込みと配達。昼は車内で簡単に食事。午後も配達業務。17時に業務終了し、帰宅後は疲れを癒す。21時に就寝。',
+        '会計士': '朝8時に起床し、事務所へ出勤。午前中は帳簿の確認や税務処理。昼は近くのレストランで食事。午後も会計業務や顧客との打ち合わせ。18時に退勤し、帰宅後は資格勉強や趣味の時間。23時に就寝。',
+        'フリーター': '朝10時に起床し、アルバイト先へ。午前中は接客や作業。昼は休憩で軽食。午後も業務。17時に退勤し、帰宅後はバンド練習や友人と遊ぶ。深夜1時に就寝。',
+        '営業': '朝7時30分に起床し、出勤。午前中は顧客訪問や商談。昼は外出先で食事。午後も営業活動や資料作成。18時30分に退勤し、帰宅後は軽く運動や夕食。23時に就寝。',
+        '税理士': '朝8時に起床し、事務所へ出勤。午前中は税務申告書の作成や相談業務。昼は近くのレストランで食事。午後も税務業務や顧客対応。18時に退勤し、帰宅後は囲碁や園芸。22時30分に就寝。',
+        '図書館司書': '朝8時30分に起床し、図書館へ出勤。午前中は本の整理や貸出業務。昼は休憩室で食事。午後も業務や読書会の準備。17時に退勤し、帰宅後は読書や音楽鑑賞。22時に就寝。',
+        'システムエンジニア': '朝9時に起床し、リモートワークまたは出勤。午前中はシステム開発や設計。昼は自宅やオフィスで食事。午後も開発作業や会議。19時に業務終了。夕食後は趣味のゲーム開発。1時に就寝。',
+        'イラストレーター': '朝9時に起床し、自宅のスタジオで作業。午前中はイラスト制作や打ち合わせ。昼はカフェでランチ。午後も制作作業。18時頃に作業終了。夕食後は漫画を読んだり、カフェ巡り。24時に就寝。',
+        'スポーツインストラクター': '朝6時に起床し、ジムへ出勤。午前中はトレーニング指導や自主トレ。昼は健康的な食事。午後もレッスンやカウンセリング。18時に退勤し、帰宅後は栄養学の勉強。22時に就寝。',
+        'ピアノ教師': '朝8時に起床し、自宅または教室へ。午前中はレッスンや練習。昼は軽く食事。午後もレッスンや発表会の準備。17時に終了し、帰宅後はコンサート鑑賞や読書。22時30分に就寝。'
+    };
+
+    return routines[occupation] || '朝8時に起床し、仕事へ。午前中は業務をこなし、昼休みは食事。午後も業務を続け、18時に退勤。帰宅後は夕食を取り、趣味の時間を過ごす。23時に就寝。';
 } 

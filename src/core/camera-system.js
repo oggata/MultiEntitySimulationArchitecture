@@ -22,7 +22,7 @@ class CameraSystem {
         this.targetAgent = null;
         this.targetFacility = null;
         this.cameraFollowEnabled = false;
-        this.cameraMode = 'free'; // 'free', 'agent', 'facility'
+        this.cameraMode = 'free'; // 'free', 'agent', 'facility', 'auto'
         
         // カメラの回転角度を管理
         this.cameraRotationX = 0; // 上下の回転
@@ -30,6 +30,12 @@ class CameraSystem {
         
         // ターゲットマーカー管理
         this.targetMarker = null;
+        
+        // 自動視点切り替え
+        this.autoViewEnabled = false;
+        this.autoViewInterval = null;
+        this.autoViewTimer = 0;
+        this.autoViewDuration = 5000; // 5秒
         
         // マウス制御用変数
         this.mouseX = 0;
@@ -44,12 +50,14 @@ class CameraSystem {
         
         // エディターマップの場合は北向き、少し高い位置から見下ろす
         if (window.isEditorMap) {
-            this.camera.position.set(0, 50, 60);  // 高めの位置から
-            this.camera.lookAt(0, 0, -20);        // 北方向を見る
+            this.camera.position.set(0, 50, 60);  // 高めの位置から、南側に配置
             
-            // 見下ろす角度を設定
-            this.cameraRotationX = -0.3;  // 少し下向き
-            this.cameraRotationY = Math.PI;  // 北向き（180度回転）
+            // 見下ろす角度を設定（回転ベースでカメラを制御）
+            this.cameraRotationX = -0.3;     // 少し下向き
+            this.cameraRotationY = Math.PI;  // 北向き（Z軸負の方向）
+            
+            // カメラの向きを更新
+            this.updateCameraRotation();
         } else {
             // 通常モードのカメラ位置
             this.camera.position.set(0, 35, 35);
@@ -70,7 +78,11 @@ class CameraSystem {
     
     // カメラ追従更新関数
     updateCameraFollow() {
-        if (!this.cameraFollowEnabled || this.cameraMode !== 'agent' || !this.targetAgent || !this.targetAgent.mesh) {
+        // 自動視点モードまたは通常のエージェント追従モード
+        if (!this.cameraFollowEnabled || 
+            (this.cameraMode !== 'agent' && this.cameraMode !== 'auto') || 
+            !this.targetAgent || 
+            !this.targetAgent.mesh) {
             return;
         }
         
@@ -207,6 +219,9 @@ class CameraSystem {
         // カメラモード表示を更新
         this.updateCameraModeDisplay();
         
+        // エージェント情報パネルを該当のエージェントまでスクロール
+        this.scrollToAgentCard(agent.name);
+        
         addLog(`👁️ ${agent.name}の視点に切り替えました（追従モード有効）`, 'system');
     }
     
@@ -246,8 +261,128 @@ class CameraSystem {
         addLog(`🏢 ${facility.name}の視点に切り替えました（ターゲットマーカー表示）`, 'system');
     }
     
+    // 自動視点切り替えを開始
+    startAutoView() {
+        this.autoViewEnabled = true;
+        this.cameraMode = 'auto';
+        
+        // 最初の視点切り替えを実行
+        this.switchToNextMovingAgent();
+        
+        // 5秒ごとに切り替え
+        this.autoViewInterval = setInterval(() => {
+            if (this.autoViewEnabled && window.simulationRunning && !window.simulationPaused) {
+                this.switchToNextMovingAgent();
+            }
+        }, this.autoViewDuration);
+        
+        addLog('🎬 自動視点切り替えを開始しました（5秒ごと）', 'system');
+        this.updateCameraModeDisplay();
+    }
+    
+    // 自動視点切り替えを停止
+    stopAutoView() {
+        this.autoViewEnabled = false;
+        
+        if (this.autoViewInterval) {
+            clearInterval(this.autoViewInterval);
+            this.autoViewInterval = null;
+        }
+        
+        addLog('⏹️ 自動視点切り替えを停止しました', 'system');
+    }
+    
+    // 次の移動中のエージェントに切り替え
+    switchToNextMovingAgent() {
+        if (!window.agents || window.agents.length === 0) {
+            addLog('❌ エージェントが見つかりません', 'system');
+            return;
+        }
+        
+        // 移動中のエージェントを優先的に取得
+        const movingAgents = window.agents.filter(agent => {
+            return agent.movementTarget && 
+                   agent.mesh && 
+                   !agent.isInConversation;
+        });
+        
+        // 移動中のエージェントがいない場合は全エージェントから選択
+        const candidateAgents = movingAgents.length > 0 ? movingAgents : window.agents.filter(agent => agent.mesh);
+        
+        if (candidateAgents.length === 0) {
+            addLog('❌ 表示可能なエージェントが見つかりません', 'system');
+            return;
+        }
+        
+        // ランダムにエージェントを選択
+        const randomIndex = Math.floor(Math.random() * candidateAgents.length);
+        const selectedAgent = candidateAgents[randomIndex];
+        
+        // エージェント視点に切り替え
+        this.targetAgent = selectedAgent;
+        this.cameraFollowEnabled = true;
+        
+        // カメラの回転角度をリセット
+        this.cameraRotationX = 0;
+        this.cameraRotationY = 0;
+        
+        // カメラを人物の後ろに配置
+        const pos = selectedAgent.mesh.position;
+        
+        const cameraOffsetX = -8;
+        const cameraOffsetZ = 0;
+        const cameraOffsetY = 4;
+        
+        this.camera.position.set(
+            pos.x + cameraOffsetX,
+            pos.y + cameraOffsetY,
+            pos.z + cameraOffsetZ
+        );
+        this.camera.lookAt(pos.x, pos.y + 2.0, pos.z);
+        
+        // ステータスメッセージ
+        const movingStatus = selectedAgent.movementTarget ? '移動中' : '停止中';
+        const destination = selectedAgent.targetLocation ? ` → ${selectedAgent.targetLocation.name}へ` : '';
+        addLog(`👤 ${selectedAgent.name}（${movingStatus}${destination}）を追跡中`, 'info');
+        
+        // エージェント情報パネルを該当のエージェントまでスクロール
+        this.scrollToAgentCard(selectedAgent.name);
+        
+        this.updateCameraModeDisplay();
+    }
+    
+    // エージェントカードまでスクロールする関数
+    scrollToAgentCard(agentName) {
+        // エージェント名からIDを生成（スペースをアンダースコアに変換）
+        const cardId = `agent-card-${agentName.replace(/\s/g, '_')}`;
+        const agentCard = document.getElementById(cardId);
+        
+        if (agentCard) {
+            // スムーズスクロールでカードまで移動
+            agentCard.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+                inline: 'nearest'
+            });
+            
+            // カードを強調表示（0.5秒間）
+            agentCard.style.transition = 'background-color 0.3s';
+            const originalBg = agentCard.style.backgroundColor;
+            agentCard.style.backgroundColor = 'rgba(76, 175, 80, 0.3)';
+            
+            setTimeout(() => {
+                agentCard.style.backgroundColor = originalBg;
+            }, 500);
+        }
+    }
+    
     // カメラをリセット
     resetCamera() {
+        // 自動視点を停止
+        if (this.autoViewEnabled) {
+            this.stopAutoView();
+        }
+        
         // ターゲットマーカーを削除
         this.removeTargetMarker();
         
@@ -259,11 +394,13 @@ class CameraSystem {
         // エディターマップの場合は北向き、少し高い位置から見下ろす
         if (window.isEditorMap) {
             this.camera.position.set(0, 50, 60);
-            this.camera.lookAt(0, 0, -20);
             
             // 見下ろす角度を設定
-            this.cameraRotationX = -0.3;  // 少し下向き
-            this.cameraRotationY = Math.PI;  // 北向き（180度回転）
+            this.cameraRotationX = -0.3;     // 少し下向き
+            this.cameraRotationY = Math.PI;  // 北向き（Z軸負の方向）
+            
+            // カメラの向きを更新
+            this.updateCameraRotation();
         } else {
             // 通常モードのカメラ位置
             this.camera.position.set(0, 30, 30);
@@ -331,6 +468,16 @@ class CameraSystem {
         if (!display) return;
         
         switch (this.cameraMode) {
+            case 'auto':
+                if (this.targetAgent) {
+                    const movingStatus = this.targetAgent.movementTarget ? '移動中' : '停止中';
+                    display.textContent = `🎬 自動視点: ${this.targetAgent.name} (${movingStatus})`;
+                    display.style.color = '#4CAF50';
+                } else {
+                    display.textContent = '🎬 自動視点（待機中）';
+                    display.style.color = '#4CAF50';
+                }
+                break;
             case 'agent':
                 if (this.targetAgent) {
                     display.textContent = `${this.targetAgent.name}の視点`;

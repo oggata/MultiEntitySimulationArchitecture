@@ -265,7 +265,7 @@
             canvas.width = pixelSize;
             canvas.height = pixelSize;
             if (canvasInfoEl) {
-                canvasInfoEl.textContent = `${GRID_SIZE} × ${GRID_SIZE} グリッド（左クリック: 配置 / 右クリック: 削除）`;
+                canvasInfoEl.textContent = `${GRID_SIZE} × ${GRID_SIZE} グリッド（左クリック: 配置 / 中クリック: 回転 / 右クリック: 削除）`;
             }
         }
         
@@ -465,6 +465,91 @@
             return true;
         }
         
+        // 建物の回転（中クリック）
+        function rotateTile(e) {
+            e.preventDefault();
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+            const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+            
+            if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
+                const raw = gridData[y][x];
+                
+                // 空地や道路の場合は何もしない
+                if (raw === 'empty' || raw === 'road') {
+                    return;
+                }
+                
+                // 回転可能なタイルかチェック（方向指定があるもの）
+                if (typeof raw !== 'string' || !raw.includes('|dir:')) {
+                    console.log('このタイルは回転できません');
+                    return;
+                }
+                
+                // 現在の方向を取得
+                const currentDir = (raw.match(/\|dir:([^|]+)/) || [null, 'up'])[1];
+                
+                // 方向のマッピング（右回り）
+                const directionMap = {
+                    'up': 'right',
+                    'right': 'down',
+                    'down': 'left',
+                    'left': 'up'
+                };
+                
+                const newDir = directionMap[currentDir];
+                const baseKey = raw.split('|')[0];
+                const newRaw = `${baseKey}|dir:${newDir}`;
+                
+                // このタイルのサイズを取得
+                const tileSize = getTileSize(raw);
+                
+                // 建物の左上隅を探す
+                let startX = x, startY = y;
+                
+                // 左上に向かって同じタイルを探す
+                for (let checkY = y; checkY >= 0 && checkY > y - tileSize; checkY--) {
+                    if (gridData[checkY][x] === raw) {
+                        startY = checkY;
+                    } else {
+                        break;
+                    }
+                }
+                
+                for (let checkX = x; checkX >= 0 && checkX > x - tileSize; checkX--) {
+                    if (gridData[y][checkX] === raw) {
+                        startX = checkX;
+                    } else {
+                        break;
+                    }
+                }
+                
+                // 建物全体の方向を更新
+                for (let dy = 0; dy < tileSize; dy++) {
+                    for (let dx = 0; dx < tileSize; dx++) {
+                        if (startY + dy < GRID_SIZE && startX + dx < GRID_SIZE) {
+                            if (gridData[startY + dy][startX + dx] === raw) {
+                                gridData[startY + dy][startX + dx] = newRaw;
+                            }
+                        }
+                    }
+                }
+                
+                // キャンバスを再描画
+                drawCanvas();
+                
+                const dirNames = {
+                    'up': '上',
+                    'right': '右',
+                    'down': '下',
+                    'left': '左'
+                };
+                
+                console.log(`回転: (${startX}, ${startY}) の建物を ${dirNames[currentDir]} → ${dirNames[newDir]} に回転しました`);
+            }
+        }
+        
         // タイルの削除（右クリック）
         function deleteTile(e) {
             e.preventDefault(); // コンテキストメニューを無効化
@@ -605,6 +690,8 @@
             if (e.button === 0) { // 左クリック
                 isDrawing = true;
                 placeTile(e);
+            } else if (e.button === 1) { // 中クリック（ホイールクリック）
+                rotateTile(e);
             }
         });
         

@@ -256,7 +256,11 @@ class MapEditorLoader {
             
             if (visited.has(key) || buildingCells.has(key)) continue;
             if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) continue;
-            if (this.gridData[y][x] !== tileType) continue;
+            
+            // グリッドデータのベースタイプを取得（パイプ区切りの最初の部分）
+            const raw = this.gridData[y][x];
+            const cellBaseType = typeof raw === 'string' ? raw.split('|')[0] : raw;
+            if (cellBaseType !== tileType) continue;
             
             buildingCells.add(key);
             
@@ -311,7 +315,8 @@ class MapEditorLoader {
 
         for (let y = 0; y < this.gridSize; y++) {
             for (let x = 0; x < this.gridSize; x++) {
-                const tileType = this.gridData[y][x];
+                const raw = this.gridData[y][x];
+                const tileType = typeof raw === 'string' ? raw.split('|')[0] : raw;
                 const key = `${x},${y}`;
                 
                 if (this.isFacilityTile(tileType) && !visited.has(key)) {

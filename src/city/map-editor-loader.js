@@ -60,7 +60,8 @@ class MapEditorLoader {
 
         for (let y = 0; y < this.gridSize; y++) {
             for (let x = 0; x < this.gridSize; x++) {
-                const tileType = this.gridData[y][x];
+                const raw = this.gridData[y][x];
+                const tileType = typeof raw === 'string' ? raw.split('|')[0] : raw;
                 const key = `${x},${y}`;
                 
                 if ((tileType === 'road' || tileType === 'railway') && !visited.has(key)) {
@@ -93,9 +94,9 @@ class MapEditorLoader {
             start: this.gridToMesaCoords(startX, startY),
             end: null,
             type: tileType === 'railway' ? 'railway' : 'main',
-            // 既存の描画ロジックに合わせ、視認性を担保するため主要道路扱いにする
-            isMain: true,
-            isShort: false
+            // エディタ由来の道路は最細幅に統一
+            isMain: false,
+            isShort: true
         };
 
         // 道路の方向を検出（水平または垂直）
@@ -163,18 +164,25 @@ class MapEditorLoader {
 
         for (let y = 0; y < this.gridSize; y++) {
             for (let x = 0; x < this.gridSize; x++) {
-                const tileType = this.gridData[y][x];
+                const raw = this.gridData[y][x];
+                const tileType = typeof raw === 'string' ? raw.split('|')[0] : raw;
                 const key = `${x},${y}`;
                 
                 if (this.isBuildingTile(tileType) && !visited.has(key)) {
                     if (tileType === 'residential') {
                         // 住宅は1マス=1軒として個別に出力
                         const center = this.gridToMesaCoords(x, y);
+                        // 向きの指定があれば反映
+                        let rotation = 0;
+                        if (typeof raw === 'string' && raw.includes('|dir:')) {
+                            const dir = (raw.match(/\|dir:([^|]+)/) || [null, 'up'])[1];
+                            rotation = this.directionToRotation(dir);
+                        }
                         buildings.push({
                             x: center.x,
                             z: center.z,
                             size: 1 * this.scaleFactor,
-                            rotation: 0,
+                            rotation: rotation,
                             type: this.mapTileTypeToBuildingType('residential')
                         });
                         visited.add(key);
@@ -193,6 +201,8 @@ class MapEditorLoader {
 
     // 建物タイプかどうかを判定
     isBuildingTile(tileType) {
+        // facility: は施設扱いにするため除外
+        if (typeof tileType === 'string' && tileType.startsWith('facility:')) return false;
         const buildingTypes = ['residential', 'office', 'industrial', 'convenience'];
         return buildingTypes.includes(tileType);
     }
@@ -217,7 +227,7 @@ class MapEditorLoader {
             }
         }
 
-        return {
+        const base = {
             x: this.gridToMesaCoords(centerX, 0).x,
             z: this.gridToMesaCoords(0, centerY).z,
             size: Math.max(width, height) * this.scaleFactor,
@@ -226,6 +236,13 @@ class MapEditorLoader {
             width: width * this.scaleFactor,
             height: height * this.scaleFactor
         };
+        // 向きオーバーライド（セルの一つを参照してdir:があれば適用）
+        const sampleRaw = this.gridData[startY][startX];
+        if (typeof sampleRaw === 'string' && sampleRaw.includes('|dir:')) {
+            const dir = (sampleRaw.match(/\|dir:([^|]+)/) || [null, 'up'])[1];
+            base.rotation = this.directionToRotation(dir);
+        }
+        return base;
     }
 
     // 建物の境界を検出
@@ -272,6 +289,11 @@ class MapEditorLoader {
 
     // タイルタイプを建物タイプにマッピング
     mapTileTypeToBuildingType(tileType) {
+        // locationData 由来の施設を優先
+        if (typeof tileType === 'string' && tileType.startsWith('facility:')) {
+            // 施設は name をそのまま type として扱い、BuildingSystem 側でサイズ/色を解決
+            return tileType.replace('facility:', '');
+        }
         // BuildingSystemの期待する型に寄せる
         const mapping = {
             'residential': 'house',        // 住宅は house
@@ -306,6 +328,7 @@ class MapEditorLoader {
 
     // 施設タイプかどうかを判定
     isFacilityTile(tileType) {
+        if (typeof tileType === 'string' && tileType.startsWith('facility:')) return true;
         const facilityTypes = ['park', 'supermarket', 'school', 'hospital', 'police'];
         return facilityTypes.includes(tileType);
     }
@@ -327,22 +350,35 @@ class MapEditorLoader {
             }
         }
 
-        // FacilitySystem/buildings.js 側は name を用いるため、日本語名に揃える
-        const nameMap = {
-            'park': '公園',
-            'supermarket': 'スーパーマーケット',
-            'school': '学校',
-            'hospital': '病院',
-            'police': '警察署'
-        };
-        const facilityName = nameMap[tileType] || '公園';
-        return {
+        // facility:名称 の場合は名称をそのまま採用
+        let facilityName;
+        if (typeof tileType === 'string' && tileType.startsWith('facility:')) {
+            facilityName = tileType.replace('facility:', '');
+        } else {
+            // 既存の英名→日本語名マッピング
+            const nameMap = {
+                'park': '公園',
+                'supermarket': 'スーパーマーケット',
+                'school': '学校',
+                'hospital': '病院',
+                'police': '警察署'
+            };
+            facilityName = nameMap[tileType] || '公園';
+        }
+        const base = {
             name: facilityName,
             x: this.gridToMesaCoords(centerX, 0).x,
             z: this.gridToMesaCoords(0, centerY).z,
             type: 'facility',
             size: Math.max(maxX - minX + 1, maxY - minY + 1) * this.scaleFactor
         };
+        // 向きオーバーライド
+        const sampleRaw = this.gridData[startY][startX];
+        if (typeof sampleRaw === 'string' && sampleRaw.includes('|dir:')) {
+            const dir = (sampleRaw.match(/\|dir:([^|]+)/) || [null, 'up'])[1];
+            base.rotation = this.directionToRotation(dir);
+        }
+        return base;
     }
 
     // タイルタイプを施設タイプにマッピング
@@ -411,6 +447,17 @@ class MapEditorLoader {
         const mesaZ = (gridY - centerY) * this.scaleFactor;
         
         return { x: mesaX, z: mesaZ };
+    }
+
+    // 方向を回転角に変換（Y回転、ラジアン）
+    directionToRotation(dir) {
+        switch (dir) {
+            case 'up': return Math.PI;      // 住宅の向き修正
+            case 'right': return -Math.PI / 2;
+            case 'down': return 0;
+            case 'left': return Math.PI / 2;
+            default: return 0;
+        }
     }
 
     // エディタデータの統計情報を取得

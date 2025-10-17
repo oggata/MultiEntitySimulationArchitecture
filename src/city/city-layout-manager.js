@@ -75,6 +75,7 @@ class CityLayoutManager {
         }
         if (Array.isArray(this.facilities)) {
             this.facilitySystem.facilities = this.facilities;
+            console.log('CityLayoutManager.drawCity: setting facilities =', this.facilities.length, this.facilities);
         }
 
         // 道路の描画

@@ -35,7 +35,8 @@ const homeManager = {
                     z: b.z,
                     type: 'home',
                     size: homeSize,
-                    rotation: nearestRoad ? cityLayout.calculateBuildingRotation(b.x, b.z, nearestRoad) : 0,
+                    // エディタが回転を持っている場合は最優先
+                    rotation: (typeof b.rotation === 'number') ? b.rotation : (nearestRoad ? cityLayout.calculateBuildingRotation(b.x, b.z, nearestRoad) : 0),
                     roadIndex,
                     distanceToRoad: cityLayout.calculateMinDistanceToRoads(b.x, b.z),
                     nearestRoadIndex: roadIndex,

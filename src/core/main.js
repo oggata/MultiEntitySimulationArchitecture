@@ -437,6 +437,10 @@ async function init() {
                 cityLayout.buildings = cityData.buildings;
                 cityLayout.facilities = cityData.facilities;
                 cityLayout.intersections = cityData.intersections;
+                
+                // エディタ地図でもgenerateCity()を呼び出してFacilitySystemを初期化
+                console.log('エディタ地図でgenerateCity()を呼び出します');
+                cityLayout.generateCity();
 
                 // エディタ反映直後に道路を強制描画して存在をログ
                 if (cityLayout && cityLayout.getRoadSystem) {

@@ -18,6 +18,7 @@ class FacilitySystem {
         // エディタ地図では自動施設配置を行わず、取り込んだ施設のみ使用
         if (window.isEditorMap && Array.isArray(this.buildingSystem.buildings)) {
             this.facilities = (Array.isArray(cityLayout.facilities) ? cityLayout.facilities : []).filter(f => !!f);
+            console.log('FacilitySystem.generateFacilities: editor facilities =', this.facilities.length, this.facilities);
             return this.facilities;
         }
         const facilities = [];
@@ -218,7 +219,9 @@ class FacilitySystem {
 
     // 施設の描画
     drawFacilities() {
-        this.facilities.forEach(facility => {
+        console.log('FacilitySystem.drawFacilities: facilities count =', this.facilities.length);
+        this.facilities.forEach((facility, index) => {
+            console.log(`Facility ${index}:`, facility.name, 'at', facility.x, facility.z, 'rotation:', facility.rotation);
             // buildings.jsの詳細な建物作成関数を使用
             const locationGroup = new THREE.Group();
             

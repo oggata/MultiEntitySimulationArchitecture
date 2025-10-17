@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>街マップエディター</title>
+    <script src="../src/core/config.js"></script>
     <style>
         * {
             margin: 0;
@@ -184,6 +185,19 @@
             <div class="palette">
                 <h2>配置タイル</h2>
                 <div id="tileButtons"></div>
+                <div style="margin-top:12px">
+                    <label for="facilitySelect" style="display:block;margin-bottom:6px;color:#333;font-weight:bold">施設（locationData）</label>
+                    <select id="facilitySelect" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;background:#fff"></select>
+                </div>
+                <div style="margin-top:12px">
+                    <label for="directionSelect" style="display:block;margin-bottom:6px;color:#333;font-weight:bold">向き</label>
+                    <select id="directionSelect" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;background:#fff">
+                        <option value="up">上</option>
+                        <option value="right">右</option>
+                        <option value="down">下</option>
+                        <option value="left">左</option>
+                    </select>
+                </div>
                 
                 <div class="controls">
                     <button class="btn btn-export" onclick="exportToJSON()">JSONで出力</button>
@@ -208,22 +222,13 @@
         const TILE_TYPES = {
             empty: { name: '空地', color: '#FFFFFF' },
             road: { name: '道路', color: '#808080' },
-            railway: { name: '鉄道', color: '#4A4A4A' },
-            park: { name: '公園', color: '#90EE90' },
             residential: { name: '住宅地', color: '#FFE4B5' },
-            supermarket: { name: 'スーパー', color: '#FF8C00' },
-            office: { name: 'オフィス', color: '#4169E1' },
-            convenience: { name: 'コンビニ', color: '#FFA500' },
-            industrial: { name: '工業地', color: '#A9A9A9' },
-            agricultural: { name: '農業地', color: '#9ACD32' },
-            school: { name: '学校', color: '#FFD700' },
-            police: { name: '警察署', color: '#0000CD' },
-            hospital: { name: '病院', color: '#FF0000' }
-        };
+    };
         
         let selectedTile = 'road';
         let isDrawing = false;
         let gridData = [];
+        let selectedDirection = 'up';
         
         const canvas = document.getElementById('mapCanvas');
         const ctx = canvas.getContext('2d');
@@ -270,6 +275,45 @@
                 button.appendChild(span);
                 container.appendChild(button);
             }
+
+            // locationData 由来の施設ドロップダウン
+            const select = document.getElementById('facilitySelect');
+            // 先頭にプレースホルダー
+            const ph = document.createElement('option');
+            ph.value = '';
+            ph.textContent = '選択してください';
+            select.appendChild(ph);
+
+            // locationData が読み込まれていれば、それを列挙
+            if (Array.isArray(locationData)) {
+                locationData.forEach((loc) => {
+                    const opt = document.createElement('option');
+                    opt.value = `facility:${loc.name}`;
+                    opt.textContent = loc.name;
+                    select.appendChild(opt);
+
+                    // 描画用に動的タイルタイプを用意（16進カラーをCSSに変換）
+                    const hex = (loc.color >>> 0).toString(16).padStart(6, '0');
+                    const cssColor = `#${hex}`;
+                    const key = `facility:${loc.name}`;
+                    if (!TILE_TYPES[key]) {
+                        TILE_TYPES[key] = { name: loc.name, color: cssColor };
+                    }
+                });
+            }
+
+            select.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if (val) {
+                    selectTile(val);
+                }
+            });
+
+            // 向き選択
+            const dirSelect = document.getElementById('directionSelect');
+            dirSelect.addEventListener('change', (e) => {
+                selectedDirection = e.target.value;
+            });
         }
         
         // タイル選択
@@ -284,15 +328,51 @@
                     btn.classList.remove('selected');
                 }
             });
+            // ドロップダウンも同期
+            const select = document.getElementById('facilitySelect');
+            if (select && select.value !== tileKey && tileKey.startsWith('facility:')) {
+                select.value = tileKey;
+            }
         }
         
         // キャンバスの描画
         function drawCanvas() {
             for (let i = 0; i < GRID_SIZE; i++) {
                 for (let j = 0; j < GRID_SIZE; j++) {
-                    const tileType = gridData[i][j];
-                    ctx.fillStyle = TILE_TYPES[tileType].color;
+                    const raw = gridData[i][j];
+                    const baseKey = typeof raw === 'string' ? raw.split('|')[0] : 'empty';
+                    const t = TILE_TYPES[baseKey] || { color: '#FFFFFF' };
+                    ctx.fillStyle = t.color;
                     ctx.fillRect(j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+
+                    // 向き矢印の描画（方向指定がある場合）
+                    if (typeof raw === 'string' && raw.includes('|dir:')) {
+                        const dir = (raw.match(/\|dir:([^|]+)/) || [null, 'up'])[1];
+                        const cx = j * CELL_SIZE + CELL_SIZE / 2;
+                        const cy = i * CELL_SIZE + CELL_SIZE / 2;
+                        const size = Math.max(4, Math.floor(CELL_SIZE * 0.3));
+                        ctx.fillStyle = '#333333';
+                        ctx.beginPath();
+                        if (dir === 'up') {
+                            ctx.moveTo(cx, cy - size);
+                            ctx.lineTo(cx - size * 0.6, cy + size * 0.6);
+                            ctx.lineTo(cx + size * 0.6, cy + size * 0.6);
+                        } else if (dir === 'right') {
+                            ctx.moveTo(cx + size, cy);
+                            ctx.lineTo(cx - size * 0.6, cy - size * 0.6);
+                            ctx.lineTo(cx - size * 0.6, cy + size * 0.6);
+                        } else if (dir === 'down') {
+                            ctx.moveTo(cx, cy + size);
+                            ctx.lineTo(cx - size * 0.6, cy - size * 0.6);
+                            ctx.lineTo(cx + size * 0.6, cy - size * 0.6);
+                        } else if (dir === 'left') {
+                            ctx.moveTo(cx - size, cy);
+                            ctx.lineTo(cx + size * 0.6, cy - size * 0.6);
+                            ctx.lineTo(cx + size * 0.6, cy + size * 0.6);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                    }
                 }
             }
         }
@@ -304,9 +384,42 @@
             const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
             
             if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
-                gridData[y][x] = selectedTile;
-                ctx.fillStyle = TILE_TYPES[selectedTile].color;
+                // 基本キーと向きをエンコード
+                const baseKey = selectedTile;
+                const needsDir = baseKey !== 'empty' && baseKey !== 'road' && baseKey !== 'railway';
+                const encoded = needsDir ? `${baseKey}|dir:${selectedDirection}` : baseKey;
+                gridData[y][x] = encoded;
+                const t = TILE_TYPES[baseKey] || { color: '#FFFFFF' };
+                ctx.fillStyle = t.color;
                 ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+
+                // 矢印を即時描画
+                if (needsDir) {
+                    const cx = x * CELL_SIZE + CELL_SIZE / 2;
+                    const cy = y * CELL_SIZE + CELL_SIZE / 2;
+                    const size = Math.max(4, Math.floor(CELL_SIZE * 0.3));
+                    ctx.fillStyle = '#333333';
+                    ctx.beginPath();
+                    if (selectedDirection === 'up') {
+                        ctx.moveTo(cx, cy - size);
+                        ctx.lineTo(cx - size * 0.6, cy + size * 0.6);
+                        ctx.lineTo(cx + size * 0.6, cy + size * 0.6);
+                    } else if (selectedDirection === 'right') {
+                        ctx.moveTo(cx + size, cy);
+                        ctx.lineTo(cx - size * 0.6, cy - size * 0.6);
+                        ctx.lineTo(cx - size * 0.6, cy + size * 0.6);
+                    } else if (selectedDirection === 'down') {
+                        ctx.moveTo(cx, cy + size);
+                        ctx.lineTo(cx - size * 0.6, cy - size * 0.6);
+                        ctx.lineTo(cx + size * 0.6, cy - size * 0.6);
+                    } else if (selectedDirection === 'left') {
+                        ctx.moveTo(cx - size, cy);
+                        ctx.lineTo(cx + size * 0.6, cy - size * 0.6);
+                        ctx.lineTo(cx + size * 0.6, cy + size * 0.6);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                }
             }
         }
         

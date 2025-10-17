@@ -201,8 +201,8 @@ class Character {
 		// ボーンシステムをキャラクターに追加
 		this.character.add(this.rootBone);
 
-		// キャラクター全体のスケールを1/8に設定（以前の半分のサイズ）
-		this.character.scale.set(1/8, 1/8, 1/8);
+		// キャラクター全体のスケールを1/16に設定（さらに半分のサイズ）
+		this.character.scale.set(1/16, 1/16, 1/16);
 	}
 
 	updateLimbAnimation(deltaTime) {

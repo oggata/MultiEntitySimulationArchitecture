@@ -1485,6 +1485,29 @@ function createAgentHome(homeData) {
             // モデルを中央に配置
             model.position.set(0, 0.35, 0);
             
+            // モデルのマテリアルを薄い青色に変更し、透過度を設定
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    // 既存のマテリアルを薄い青色の透過マテリアルに変更
+                    const newMaterial = new THREE.MeshLambertMaterial({
+                        color: 0x87CEEB, // 薄い青色
+                        transparent: true,
+                        opacity: 0.7,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            
+            // モデル専用のライティングを追加
+            const modelLight = new THREE.PointLight(0xffffff, 1.0, 10);
+            modelLight.position.set(0, 2, 0);
+            homeGroup.add(modelLight);
+            
+            // 追加の環境光
+            const modelAmbientLight = new THREE.AmbientLight(0x87CEEB, 0.3);
+            homeGroup.add(modelAmbientLight);
+            
             homeGroup.add(model);
             
             // 家の位置を設定

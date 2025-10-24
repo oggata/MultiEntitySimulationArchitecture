@@ -393,100 +393,10 @@ class BuildingSystem {
             const buildingMesh = new THREE.Mesh(geometry, buildingMaterial);
             buildingMesh.position.set(building.x, building.size/2, building.z);
             buildingMesh.rotation.y = building.rotation;
-            scene.add(buildingMesh);
-            /*
-            // 建物の輪郭線
-            const edges = new THREE.EdgesGeometry(geometry);
-            const edgeMaterial = new THREE.LineBasicMaterial({ 
-                color: buildingColor, 
-                transparent: true, 
-                opacity: 0.8 
-            });
-            const edgeMesh = new THREE.LineSegments(edges, edgeMaterial);
-            edgeMesh.position.set(building.x, building.size/2, building.z);
-            edgeMesh.rotation.y = building.rotation;
-            scene.add(edgeMesh);
-            
-            // 窓の装飾（前面）
-            for(let i = 0; i < 2; i++) {
-                const windowGeometry = new THREE.PlaneGeometry(building.size * 0.15, building.size * 0.4);
-                const windowMaterial = new THREE.MeshBasicMaterial({ 
-                    color: 0xFFFFFF, 
-                    transparent: true, 
-                    opacity: 0.6 
-                });
-                const window = new THREE.Mesh(windowGeometry, windowMaterial);
-                window.position.set(
-                    building.x + (i === 0 ? -1 : 1) * building.size * 0.25,
-                    building.size * 0.3,
-                    building.z + building.size * 0.5
-                );
-                window.rotation.y = building.rotation;
-                scene.add(window);
-            }
-            
-            // 窓の装飾（側面）
-            for(let i = 0; i < 2; i++) {
-                for(let j = 0; j < 2; j++) {
-                    const sideWindowGeometry = new THREE.PlaneGeometry(building.size * 0.12, building.size * 0.3);
-                    const sideWindowMaterial = new THREE.MeshBasicMaterial({ 
-                        color: 0xFFFFFF, 
-                        transparent: true, 
-                        opacity: 0.6 
-                    });
-                    const sideWindow = new THREE.Mesh(sideWindowGeometry, sideWindowMaterial);
-                    sideWindow.position.set(
-                        building.x + (i === 0 ? -1 : 1) * building.size * 0.5,
-                        building.size * 0.25 + (j - 0.5) * building.size * 0.4,
-                        building.z
-                    );
-                    sideWindow.rotation.y = building.rotation + (i === 0 ? Math.PI / 2 : -Math.PI / 2);
-                    scene.add(sideWindow);
-                }
-            }
-            
-            // 屋根の装飾
-            const roofGeometry = new THREE.BoxGeometry(building.size * 1.1, 0.2, building.size * 1.1);
-            const roofMaterial = new THREE.MeshBasicMaterial({ 
-                color: 0xF5F5DC, 
-                transparent: true, 
-                opacity: 0.4 
-            });
-            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
-            roof.position.set(building.x, building.size + 0.1, building.z);
-            roof.rotation.y = building.rotation;
-            scene.add(roof);
-            
-            // 屋根の輪郭線
-            const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-            const roofEdgeMaterial = new THREE.LineBasicMaterial({ 
-                color: 0xF5F5DC, 
-                transparent: true, 
-                opacity: 0.8 
-            });
-            const roofEdge = new THREE.LineSegments(roofEdges, roofEdgeMaterial);
-            roofEdge.position.set(building.x, building.size + 0.1, building.z);
-            roofEdge.rotation.y = building.rotation;
-            scene.add(roofEdge);
-            
-            // 入り口の表示（建物の前面に小さな四角形を追加）
-            const entranceSize = building.size * 0.3;
-            const entranceGeometry = new THREE.PlaneGeometry(entranceSize, entranceSize);
-            const entranceEdges = new THREE.EdgesGeometry(entranceGeometry);
-            const entranceMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
-            const entrance = new THREE.LineSegments(entranceEdges, entranceMaterial);
-            entrance.position.set(
-                building.x + Math.sin(building.rotation) * building.size * 0.65,
-                building.size * 0.3,
-                building.z + Math.cos(building.rotation) * building.size * 0.65
-            );
-            entrance.rotation.x = -Math.PI / 2;
-            entrance.rotation.y = building.rotation;
-            scene.add(entrance);
-            */
+            //scene.add(buildingMesh);            
             // 入り口位置のマーカーを表示（デバッグ用）
             const entrancePos = this.getBuildingEntrance(building);
-            const markerGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+            const markerGeometry = new THREE.SphereGeometry(0.05, 8, 8);
             const markerMaterial = new THREE.MeshBasicMaterial({ 
                 color: 0xF5F5F5, 
                 transparent: true, 

@@ -179,13 +179,6 @@ function createLocations() {
             createDetailedBuilding(locationGroup, loc, facilitySize, facilityHeight);
         }
 
-        // 建物の入り口通路を追加
-        if (loc.name !== "公園" && loc.name !== "町の広場") {
-            addEntrancePath(locationGroup, facilitySize, loc.color, loc.rotation || 0);
-        } else if (loc.name === "公園" || loc.name === "町の広場") {
-            addPublicSpaceEntrance(locationGroup, facilitySize, loc.name);
-        }
-
         // 場所特有の装飾（サイズに応じてスケール調整）
         const scale = facilitySize / 4; // 基準サイズ4に対するスケール
         switch(loc.name) {
@@ -675,7 +668,7 @@ function createDetailedBuilding(locationGroup, loc, facilitySize, facilityHeight
             
         default:
             // デフォルトの建物（より詳細な立方体）
-            createDefaultBuilding(locationGroup, facilitySize, facilityHeight, loc.color, scale);
+            //createDefaultBuilding(locationGroup, facilitySize, facilityHeight, loc.color, scale);
             break;
     }
 }
@@ -1410,65 +1403,6 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
     }
 }
 
-// 建物の入り口通路を作成する関数
-function addEntrancePath(locationGroup, facilitySize, buildingColor, buildingRotation = 0) {
-    const pathWidth = facilitySize * 0.3; // 通路の幅
-    const pathLength = facilitySize * 0.8; // 通路の長さ
-    
-    // 通路の地面
-    const pathGeometry = new THREE.PlaneGeometry(pathWidth, pathLength);
-    const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-    const pathMaterial = new THREE.LineBasicMaterial({ color: 0xD3D3D3 });
-    const path = new THREE.LineSegments(pathEdges, pathMaterial);
-    path.rotation.x = -Math.PI / 2;
-    // 建物の回転に応じて入り口の位置を調整
-    const entranceOffset = facilitySize * 0.6;
-    path.position.set(
-        Math.sin(buildingRotation) * entranceOffset, 
-        0.02, 
-        Math.cos(buildingRotation) * entranceOffset
-    );
-    locationGroup.add(path);
-    
-    // 入り口の階段（小さな段差）
-    const stepGeometry = new THREE.BoxGeometry(pathWidth * 0.8, 0.1, 0.2);
-    const stepEdges = new THREE.EdgesGeometry(stepGeometry);
-    const stepMaterial = new THREE.LineBasicMaterial({ color: buildingColor });
-    const step = new THREE.LineSegments(stepEdges, stepMaterial);
-    const stepOffset = facilitySize * 0.4;
-    step.position.set(
-        Math.sin(buildingRotation) * stepOffset, 
-        0.05, 
-        Math.cos(buildingRotation) * stepOffset
-    );
-    locationGroup.add(step);
-    
-    // 入り口のドア枠
-    const doorFrameGeometry = new THREE.BoxGeometry(0.8, facilitySize * 0.4, 0.1);
-    const doorFrameEdges = new THREE.EdgesGeometry(doorFrameGeometry);
-    const doorFrameMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
-    const doorFrame = new THREE.LineSegments(doorFrameEdges, doorFrameMaterial);
-    const doorOffset = facilitySize * 0.45;
-    doorFrame.position.set(
-        Math.sin(buildingRotation) * doorOffset, 
-        facilitySize * 0.2, 
-        Math.cos(buildingRotation) * doorOffset
-    );
-    locationGroup.add(doorFrame);
-    
-    // 入り口の看板
-    const entranceSignGeometry = new THREE.PlaneGeometry(1.5, 0.5);
-    const entranceSignEdges = new THREE.EdgesGeometry(entranceSignGeometry);
-    const entranceSignMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
-    const entranceSign = new THREE.LineSegments(entranceSignEdges, entranceSignMaterial);
-    const signOffset = facilitySize * 0.3;
-    entranceSign.position.set(
-        Math.sin(buildingRotation) * signOffset, 
-        0.5, 
-        Math.cos(buildingRotation) * signOffset
-    );
-    locationGroup.add(entranceSign);
-}
 
 // エージェントの自宅を作成する関数
 function createAgentHome(homeData) {
@@ -1534,157 +1468,47 @@ function createAgentHome(homeData) {
     
     const homeGroup = new THREE.Group();
     
+    // GLBファイルを読み込んで自宅を作成
+    const loader = new THREE.GLTFLoader();
+    loader.load(
+        'src/glb/ComfyUI_00004_.glb',
+        function(gltf) {
+            const model = gltf.scene;
+            
+            // 自宅のサイズ（小サイズ）
+            const homeSize = cityLayoutConfig.buildingSizes.small;
+            
+            // モデルのスケールを調整
+            const scale = homeSize / 2; // 適切なサイズに調整
+            model.scale.set(scale, scale, scale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.35, 0);
+            
+            homeGroup.add(model);
+            
+            // 家の位置を設定
+            homeGroup.position.set(homeData.x, 0, homeData.z);
+            scene.add(homeGroup);
+            
+            // 入り口接続とlocations配列への追加
+            createHomeConnections(homeGroup, homeData);
+            
+            console.log(`自宅「${homeData.name}」をGLBファイルから作成しました。`);
+        },
+        function(progress) {
+            console.log('GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('GLBファイルの読み込みに失敗しました:', error);
+        }
+    );
+}
+
+// 家の入り口接続とlocations配列への追加を行う共通関数
+function createHomeConnections(homeGroup, homeData) {
     // 自宅のサイズ（小サイズ）
     const homeSize = cityLayoutConfig.buildingSizes.small;
-    const homeHeight = homeSize * 0.8;
-    
-    // 家の基本構造（透過した壁）
-    const houseGeometry = new THREE.BoxGeometry(homeSize, homeHeight, homeSize);
-    const houseMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xF5F5F5, 
-        transparent: true, 
-        opacity: 0.3 
-    });
-    const house = new THREE.Mesh(houseGeometry, houseMaterial);
-    house.position.set(0, homeHeight/2, 0);
-    homeGroup.add(house);
-    
-    // 家の境界線
-    const houseEdges = new THREE.EdgesGeometry(houseGeometry);
-    const houseEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
-    const houseEdge = new THREE.LineSegments(houseEdges, houseEdgeMaterial);
-    houseEdge.position.copy(house.position);
-    homeGroup.add(houseEdge);
-
-    // 屋根（三角屋根、透過した色）
-    const roofGeometry = new THREE.ConeGeometry(homeSize * 0.75, homeSize * 0.5, 4);
-    const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xF5F5DC, 
-        transparent: true, 
-        opacity: 0.4 
-    });
-    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
-    roof.position.set(0, homeHeight + homeSize * 0.25, 0);
-    roof.rotation.y = Math.PI / 4;
-    homeGroup.add(roof);
-    
-    // 屋根の境界線
-    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
-    const roofEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
-    const roofEdge = new THREE.LineSegments(roofEdges, roofEdgeMaterial);
-    roofEdge.position.copy(roof.position);
-    roofEdge.rotation.copy(roof.rotation);
-    homeGroup.add(roofEdge);
-
-    // 窓（正面、透過した色）
-    for(let i = 0; i < 2; i++) {
-        const windowGeometry = new THREE.PlaneGeometry(homeSize * 0.2, homeHeight * 0.3);
-        const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xFFFFFF, 
-            transparent: true, 
-            opacity: 0.6 
-        });
-        const window = new THREE.Mesh(windowGeometry, windowMaterial);
-        window.position.set(
-            (i === 0 ? -1 : 1) * homeSize * 0.25,
-            homeHeight * 0.4,
-            homeSize * 0.5
-        );
-        homeGroup.add(window);
-        
-        // 窓の境界線
-        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
-        const windowEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
-        const windowEdge = new THREE.LineSegments(windowEdges, windowEdgeMaterial);
-        windowEdge.position.copy(window.position);
-        homeGroup.add(windowEdge);
-    }
-
-    // 窓（側面、透過した色）
-    for(let i = 0; i < 2; i++) {
-        const sideWindowGeometry = new THREE.PlaneGeometry(homeSize * 0.15, homeHeight * 0.25);
-        const sideWindowMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xFFFFFF, 
-            transparent: true, 
-            opacity: 0.6 
-        });
-        const sideWindow = new THREE.Mesh(sideWindowGeometry, sideWindowMaterial);
-        sideWindow.position.set(
-            (i === 0 ? -1 : 1) * homeSize * 0.5,
-            homeHeight * 0.35,
-            0
-        );
-        sideWindow.rotation.y = i === 0 ? Math.PI / 2 : -Math.PI / 2;
-        homeGroup.add(sideWindow);
-        
-        // 側面窓の境界線
-        const sideWindowEdges = new THREE.EdgesGeometry(sideWindowGeometry);
-        const sideWindowEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
-        const sideWindowEdge = new THREE.LineSegments(sideWindowEdges, sideWindowEdgeMaterial);
-        sideWindowEdge.position.copy(sideWindow.position);
-        sideWindowEdge.rotation.copy(sideWindow.rotation);
-        homeGroup.add(sideWindowEdge);
-    }
-
-    // 入り口の扉（透過した色）
-    const doorGeometry = new THREE.PlaneGeometry(homeSize * 0.3, homeHeight * 0.5);
-    const doorMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xF5F5DC, 
-        transparent: true, 
-        opacity: 0.7 
-    });
-    const door = new THREE.Mesh(doorGeometry, doorMaterial);
-    door.position.set(0, homeHeight * 0.25, homeSize * 0.5);
-    homeGroup.add(door);
-    
-    // 扉の境界線
-    const doorEdges = new THREE.EdgesGeometry(doorGeometry);
-    const doorEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
-    const doorEdge = new THREE.LineSegments(doorEdges, doorEdgeMaterial);
-    doorEdge.position.copy(door.position);
-    homeGroup.add(doorEdge);
-
-    // 玄関の庇（透過した色）
-    const canopyGeometry = new THREE.BoxGeometry(homeSize * 0.4, 0.1, homeSize * 0.2);
-    const canopyMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xF5F5DC, 
-        transparent: true, 
-        opacity: 0.8 
-    });
-    const canopy = new THREE.Mesh(canopyGeometry, canopyMaterial);
-    canopy.position.set(0, homeHeight * 0.8, homeSize * 0.4);
-    homeGroup.add(canopy);
-    
-    // 庇の境界線
-    const canopyEdges = new THREE.EdgesGeometry(canopyGeometry);
-    const canopyEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
-    const canopyEdge = new THREE.LineSegments(canopyEdges, canopyEdgeMaterial);
-    canopyEdge.position.copy(canopy.position);
-    homeGroup.add(canopyEdge);
-
-    // 煙突（透過した色）
-    const chimneyGeometry = new THREE.BoxGeometry(homeSize * 0.15, homeSize * 0.3, homeSize * 0.15);
-    const chimneyMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xF5F5DC, 
-        transparent: true, 
-        opacity: 0.8 
-    });
-    const chimney = new THREE.Mesh(chimneyGeometry, chimneyMaterial);
-    chimney.position.set(homeSize * 0.2, homeHeight + homeSize * 0.4, 0);
-    homeGroup.add(chimney);
-    
-    // 煙突の境界線
-    const chimneyEdges = new THREE.EdgesGeometry(chimneyGeometry);
-    const chimneyEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
-    const chimneyEdge = new THREE.LineSegments(chimneyEdges, chimneyEdgeMaterial);
-    chimneyEdge.position.copy(chimney.position);
-    homeGroup.add(chimneyEdge);
-
-    // 看板（自宅）は削除
-
-    // 家の位置を設定
-    homeGroup.position.set(homeData.x, 0, homeData.z);
-    scene.add(homeGroup);
     
     // 家の入り口接続を作成
     const homeBuilding = {
@@ -1695,6 +1519,7 @@ function createAgentHome(homeData) {
         type: 'home'
     };
     
+    /*
     // 入り口接続を描画
     if (cityLayout && cityLayout.createEntranceConnection) {
         const connection = cityLayout.createEntranceConnection(homeBuilding);
@@ -1746,6 +1571,7 @@ function createAgentHome(homeData) {
             scene.add(step);
         }
     }
+        */
     
     locations.push({
         name: homeData.name,
@@ -1758,93 +1584,6 @@ function createAgentHome(homeData) {
     });
 }
 
-// 家の入り口通路を作成する関数
-function addHomeEntrancePath(homeGroup, homeSize, homeColor) {
-    const pathWidth = homeSize * 0.4; // 通路の幅
-    const pathLength = homeSize * 0.6; // 通路の長さ
-    
-    // 通路の地面
-    const pathGeometry = new THREE.PlaneGeometry(pathWidth, pathLength);
-    const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-    const pathMaterial = new THREE.LineBasicMaterial({ color: 0xD3D3D3 });
-    const path = new THREE.LineSegments(pathEdges, pathMaterial);
-    path.rotation.x = -Math.PI / 2;
-    path.position.set(0, 0.02, homeSize * 0.5); // 家の手前に配置
-    homeGroup.add(path);
-    
-    // 入り口の階段
-    const stepGeometry = new THREE.BoxGeometry(pathWidth * 0.6, 0.1, 0.15);
-    const stepEdges = new THREE.EdgesGeometry(stepGeometry);
-    const stepMaterial = new THREE.LineBasicMaterial({ color: homeColor });
-    const step = new THREE.LineSegments(stepEdges, stepMaterial);
-    step.position.set(0, 0.05, homeSize * 0.35);
-    homeGroup.add(step);
-    
-    // 入り口のドア枠
-    const doorFrameGeometry = new THREE.BoxGeometry(0.6, homeSize * 0.3, 0.1);
-    const doorFrameEdges = new THREE.EdgesGeometry(doorFrameGeometry);
-    const doorFrameMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
-    const doorFrame = new THREE.LineSegments(doorFrameEdges, doorFrameMaterial);
-    doorFrame.position.set(0, homeSize * 0.15, homeSize * 0.4);
-    homeGroup.add(doorFrame);
-    
-    // 玄関のポーチ
-    const porchGeometry = new THREE.BoxGeometry(pathWidth * 0.8, 0.05, 0.3);
-    const porchEdges = new THREE.EdgesGeometry(porchGeometry);
-    const porchMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
-    const porch = new THREE.LineSegments(porchEdges, porchMaterial);
-    porch.position.set(0, 0.025, homeSize * 0.25);
-    homeGroup.add(porch);
-}
-
-// 公園と広場の入り口を作成する関数
-function addPublicSpaceEntrance(locationGroup, facilitySize, spaceName) {
-    const pathWidth = facilitySize * 0.4; // 通路の幅
-    const pathLength = facilitySize * 0.5; // 通路の長さ
-    
-    // 通路の地面
-    const pathGeometry = new THREE.PlaneGeometry(pathWidth, pathLength);
-    const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-    const pathMaterial = new THREE.LineBasicMaterial({ color: 0xD3D3D3 });
-    const path = new THREE.LineSegments(pathEdges, pathMaterial);
-    path.rotation.x = -Math.PI / 2;
-    path.position.set(0, 0.02, facilitySize * 0.4); // 施設の手前に配置
-    locationGroup.add(path);
-    
-    // 入り口の看板
-    const signGeometry = new THREE.PlaneGeometry(2, 0.8);
-    const signEdges = new THREE.EdgesGeometry(signGeometry);
-    const signMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
-    const sign = new THREE.LineSegments(signEdges, signMaterial);
-    sign.position.set(0, 1, facilitySize * 0.3);
-    locationGroup.add(sign);
-    
-    // 入り口の柵（公園の場合）
-    if (spaceName === "公園") {
-        for (let i = 0; i < 3; i++) {
-            const fenceGeometry = new THREE.BoxGeometry(0.1, 0.8, 0.1);
-            const fenceEdges = new THREE.EdgesGeometry(fenceGeometry);
-            const fenceMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
-            const fence = new THREE.LineSegments(fenceEdges, fenceMaterial);
-            fence.position.set(
-                (i - 1) * 1.5,
-                0.4,
-                facilitySize * 0.25
-            );
-            locationGroup.add(fence);
-        }
-    }
-    
-    // 入り口のベンチ（広場の場合）
-    if (spaceName === "町の広場") {
-        const benchGeometry = new THREE.BoxGeometry(2, 0.2, 0.6);
-        const benchEdges = new THREE.EdgesGeometry(benchGeometry);
-        const benchMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5DC });
-        const bench = new THREE.LineSegments(benchEdges, benchMaterial);
-        bench.position.set(0, 0.1, facilitySize * 0.2);
-        locationGroup.add(bench);
-    }
-}
 
 // 施設情報を取得する関数
 function getFacilityInfo(facilityName) {

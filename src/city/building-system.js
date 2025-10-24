@@ -388,13 +388,13 @@ class BuildingSystem {
             const buildingMaterial = new THREE.MeshBasicMaterial({ 
                 color: buildingColor, 
                 transparent: true, 
-                opacity: 0.3 
+                opacity: 0.05 
             });
             const buildingMesh = new THREE.Mesh(geometry, buildingMaterial);
             buildingMesh.position.set(building.x, building.size/2, building.z);
             buildingMesh.rotation.y = building.rotation;
             scene.add(buildingMesh);
-            
+            /*
             // 建物の輪郭線
             const edges = new THREE.EdgesGeometry(geometry);
             const edgeMaterial = new THREE.LineBasicMaterial({ 
@@ -483,7 +483,7 @@ class BuildingSystem {
             entrance.rotation.x = -Math.PI / 2;
             entrance.rotation.y = building.rotation;
             scene.add(entrance);
-            
+            */
             // 入り口位置のマーカーを表示（デバッグ用）
             const entrancePos = this.getBuildingEntrance(building);
             const markerGeometry = new THREE.SphereGeometry(0.2, 8, 8);

@@ -1,5 +1,22 @@
+## 0.test実行
+
+```bash
+npx electron .
+```
+
+## 1. パッケージインストール
+
+```bash
+npm install --save-dev electron-builder
+```
+
+## 2. package.jsonの設定
+
+package.jsonに以下の設定を追加します：
+
+```json
 {
-  "name": "MESA",
+  "name": "your-app-name",
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
@@ -8,8 +25,8 @@
     "build:mac": "electron-builder --mac"
   },
   "build": {
-    "appId": "com.mesa.mesa",
-    "productName": "mesa",
+    "appId": "com.yourcompany.yourapp",
+    "productName": "YourAppName",
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
@@ -39,3 +56,15 @@
     ]
   }
 }
+```
+
+## 3. アイコンの準備（オプション）
+
+- `build/icon.icns` にアプリアイコンを配置（512x512px以上のPNG画像から変換可能）
+
+## 4. ビルド実行
+
+```bash
+npm run build:mac
+```
+

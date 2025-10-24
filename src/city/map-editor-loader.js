@@ -462,12 +462,13 @@ class MapEditorLoader {
     }
 
     // 方向を回転角に変換（Y回転、ラジアン）
+    // 建物の入り口が指定された方向を向くように設定
     directionToRotation(dir) {
         switch (dir) {
-            case 'up': return Math.PI;      // 住宅の向き修正
-            case 'right': return -Math.PI / 2;
-            case 'down': return 0;
-            case 'left': return Math.PI / 2;
+            case 'up': return Math.PI;        // 上向き（北向き）
+            case 'right': return -Math.PI / 2; // 右向き（東向き）
+            case 'down': return 0;           // 下向き（南向き）
+            case 'left': return Math.PI / 2;   // 左向き（西向き）
             default: return 0;
         }
     }

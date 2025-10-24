@@ -181,7 +181,7 @@ function createLocations() {
 
         // 建物の入り口通路を追加
         if (loc.name !== "公園" && loc.name !== "町の広場") {
-            addEntrancePath(locationGroup, facilitySize, loc.color);
+            addEntrancePath(locationGroup, facilitySize, loc.color, loc.rotation || 0);
         } else if (loc.name === "公園" || loc.name === "町の広場") {
             addPublicSpaceEntrance(locationGroup, facilitySize, loc.name);
         }
@@ -1411,7 +1411,7 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
 }
 
 // 建物の入り口通路を作成する関数
-function addEntrancePath(locationGroup, facilitySize, buildingColor) {
+function addEntrancePath(locationGroup, facilitySize, buildingColor, buildingRotation = 0) {
     const pathWidth = facilitySize * 0.3; // 通路の幅
     const pathLength = facilitySize * 0.8; // 通路の長さ
     
@@ -1421,7 +1421,13 @@ function addEntrancePath(locationGroup, facilitySize, buildingColor) {
     const pathMaterial = new THREE.LineBasicMaterial({ color: 0xD3D3D3 });
     const path = new THREE.LineSegments(pathEdges, pathMaterial);
     path.rotation.x = -Math.PI / 2;
-    path.position.set(0, 0.02, facilitySize * 0.6); // 建物の手前に配置
+    // 建物の回転に応じて入り口の位置を調整
+    const entranceOffset = facilitySize * 0.6;
+    path.position.set(
+        Math.sin(buildingRotation) * entranceOffset, 
+        0.02, 
+        Math.cos(buildingRotation) * entranceOffset
+    );
     locationGroup.add(path);
     
     // 入り口の階段（小さな段差）
@@ -1429,7 +1435,12 @@ function addEntrancePath(locationGroup, facilitySize, buildingColor) {
     const stepEdges = new THREE.EdgesGeometry(stepGeometry);
     const stepMaterial = new THREE.LineBasicMaterial({ color: buildingColor });
     const step = new THREE.LineSegments(stepEdges, stepMaterial);
-    step.position.set(0, 0.05, facilitySize * 0.4);
+    const stepOffset = facilitySize * 0.4;
+    step.position.set(
+        Math.sin(buildingRotation) * stepOffset, 
+        0.05, 
+        Math.cos(buildingRotation) * stepOffset
+    );
     locationGroup.add(step);
     
     // 入り口のドア枠
@@ -1437,7 +1448,12 @@ function addEntrancePath(locationGroup, facilitySize, buildingColor) {
     const doorFrameEdges = new THREE.EdgesGeometry(doorFrameGeometry);
     const doorFrameMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
     const doorFrame = new THREE.LineSegments(doorFrameEdges, doorFrameMaterial);
-    doorFrame.position.set(0, facilitySize * 0.2, facilitySize * 0.45);
+    const doorOffset = facilitySize * 0.45;
+    doorFrame.position.set(
+        Math.sin(buildingRotation) * doorOffset, 
+        facilitySize * 0.2, 
+        Math.cos(buildingRotation) * doorOffset
+    );
     locationGroup.add(doorFrame);
     
     // 入り口の看板
@@ -1445,7 +1461,12 @@ function addEntrancePath(locationGroup, facilitySize, buildingColor) {
     const entranceSignEdges = new THREE.EdgesGeometry(entranceSignGeometry);
     const entranceSignMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
     const entranceSign = new THREE.LineSegments(entranceSignEdges, entranceSignMaterial);
-    entranceSign.position.set(0, 0.5, facilitySize * 0.3);
+    const signOffset = facilitySize * 0.3;
+    entranceSign.position.set(
+        Math.sin(buildingRotation) * signOffset, 
+        0.5, 
+        Math.cos(buildingRotation) * signOffset
+    );
     locationGroup.add(entranceSign);
 }
 

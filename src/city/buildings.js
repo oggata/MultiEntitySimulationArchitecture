@@ -796,12 +796,71 @@ function createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 
 
 // カフェの建物を作成
 function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでカフェを作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('カフェGLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('カフェGLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整（カフェは小さめ）
+            const modelScale = facilitySize / 3; // カフェは小さめに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`カフェメッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFFD700, // 金色（Gold）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`カフェ合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('カフェをGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('カフェGLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('カフェGLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なカフェの形状を作成
+            console.log('フォールバック: 基本的なカフェの形状を作成します');
+            createFallbackCafe(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なカフェの形状を作成する関数
+function createFallbackCafe(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物（小さめ）
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize * 0.8, facilityHeight * 0.7, facilitySize * 0.8);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: 0xFFD700, // 金色
         transparent: true, 
-        opacity: 0.3 
+        opacity: 0.85 
     });
     const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight * 0.35, 0);
@@ -810,7 +869,7 @@ function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, 
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: 0xFFD700, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -820,7 +879,7 @@ function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, 
     // 屋根（三角屋根）
     const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.6, facilityHeight * 0.3, 4);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: buildingColorsConfig.roof.primary, 
+        color: 0xFFD700, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -832,7 +891,7 @@ function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, 
     // 屋根の輪郭線
     const roofEdges = new THREE.EdgesGeometry(roofGeometry);
     const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
-        color: buildingColorsConfig.roof.primary, 
+        color: 0xFFD700, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -844,7 +903,7 @@ function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, 
     for(let i = 0; i < 2; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.3, facilityHeight * 0.4);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: buildingColorsConfig.window.primary, 
+            color: 0xFFD700, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -860,23 +919,86 @@ function createCafeBuilding(locationGroup, facilitySize, facilityHeight, color, 
     // テラス
     const terraceGeometry = new THREE.BoxGeometry(facilitySize * 0.6, 0.1, facilitySize * 0.3);
     const terraceMaterial = new THREE.MeshBasicMaterial({ 
-        color: buildingColorsConfig.terrace.primary, 
+        color: 0xFFD700, 
         transparent: true, 
         opacity: 0.5 
     });
     const terrace = new THREE.Mesh(terraceGeometry, terraceMaterial);
     terrace.position.set(0, 0.05, facilitySize * 0.4);
     locationGroup.add(terrace);
+    
+    // 軽い環境光を追加
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    locationGroup.add(ambientLight);
 }
 
 // 図書館の建物を作成
 function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで図書館を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00005_library.glb';
+    console.log('図書館GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('図書館GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 2.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`図書館メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x87CEEB, // 空色（SkyBlue）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`図書館合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('図書館をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('図書館GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('図書館GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な図書館の形状を作成
+            console.log('フォールバック: 基本的な図書館の形状を作成します');
+            createFallbackLibrary(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な図書館の形状を作成する関数
+function createFallbackLibrary(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: 0x87CEEB, // 空色
         transparent: true, 
-        opacity: 0.3 
+        opacity: 0.85 
     });
     const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
@@ -885,7 +1007,7 @@ function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, colo
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: 0x87CEEB, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -896,7 +1018,7 @@ function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, colo
     for(let i = 0; i < 3; i++) {
         const columnGeometry = new THREE.BoxGeometry(0.3, facilityHeight, 0.3);
         const columnMaterial = new THREE.MeshBasicMaterial({ 
-            color: buildingColorsConfig.column.primary, 
+            color: 0x87CEEB, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -912,7 +1034,7 @@ function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, colo
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: buildingColorsConfig.roof.secondary, 
+        color: 0x87CEEB, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -923,7 +1045,7 @@ function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, colo
     // 屋根の輪郭線
     const roofEdges = new THREE.EdgesGeometry(roofGeometry);
     const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
-        color: buildingColorsConfig.roof.secondary, 
+        color: 0x87CEEB, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -933,23 +1055,86 @@ function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, colo
     // 大きな窓
     const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.8, facilityHeight * 0.6);
     const windowMaterial = new THREE.MeshBasicMaterial({ 
-        color: buildingColorsConfig.window.primary, 
+        color: 0x87CEEB, 
         transparent: true, 
         opacity: 0.6 
     });
     const window = new THREE.Mesh(windowGeometry, windowMaterial);
     window.position.set(0, facilityHeight * 0.3, facilitySize * 0.5);
     locationGroup.add(window);
+    
+    // 軽い環境光を追加
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    locationGroup.add(ambientLight);
 }
 
 // スポーツジムの建物を作成
 function createGymBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでジムを作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00002_gym.glb';
+    console.log('ジムGLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('ジムGLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 2.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`ジムメッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFF6347, // トマト色（Tomato）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`ジム合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('ジムをGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('ジムGLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('ジムGLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なジムの形状を作成
+            console.log('フォールバック: 基本的なジムの形状を作成します');
+            createFallbackGym(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なジムの形状を作成する関数
+function createFallbackGym(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: 0xFF6347, // トマト色
         transparent: true, 
-        opacity: 0.3 
+        opacity: 0.85 
     });
     const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
@@ -958,7 +1143,7 @@ function createGymBuilding(locationGroup, facilitySize, facilityHeight, color, s
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: 0xFF6347, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -969,7 +1154,7 @@ function createGymBuilding(locationGroup, facilitySize, facilityHeight, color, s
     for(let i = 0; i < 3; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.25, facilityHeight * 0.7);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: buildingColorsConfig.window.primary, 
+            color: 0xFF6347, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -1013,16 +1198,79 @@ function createGymBuilding(locationGroup, facilitySize, facilityHeight, color, s
     }));
     roofOutline.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roofOutline);
+    
+    // 軽い環境光を追加
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    locationGroup.add(ambientLight);
 }
 
 // 学校の建物を作成
 function createSchoolBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで学校を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00002_.glb';
+    console.log('学校GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('学校GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`学校メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x32CD32, // ライムグリーン（LimeGreen）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`学校合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('学校をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('学校GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('学校GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な学校の形状を作成
+            console.log('フォールバック: 基本的な学校の形状を作成します');
+            createFallbackSchool(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な学校の形状を作成する関数
+function createFallbackSchool(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: 0x32CD32, // ライムグリーン
         transparent: true, 
-        opacity: 0.3 
+        opacity: 0.85 
     });
     const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
@@ -1031,7 +1279,7 @@ function createSchoolBuilding(locationGroup, facilitySize, facilityHeight, color
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: 0x32CD32, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -1064,7 +1312,7 @@ function createSchoolBuilding(locationGroup, facilitySize, facilityHeight, color
     // 屋根（三角屋根）
     const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: buildingColorsConfig.roof.primary, 
+        color: 0x8B4513, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -1077,7 +1325,7 @@ function createSchoolBuilding(locationGroup, facilitySize, facilityHeight, color
     for(let i = 0; i < 4; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.5);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: buildingColorsConfig.window.primary, 
+            color: 0x32CD32, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -1090,16 +1338,79 @@ function createSchoolBuilding(locationGroup, facilitySize, facilityHeight, color
         window.rotation.y = i * Math.PI/2;
         locationGroup.add(window);
     }
+    
+    // 軽い環境光を追加
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    locationGroup.add(ambientLight);
 }
 
 // 病院の建物を作成
 function createHospitalBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで病院を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00003_.glb';
+    console.log('病院GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('病院GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`病院メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFFB6C1, // ライトピンク（LightPink）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`病院合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('病院をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('病院GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('病院GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な病院の形状を作成
+            console.log('フォールバック: 基本的な病院の形状を作成します');
+            createFallbackHospital(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な病院の形状を作成する関数
+function createFallbackHospital(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: 0xFFB6C1, // ライトピンク
         transparent: true, 
-        opacity: 0.3 
+        opacity: 0.85 
     });
     const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
@@ -1108,7 +1419,7 @@ function createHospitalBuilding(locationGroup, facilitySize, facilityHeight, col
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: 0xFFB6C1, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -1139,7 +1450,7 @@ function createHospitalBuilding(locationGroup, facilitySize, facilityHeight, col
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: buildingColorsConfig.roof.secondary, 
+        color: 0xFFB6C1, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -1150,7 +1461,7 @@ function createHospitalBuilding(locationGroup, facilitySize, facilityHeight, col
     // 屋根の輪郭線
     const roofEdges = new THREE.EdgesGeometry(roofGeometry);
     const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
-        color: buildingColorsConfig.roof.secondary, 
+        color: 0xFFB6C1, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -1161,7 +1472,7 @@ function createHospitalBuilding(locationGroup, facilitySize, facilityHeight, col
     for(let i = 0; i < 3; i++) {
         const windowGeometry = new THREE.PlaneGeometry(facilitySize * 0.2, facilityHeight * 0.4);
         const windowMaterial = new THREE.MeshBasicMaterial({ 
-            color: buildingColorsConfig.window.primary, 
+            color: 0xFFB6C1, 
             transparent: true, 
             opacity: 0.6 
         });
@@ -1173,16 +1484,79 @@ function createHospitalBuilding(locationGroup, facilitySize, facilityHeight, col
         );
         locationGroup.add(window);
     }
+    
+    // 軽い環境光を追加
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    locationGroup.add(ambientLight);
 }
 
 // スーパーマーケットの建物を作成
 function createSupermarketBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでスーパーマーケットを作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_supermarket.glb';
+    console.log('スーパーマーケットGLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('スーパーマーケットGLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 2.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`スーパーマーケットメッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x90EE90, // 明るい緑色（LightGreen）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`スーパーマーケット合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('スーパーマーケットをGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('スーパーマーケットGLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('スーパーマーケットGLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なスーパーマーケットの形状を作成
+            console.log('フォールバック: 基本的なスーパーマーケットの形状を作成します');
+            createFallbackSupermarket(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なスーパーマーケットの形状を作成する関数
+function createFallbackSupermarket(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: 0x90EE90, // 明るい緑色
         transparent: true, 
-        opacity: 0.3 
+        opacity: 0.85 
     });
     const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
@@ -1191,7 +1565,7 @@ function createSupermarketBuilding(locationGroup, facilitySize, facilityHeight, 
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: 0x90EE90, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -1201,7 +1575,7 @@ function createSupermarketBuilding(locationGroup, facilitySize, facilityHeight, 
     // 大きな入口
     const entranceGeometry = new THREE.PlaneGeometry(facilitySize * 0.6, facilityHeight * 0.8);
     const entranceMaterial = new THREE.MeshBasicMaterial({ 
-        color: buildingColorsConfig.door.primary, 
+        color: 0x90EE90, 
         transparent: true, 
         opacity: 0.7 
     });
@@ -1212,7 +1586,7 @@ function createSupermarketBuilding(locationGroup, facilitySize, facilityHeight, 
     // 屋根（平ら）
     const roofGeometry = new THREE.BoxGeometry(facilitySize * 1.1, 0.2, facilitySize * 1.1);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: buildingColorsConfig.roof.secondary, 
+        color: 0x90EE90, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -1223,24 +1597,85 @@ function createSupermarketBuilding(locationGroup, facilitySize, facilityHeight, 
     // 屋根の輪郭線
     const roofEdges = new THREE.EdgesGeometry(roofGeometry);
     const roofOutline = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ 
-        color: buildingColorsConfig.roof.secondary, 
+        color: 0x90EE90, 
         transparent: true, 
         opacity: 0.8 
     }));
     roofOutline.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roofOutline);
     
-    // 看板は削除
+    // 軽い環境光を追加
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    locationGroup.add(ambientLight);
 }
 
 // ファミレスの建物を作成
 function createFamilyRestaurantBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでファミレスを作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00004_.glb';
+    console.log('ファミレスGLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('ファミレスGLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`ファミレスメッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFFA500, // オレンジ色（Orange）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`ファミレス合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('ファミレスをGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('ファミレスGLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('ファミレスGLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なファミレスの形状を作成
+            console.log('フォールバック: 基本的なファミレスの形状を作成します');
+            createFallbackFamilyRestaurant(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なファミレスの形状を作成する関数
+function createFallbackFamilyRestaurant(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: 0xFFA500, // オレンジ色
         transparent: true, 
-        opacity: 0.3 
+        opacity: 0.85 
     });
     const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
@@ -1249,7 +1684,7 @@ function createFamilyRestaurantBuilding(locationGroup, facilitySize, facilityHei
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: 0xFFA500, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -1259,7 +1694,7 @@ function createFamilyRestaurantBuilding(locationGroup, facilitySize, facilityHei
     // 屋根（三角屋根）
     const roofGeometry = new THREE.ConeGeometry(facilitySize * 0.8, facilityHeight * 0.3, 4);
     const roofMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xF5F5DC, 
+        color: 0xFFA500, 
         transparent: true, 
         opacity: 0.4 
     });
@@ -1288,13 +1723,17 @@ function createFamilyRestaurantBuilding(locationGroup, facilitySize, facilityHei
     // 入口の庇
     const canopyGeometry = new THREE.BoxGeometry(facilitySize * 0.4, 0.1, facilitySize * 0.2);
     const canopyMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xF5F5DC, 
+        color: 0xFFA500, 
         transparent: true, 
         opacity: 0.5 
     });
     const canopy = new THREE.Mesh(canopyGeometry, canopyMaterial);
     canopy.position.set(0, facilityHeight * 0.8, facilitySize * 0.4);
     locationGroup.add(canopy);
+    
+    // 軽い環境光を追加
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    locationGroup.add(ambientLight);
 }
 
 // デフォルトの建物を作成（より詳細な立方体）
@@ -1470,9 +1909,12 @@ function createAgentHome(homeData) {
     
     // GLBファイルを読み込んで自宅を作成
     const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00004_.glb';
+    console.log('GLBファイルを読み込み中:', glbPath);
     loader.load(
-        'src/glb/ComfyUI_00004_.glb',
+        glbPath,
         function(gltf) {
+            console.log('GLBファイルの読み込み成功:', gltf);
             const model = gltf.scene;
             
             // 自宅のサイズ（小サイズ）
@@ -1485,28 +1927,29 @@ function createAgentHome(homeData) {
             // モデルを中央に配置
             model.position.set(0, 0.35, 0);
             
-            // モデルのマテリアルを薄い青色に変更し、透過度を設定
+            // モデルのマテリアルを明るい薄い青色に変更
+            let meshCount = 0;
             model.traverse(function(child) {
                 if (child.isMesh) {
-                    // 既存のマテリアルを薄い青色の透過マテリアルに変更
-                    const newMaterial = new THREE.MeshLambertMaterial({
-                        color: 0x87CEEB, // 薄い青色
+                    meshCount++;
+                    console.log(`メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで非常に明るい薄い青色に設定（ライティングの影響を受けない）
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xADD8E6, // より明るい薄い青色（LightBlue）
                         transparent: true,
-                        opacity: 0.7,
+                        opacity: 0.85, // 透過度
                         side: THREE.DoubleSide
                     });
                     child.material = newMaterial;
                 }
             });
+            console.log(`合計 ${meshCount} 個のメッシュを処理しました`);
             
-            // モデル専用のライティングを追加
-            const modelLight = new THREE.PointLight(0xffffff, 1.0, 10);
-            modelLight.position.set(0, 2, 0);
-            homeGroup.add(modelLight);
-            
-            // 追加の環境光
-            const modelAmbientLight = new THREE.AmbientLight(0x87CEEB, 0.3);
-            homeGroup.add(modelAmbientLight);
+            // BasicMaterialを使用しているためライティングは不要（影響を受けない）
+            // ただし、視覚的な参考として軽いライトを追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+            homeGroup.add(ambientLight);
             
             homeGroup.add(model);
             
@@ -1524,8 +1967,173 @@ function createAgentHome(homeData) {
         },
         function(error) {
             console.error('GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な家の形状を作成
+            console.log('フォールバック: 基本的な家の形状を作成します');
+            createFallbackHome(homeGroup, homeData);
         }
     );
+}
+
+// フォールバック用の基本的な家の形状を作成する関数
+function createFallbackHome(homeGroup, homeData) {
+    // 自宅のサイズ（小サイズ）
+    const homeSize = cityLayoutConfig.buildingSizes.small;
+    const homeHeight = homeSize * 0.8;
+    
+    // 家の基本構造（明るい薄い青色の透過した壁）
+    const houseGeometry = new THREE.BoxGeometry(homeSize, homeHeight, homeSize);
+    const houseMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xADD8E6, // より明るい薄い青色（LightBlue）
+        transparent: true, 
+        opacity: 0.85,
+        side: THREE.DoubleSide
+    });
+    const house = new THREE.Mesh(houseGeometry, houseMaterial);
+    house.position.set(0, homeHeight/2, 0);
+    homeGroup.add(house);
+    
+    // 家の境界線
+    const houseEdges = new THREE.EdgesGeometry(houseGeometry);
+    const houseEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x87CEEB });
+    const houseEdge = new THREE.LineSegments(houseEdges, houseEdgeMaterial);
+    houseEdge.position.copy(house.position);
+    homeGroup.add(houseEdge);
+
+    // 屋根（三角屋根、薄い青色）
+    const roofGeometry = new THREE.ConeGeometry(homeSize * 0.75, homeSize * 0.5, 4);
+    const roofMaterial = new THREE.MeshLambertMaterial({ 
+        color: 0x87CEEB, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+    roof.position.set(0, homeHeight + homeSize * 0.25, 0);
+    roof.rotation.y = Math.PI / 4;
+    homeGroup.add(roof);
+    
+    // 屋根の境界線
+    const roofEdges = new THREE.EdgesGeometry(roofGeometry);
+    const roofEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x87CEEB });
+    const roofEdge = new THREE.LineSegments(roofEdges, roofEdgeMaterial);
+    roofEdge.position.copy(roof.position);
+    roofEdge.rotation.copy(roof.rotation);
+    homeGroup.add(roofEdge);
+
+    // 窓（正面、薄い青色）
+    for(let i = 0; i < 2; i++) {
+        const windowGeometry = new THREE.PlaneGeometry(homeSize * 0.2, homeHeight * 0.3);
+        const windowMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0xFFFFFF, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
+        window.position.set(
+            (i === 0 ? -1 : 1) * homeSize * 0.25,
+            homeHeight * 0.4,
+            homeSize * 0.5
+        );
+        homeGroup.add(window);
+        
+        // 窓の境界線
+        const windowEdges = new THREE.EdgesGeometry(windowGeometry);
+        const windowEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
+        const windowEdge = new THREE.LineSegments(windowEdges, windowEdgeMaterial);
+        windowEdge.position.copy(window.position);
+        homeGroup.add(windowEdge);
+    }
+
+    // 窓（側面、薄い青色）
+    for(let i = 0; i < 2; i++) {
+        const sideWindowGeometry = new THREE.PlaneGeometry(homeSize * 0.15, homeHeight * 0.25);
+        const sideWindowMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0xFFFFFF, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const sideWindow = new THREE.Mesh(sideWindowGeometry, sideWindowMaterial);
+        sideWindow.position.set(
+            (i === 0 ? -1 : 1) * homeSize * 0.5,
+            homeHeight * 0.35,
+            0
+        );
+        sideWindow.rotation.y = i === 0 ? Math.PI / 2 : -Math.PI / 2;
+        homeGroup.add(sideWindow);
+        
+        // 側面窓の境界線
+        const sideWindowEdges = new THREE.EdgesGeometry(sideWindowGeometry);
+        const sideWindowEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
+        const sideWindowEdge = new THREE.LineSegments(sideWindowEdges, sideWindowEdgeMaterial);
+        sideWindowEdge.position.copy(sideWindow.position);
+        sideWindowEdge.rotation.copy(sideWindow.rotation);
+        homeGroup.add(sideWindowEdge);
+    }
+
+    // 入り口の扉（薄い青色）
+    const doorGeometry = new THREE.PlaneGeometry(homeSize * 0.3, homeHeight * 0.5);
+    const doorMaterial = new THREE.MeshLambertMaterial({ 
+        color: 0x87CEEB, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const door = new THREE.Mesh(doorGeometry, doorMaterial);
+    door.position.set(0, homeHeight * 0.25, homeSize * 0.5);
+    homeGroup.add(door);
+    
+    // 扉の境界線
+    const doorEdges = new THREE.EdgesGeometry(doorGeometry);
+    const doorEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x87CEEB });
+    const doorEdge = new THREE.LineSegments(doorEdges, doorEdgeMaterial);
+    doorEdge.position.copy(door.position);
+    homeGroup.add(doorEdge);
+
+    // 玄関の庇（薄い青色）
+    const canopyGeometry = new THREE.BoxGeometry(homeSize * 0.4, 0.1, homeSize * 0.2);
+    const canopyMaterial = new THREE.MeshLambertMaterial({ 
+        color: 0x87CEEB, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const canopy = new THREE.Mesh(canopyGeometry, canopyMaterial);
+    canopy.position.set(0, homeHeight * 0.8, homeSize * 0.4);
+    homeGroup.add(canopy);
+    
+    // 庇の境界線
+    const canopyEdges = new THREE.EdgesGeometry(canopyGeometry);
+    const canopyEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x87CEEB });
+    const canopyEdge = new THREE.LineSegments(canopyEdges, canopyEdgeMaterial);
+    canopyEdge.position.copy(canopy.position);
+    homeGroup.add(canopyEdge);
+
+    // 煙突（薄い青色）
+    const chimneyGeometry = new THREE.BoxGeometry(homeSize * 0.15, homeSize * 0.3, homeSize * 0.15);
+    const chimneyMaterial = new THREE.MeshLambertMaterial({ 
+        color: 0x87CEEB, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    const chimney = new THREE.Mesh(chimneyGeometry, chimneyMaterial);
+    chimney.position.set(homeSize * 0.2, homeHeight + homeSize * 0.4, 0);
+    homeGroup.add(chimney);
+    
+    // 煙突の境界線
+    const chimneyEdges = new THREE.EdgesGeometry(chimneyGeometry);
+    const chimneyEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x87CEEB });
+    const chimneyEdge = new THREE.LineSegments(chimneyEdges, chimneyEdgeMaterial);
+    chimneyEdge.position.copy(chimney.position);
+    homeGroup.add(chimneyEdge);
+
+    // BasicMaterialを使用しているためライティングは不要
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    homeGroup.add(ambientLight);
+
+    // 家の位置を設定
+    homeGroup.position.set(homeData.x, 0, homeData.z);
+    scene.add(homeGroup);
+    
+    // 入り口接続とlocations配列への追加
+    createHomeConnections(homeGroup, homeData);
 }
 
 // 家の入り口接続とlocations配列への追加を行う共通関数
@@ -2044,12 +2652,71 @@ function getWaitingSpots(facilityName, facilitySize) {
 
 // 郵便局の建物を作成
 function createPostOfficeBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで郵便局を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00004_.glb';
+    console.log('郵便局GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('郵便局GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`郵便局メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x4169E1, // ロイヤルブルー（RoyalBlue）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`郵便局合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('郵便局をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('郵便局GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('郵便局GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な郵便局の形状を作成
+            console.log('フォールバック: 基本的な郵便局の形状を作成します');
+            createFallbackPostOffice(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な郵便局の形状を作成する関数
+function createFallbackPostOffice(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: 0x4169E1, // ロイヤルブルー
         transparent: true, 
-        opacity: 0.3 
+        opacity: 0.85 
     });
     const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
@@ -2058,7 +2725,7 @@ function createPostOfficeBuilding(locationGroup, facilitySize, facilityHeight, c
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: 0x4169E1, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -2113,16 +2780,79 @@ function createPostOfficeBuilding(locationGroup, facilitySize, facilityHeight, c
     }));
     roofOutline.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roofOutline);
+    
+    // 軽い環境光を追加
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    locationGroup.add(ambientLight);
 }
 
 // 銀行の建物を作成
 function createBankBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで銀行を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00004_.glb';
+    console.log('銀行GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('銀行GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`銀行メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x8B4513, // サドルブラウン（SaddleBrown）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`銀行合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('銀行をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('銀行GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('銀行GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な銀行の形状を作成
+            console.log('フォールバック: 基本的な銀行の形状を作成します');
+            createFallbackBank(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な銀行の形状を作成する関数
+function createFallbackBank(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: 0x8B4513, // サドルブラウン
         transparent: true, 
-        opacity: 0.3 
+        opacity: 0.85 
     });
     const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
@@ -2131,7 +2861,7 @@ function createBankBuilding(locationGroup, facilitySize, facilityHeight, color, 
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: 0x8B4513, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -2186,16 +2916,79 @@ function createBankBuilding(locationGroup, facilitySize, facilityHeight, color, 
     }));
     roofOutline.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roofOutline);
+    
+    // 軽い環境光を追加
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    locationGroup.add(ambientLight);
 }
 
 // 美容院の建物を作成
 function createBeautySalonBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで美容院を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('美容院GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('美容院GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`美容院メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFF69B4, // ホットピンク（HotPink）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`美容院合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('美容院をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('美容院GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('美容院GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な美容院の形状を作成
+            console.log('フォールバック: 基本的な美容院の形状を作成します');
+            createFallbackBeautySalon(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な美容院の形状を作成する関数
+function createFallbackBeautySalon(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: 0xFF69B4, // ホットピンク
         transparent: true, 
-        opacity: 0.3 
+        opacity: 0.85 
     });
     const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
@@ -2204,7 +2997,7 @@ function createBeautySalonBuilding(locationGroup, facilitySize, facilityHeight, 
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: 0xFF69B4, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -2239,16 +3032,79 @@ function createBeautySalonBuilding(locationGroup, facilitySize, facilityHeight, 
     roof.position.set(0, facilityHeight + facilityHeight * 0.15, 0);
     roof.rotation.y = Math.PI / 4;
     locationGroup.add(roof);
+    
+    // 軽い環境光を追加
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    locationGroup.add(ambientLight);
 }
 
 // クリーニング店の建物を作成
 function createCleaningShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでクリーニング店を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('クリーニング店GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('クリーニング店GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`クリーニング店メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x87CEEB, // スカイブルー（SkyBlue）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`クリーニング店合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('クリーニング店をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('クリーニング店GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('クリーニング店GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なクリーニング店の形状を作成
+            console.log('フォールバック: 基本的なクリーニング店の形状を作成します');
+            createFallbackCleaningShop(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なクリーニング店の形状を作成する関数
+function createFallbackCleaningShop(locationGroup, facilitySize, facilityHeight, color, scale) {
     // メインの建物
     const mainBuildingGeometry = new THREE.BoxGeometry(facilitySize, facilityHeight, facilitySize);
     const mainBuildingMaterial = new THREE.MeshBasicMaterial({ 
-        color: color, 
+        color: 0x87CEEB, // スカイブルー
         transparent: true, 
-        opacity: 0.3 
+        opacity: 0.85 
     });
     const mainBuilding = new THREE.Mesh(mainBuildingGeometry, mainBuildingMaterial);
     mainBuilding.position.set(0, facilityHeight/2, 0);
@@ -2257,7 +3113,7 @@ function createCleaningShopBuilding(locationGroup, facilitySize, facilityHeight,
     // 建物の輪郭線
     const mainBuildingEdges = new THREE.EdgesGeometry(mainBuildingGeometry);
     const mainBuildingOutline = new THREE.LineSegments(mainBuildingEdges, new THREE.LineBasicMaterial({ 
-        color: color, 
+        color: 0x87CEEB, 
         transparent: true, 
         opacity: 0.8 
     }));
@@ -2301,10 +3157,73 @@ function createCleaningShopBuilding(locationGroup, facilitySize, facilityHeight,
     }));
     roofOutline.position.set(0, facilityHeight + 0.1, 0);
     locationGroup.add(roofOutline);
+    
+    // 軽い環境光を追加
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    locationGroup.add(ambientLight);
 }
 
 // 薬局の建物を作成
 function createPharmacyBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで薬局を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('薬局GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('薬局GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`薬局メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x00FF00, // ライム（Lime）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`薬局合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('薬局をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('薬局GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('薬局GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な薬局の形状を作成
+            console.log('フォールバック: 基本的な薬局の形状を作成します');
+            createFallbackPharmacy(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な薬局の形状を作成する関数
+function createFallbackPharmacy(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -2330,7 +3249,7 @@ function createPharmacyBuilding(locationGroup, facilitySize, facilityHeight, col
             x: 0,
             y: facilityHeight + facilityHeight * 0.1,
             z: 0,
-            color: 0x00CED1,
+            color: 0x00FF00,
             opacity: 0.8
         },
         {
@@ -2340,12 +3259,12 @@ function createPharmacyBuilding(locationGroup, facilitySize, facilityHeight, col
             x: 0,
             y: facilityHeight + facilityHeight * 0.1,
             z: 0,
-            color: 0x00CED1,
+            color: 0x00FF00,
             opacity: 0.8
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x00FF00, scale, {
         windows: windows,
         roof: { type: 'flat', color: 0x696969 },
         decorations: decorations
@@ -2354,6 +3273,65 @@ function createPharmacyBuilding(locationGroup, facilitySize, facilityHeight, col
 
 // 本屋の建物を作成
 function createBookstoreBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで本屋を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('本屋GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('本屋GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`本屋メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x8B4513, // サドルブラウン（SaddleBrown）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`本屋合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('本屋をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('本屋GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('本屋GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な本屋の形状を作成
+            console.log('フォールバック: 基本的な本屋の形状を作成します');
+            createFallbackBookstore(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な本屋の形状を作成する関数
+function createFallbackBookstore(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.3,
@@ -2371,7 +3349,7 @@ function createBookstoreBuilding(locationGroup, facilitySize, facilityHeight, co
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x8B4513, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 }
     });
@@ -2379,6 +3357,65 @@ function createBookstoreBuilding(locationGroup, facilitySize, facilityHeight, co
 
 // コンビニの建物を作成
 function createConvenienceStoreBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでコンビニを作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('コンビニGLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('コンビニGLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`コンビニメッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFF6347, // トマト（Tomato）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`コンビニ合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('コンビニをGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('コンビニGLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('コンビニGLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なコンビニの形状を作成
+            console.log('フォールバック: 基本的なコンビニの形状を作成します');
+            createFallbackConvenienceStore(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なコンビニの形状を作成する関数
+function createFallbackConvenienceStore(locationGroup, facilitySize, facilityHeight, color, scale) {
     const entrance = {
         width: facilitySize * 0.5,
         height: facilityHeight * 0.8,
@@ -2400,7 +3437,7 @@ function createConvenienceStoreBuilding(locationGroup, facilitySize, facilityHei
         opacity: 0.8
     };
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0xFF6347, scale, {
         roof: { type: 'flat', color: 0x696969 },
         entrance: entrance,
         sign: sign
@@ -2409,6 +3446,65 @@ function createConvenienceStoreBuilding(locationGroup, facilitySize, facilityHei
 
 // パン屋の建物を作成
 function createBakeryBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでパン屋を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('パン屋GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('パン屋GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`パン屋メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFFD700, // ゴールド（Gold）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`パン屋合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('パン屋をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('パン屋GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('パン屋GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なパン屋の形状を作成
+            console.log('フォールバック: 基本的なパン屋の形状を作成します');
+            createFallbackBakery(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なパン屋の形状を作成する関数
+function createFallbackBakery(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -2439,7 +3535,7 @@ function createBakeryBuilding(locationGroup, facilitySize, facilityHeight, color
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0xFFD700, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 },
         decorations: decorations
@@ -2448,6 +3544,65 @@ function createBakeryBuilding(locationGroup, facilitySize, facilityHeight, color
 
 // 花屋の建物を作成
 function createFlowerShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで花屋を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('花屋GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('花屋GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`花屋メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFF69B4, // ホットピンク（HotPink）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`花屋合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('花屋をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('花屋GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('花屋GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な花屋の形状を作成
+            console.log('フォールバック: 基本的な花屋の形状を作成します');
+            createFallbackFlowerShop(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な花屋の形状を作成する関数
+function createFallbackFlowerShop(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.3,
@@ -2465,7 +3620,7 @@ function createFlowerShopBuilding(locationGroup, facilitySize, facilityHeight, c
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0xFF69B4, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 }
     });
@@ -2473,6 +3628,65 @@ function createFlowerShopBuilding(locationGroup, facilitySize, facilityHeight, c
 
 // 電気屋の建物を作成
 function createElectronicsShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで電気屋を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('電気屋GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('電気屋GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`電気屋メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x1E90FF, // ドジャーブルー（DodgerBlue）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`電気屋合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('電気屋をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('電気屋GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('電気屋GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な電気屋の形状を作成
+            console.log('フォールバック: 基本的な電気屋の形状を作成します');
+            createFallbackElectronicsShop(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な電気屋の形状を作成する関数
+function createFallbackElectronicsShop(locationGroup, facilitySize, facilityHeight, color, scale) {
     const entrance = {
         width: facilitySize * 0.4,
         height: facilityHeight * 0.7,
@@ -2494,7 +3708,7 @@ function createElectronicsShopBuilding(locationGroup, facilitySize, facilityHeig
         opacity: 0.8
     };
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x1E90FF, scale, {
         roof: { type: 'flat', color: 0x696969 },
         entrance: entrance,
         sign: sign
@@ -2503,6 +3717,65 @@ function createElectronicsShopBuilding(locationGroup, facilitySize, facilityHeig
 
 // 八百屋の建物を作成
 function createGreengrocerBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで八百屋を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('八百屋GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('八百屋GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`八百屋メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x32CD32, // ライムグリーン（LimeGreen）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`八百屋合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('八百屋をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('八百屋GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('八百屋GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な八百屋の形状を作成
+            console.log('フォールバック: 基本的な八百屋の形状を作成します');
+            createFallbackGreengrocer(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な八百屋の形状を作成する関数
+function createFallbackGreengrocer(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.3,
@@ -2520,7 +3793,7 @@ function createGreengrocerBuilding(locationGroup, facilitySize, facilityHeight, 
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x32CD32, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 }
     });
@@ -2528,6 +3801,65 @@ function createGreengrocerBuilding(locationGroup, facilitySize, facilityHeight, 
 
 // 魚屋の建物を作成
 function createFishShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで魚屋を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('魚屋GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('魚屋GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`魚屋メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x00CED1, // ダークターコイズ（DarkTurquoise）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`魚屋合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('魚屋をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('魚屋GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('魚屋GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な魚屋の形状を作成
+            console.log('フォールバック: 基本的な魚屋の形状を作成します');
+            createFallbackFishShop(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な魚屋の形状を作成する関数
+function createFallbackFishShop(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -2545,7 +3877,7 @@ function createFishShopBuilding(locationGroup, facilitySize, facilityHeight, col
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x00CED1, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 }
     });
@@ -2553,6 +3885,65 @@ function createFishShopBuilding(locationGroup, facilitySize, facilityHeight, col
 
 // 肉屋の建物を作成
 function createButcherShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで肉屋を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('肉屋GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('肉屋GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`肉屋メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xDC143C, // クリムゾン（Crimson）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`肉屋合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('肉屋をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('肉屋GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('肉屋GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な肉屋の形状を作成
+            console.log('フォールバック: 基本的な肉屋の形状を作成します');
+            createFallbackButcherShop(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な肉屋の形状を作成する関数
+function createFallbackButcherShop(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -2570,7 +3961,7 @@ function createButcherShopBuilding(locationGroup, facilitySize, facilityHeight, 
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0xDC143C, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 }
     });
@@ -2578,6 +3969,65 @@ function createButcherShopBuilding(locationGroup, facilitySize, facilityHeight, 
 
 // ケーキ屋の建物を作成
 function createCakeShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでケーキ屋を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('ケーキ屋GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('ケーキ屋GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`ケーキ屋メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFFB6C1, // ライトピンク（LightPink）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`ケーキ屋合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('ケーキ屋をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('ケーキ屋GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('ケーキ屋GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なケーキ屋の形状を作成
+            console.log('フォールバック: 基本的なケーキ屋の形状を作成します');
+            createFallbackCakeShop(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なケーキ屋の形状を作成する関数
+function createFallbackCakeShop(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.3,
@@ -2595,7 +4045,7 @@ function createCakeShopBuilding(locationGroup, facilitySize, facilityHeight, col
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0xFFB6C1, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 }
     });
@@ -2603,6 +4053,65 @@ function createCakeShopBuilding(locationGroup, facilitySize, facilityHeight, col
 
 // 喫茶店の建物を作成
 function createTeaHouseBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで喫茶店を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('喫茶店GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('喫茶店GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`喫茶店メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xD2691E, // チョコレート（Chocolate）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`喫茶店合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('喫茶店をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('喫茶店GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('喫茶店GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な喫茶店の形状を作成
+            console.log('フォールバック: 基本的な喫茶店の形状を作成します');
+            createFallbackTeaHouse(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な喫茶店の形状を作成する関数
+function createFallbackTeaHouse(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -2620,7 +4129,7 @@ function createTeaHouseBuilding(locationGroup, facilitySize, facilityHeight, col
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0xD2691E, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 }
     });
@@ -2628,6 +4137,65 @@ function createTeaHouseBuilding(locationGroup, facilitySize, facilityHeight, col
 
 // ラーメン屋の建物を作成
 function createRamenShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでラーメン屋を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('ラーメン屋GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('ラーメン屋GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`ラーメン屋メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFF8C00, // ダークオレンジ（DarkOrange）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`ラーメン屋合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('ラーメン屋をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('ラーメン屋GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('ラーメン屋GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なラーメン屋の形状を作成
+            console.log('フォールバック: 基本的なラーメン屋の形状を作成します');
+            createFallbackRamenShop(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なラーメン屋の形状を作成する関数
+function createFallbackRamenShop(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -2658,7 +4226,7 @@ function createRamenShopBuilding(locationGroup, facilitySize, facilityHeight, co
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0xFF8C00, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 },
         decorations: decorations
@@ -2667,6 +4235,65 @@ function createRamenShopBuilding(locationGroup, facilitySize, facilityHeight, co
 
 // 寿司屋の建物を作成
 function createSushiShopBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで寿司屋を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('寿司屋GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('寿司屋GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`寿司屋メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x20B2AA, // ライトシーグリーン（LightSeaGreen）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`寿司屋合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('寿司屋をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('寿司屋GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('寿司屋GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な寿司屋の形状を作成
+            console.log('フォールバック: 基本的な寿司屋の形状を作成します');
+            createFallbackSushiShop(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な寿司屋の形状を作成する関数
+function createFallbackSushiShop(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -2695,7 +4322,7 @@ function createSushiShopBuilding(locationGroup, facilitySize, facilityHeight, co
         opacity: 0.8
     };
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x20B2AA, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 },
         sign: sign
@@ -2704,6 +4331,65 @@ function createSushiShopBuilding(locationGroup, facilitySize, facilityHeight, co
 
 // 居酒屋の建物を作成
 function createIzakayaBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで居酒屋を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('居酒屋GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('居酒屋GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`居酒屋メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x8B0000, // ダークレッド（DarkRed）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`居酒屋合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('居酒屋をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('居酒屋GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('居酒屋GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な居酒屋の形状を作成
+            console.log('フォールバック: 基本的な居酒屋の形状を作成します');
+            createFallbackIzakaya(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な居酒屋の形状を作成する関数
+function createFallbackIzakaya(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -2732,7 +4418,7 @@ function createIzakayaBuilding(locationGroup, facilitySize, facilityHeight, colo
         opacity: 0.8
     };
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x8B0000, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 },
         sign: sign
@@ -2741,6 +4427,65 @@ function createIzakayaBuilding(locationGroup, facilitySize, facilityHeight, colo
 
 // 銭湯の建物を作成
 function createPublicBathBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで銭湯を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('銭湯GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('銭湯GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`銭湯メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x4682B4, // スチールブルー（SteelBlue）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`銭湯合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('銭湯をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('銭湯GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('銭湯GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な銭湯の形状を作成
+            console.log('フォールバック: 基本的な銭湯の形状を作成します');
+            createFallbackPublicBath(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な銭湯の形状を作成する関数
+function createFallbackPublicBath(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -2769,7 +4514,7 @@ function createPublicBathBuilding(locationGroup, facilitySize, facilityHeight, c
         opacity: 0.8
     };
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x4682B4, scale, {
         windows: windows,
         roof: { type: 'flat', color: 0x696969 },
         sign: sign
@@ -2778,6 +4523,65 @@ function createPublicBathBuilding(locationGroup, facilitySize, facilityHeight, c
 
 // ゲームセンターの建物を作成
 function createGameCenterBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでゲームセンターを作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('ゲームセンターGLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('ゲームセンターGLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`ゲームセンターメッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFF1493, // ディープピンク（DeepPink）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`ゲームセンター合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('ゲームセンターをGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('ゲームセンターGLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('ゲームセンターGLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なゲームセンターの形状を作成
+            console.log('フォールバック: 基本的なゲームセンターの形状を作成します');
+            createFallbackGameCenter(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なゲームセンターの形状を作成する関数
+function createFallbackGameCenter(locationGroup, facilitySize, facilityHeight, color, scale) {
     const entrance = {
         width: facilitySize * 0.4,
         height: facilityHeight * 0.7,
@@ -2799,7 +4603,7 @@ function createGameCenterBuilding(locationGroup, facilitySize, facilityHeight, c
         opacity: 0.8
     };
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0xFF1493, scale, {
         roof: { type: 'flat', color: 0x696969 },
         entrance: entrance,
         sign: sign
@@ -2808,6 +4612,65 @@ function createGameCenterBuilding(locationGroup, facilitySize, facilityHeight, c
 
 // 映画館の建物を作成
 function createCinemaBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで映画館を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('映画館GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('映画館GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`映画館メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x4B0082, // インディゴ（Indigo）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`映画館合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('映画館をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('映画館GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('映画館GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な映画館の形状を作成
+            console.log('フォールバック: 基本的な映画館の形状を作成します');
+            createFallbackCinema(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な映画館の形状を作成する関数
+function createFallbackCinema(locationGroup, facilitySize, facilityHeight, color, scale) {
     const entrance = {
         width: facilitySize * 0.5,
         height: facilityHeight * 0.8,
@@ -2829,7 +4692,7 @@ function createCinemaBuilding(locationGroup, facilitySize, facilityHeight, color
         opacity: 0.8
     };
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x4B0082, scale, {
         roof: { type: 'flat', color: 0x696969 },
         entrance: entrance,
         sign: sign
@@ -2838,6 +4701,65 @@ function createCinemaBuilding(locationGroup, facilitySize, facilityHeight, color
 
 // カラオケの建物を作成
 function createKaraokeBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでカラオケを作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('カラオケGLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('カラオケGLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`カラオケメッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFF69B4, // ホットピンク（HotPink）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`カラオケ合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('カラオケをGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('カラオケGLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('カラオケGLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なカラオケの形状を作成
+            console.log('フォールバック: 基本的なカラオケの形状を作成します');
+            createFallbackKaraoke(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なカラオケの形状を作成する関数
+function createFallbackKaraoke(locationGroup, facilitySize, facilityHeight, color, scale) {
     const entrance = {
         width: facilitySize * 0.4,
         height: facilityHeight * 0.7,
@@ -2859,7 +4781,7 @@ function createKaraokeBuilding(locationGroup, facilitySize, facilityHeight, colo
         opacity: 0.8
     };
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0xFF69B4, scale, {
         roof: { type: 'flat', color: 0x696969 },
         entrance: entrance,
         sign: sign
@@ -2868,6 +4790,65 @@ function createKaraokeBuilding(locationGroup, facilitySize, facilityHeight, colo
 
 // ボーリング場の建物を作成
 function createBowlingAlleyBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んでボーリング場を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('ボーリング場GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('ボーリング場GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`ボーリング場メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x1E90FF, // ドジャーブルー（DodgerBlue）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`ボーリング場合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('ボーリング場をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('ボーリング場GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('ボーリング場GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的なボーリング場の形状を作成
+            console.log('フォールバック: 基本的なボーリング場の形状を作成します');
+            createFallbackBowlingAlley(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的なボーリング場の形状を作成する関数
+function createFallbackBowlingAlley(locationGroup, facilitySize, facilityHeight, color, scale) {
     const entrance = {
         width: facilitySize * 0.4,
         height: facilityHeight * 0.7,
@@ -2889,7 +4870,7 @@ function createBowlingAlleyBuilding(locationGroup, facilitySize, facilityHeight,
         opacity: 0.8
     };
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x1E90FF, scale, {
         roof: { type: 'flat', color: 0x696969 },
         entrance: entrance,
         sign: sign
@@ -2898,6 +4879,65 @@ function createBowlingAlleyBuilding(locationGroup, facilitySize, facilityHeight,
 
 // 温泉の建物を作成
 function createHotSpringBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで温泉を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('温泉GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('温泉GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`温泉メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x20B2AA, // ライトシーグリーン（LightSeaGreen）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`温泉合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('温泉をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('温泉GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('温泉GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な温泉の形状を作成
+            console.log('フォールバック: 基本的な温泉の形状を作成します');
+            createFallbackHotSpring(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な温泉の形状を作成する関数
+function createFallbackHotSpring(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -2926,7 +4966,7 @@ function createHotSpringBuilding(locationGroup, facilitySize, facilityHeight, co
         opacity: 0.8
     };
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x20B2AA, scale, {
         windows: windows,
         roof: { type: 'flat', color: 0x696969 },
         sign: sign
@@ -2935,6 +4975,65 @@ function createHotSpringBuilding(locationGroup, facilitySize, facilityHeight, co
 
 // 神社の建物を作成
 function createShrineBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで神社を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('神社GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('神社GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`神社メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x8B4513, // サドルブラウン（SaddleBrown）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`神社合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('神社をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('神社GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('神社GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な神社の形状を作成
+            console.log('フォールバック: 基本的な神社の形状を作成します');
+            createFallbackShrine(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な神社の形状を作成する関数
+function createFallbackShrine(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -2965,7 +5064,7 @@ function createShrineBuilding(locationGroup, facilitySize, facilityHeight, color
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x8B4513, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 },
         decorations: decorations
@@ -2974,6 +5073,65 @@ function createShrineBuilding(locationGroup, facilitySize, facilityHeight, color
 
 // 寺の建物を作成
 function createTempleBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで寺を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('寺GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('寺GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`寺メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x8B4513, // サドルブラウン（SaddleBrown）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`寺合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('寺をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('寺GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('寺GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な寺の形状を作成
+            console.log('フォールバック: 基本的な寺の形状を作成します');
+            createFallbackTemple(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な寺の形状を作成する関数
+function createFallbackTemple(locationGroup, facilitySize, facilityHeight, color, scale) {
     const windows = [
         {
             width: facilitySize * 0.2,
@@ -3014,7 +5172,7 @@ function createTempleBuilding(locationGroup, facilitySize, facilityHeight, color
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x8B4513, scale, {
         windows: windows,
         roof: { type: 'cone', color: 0x8B4513 },
         decorations: decorations
@@ -3023,6 +5181,65 @@ function createTempleBuilding(locationGroup, facilitySize, facilityHeight, color
 
 // 消防署の建物を作成
 function createFireStationBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで消防署を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('消防署GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('消防署GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`消防署メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xFF0000, // レッド（Red）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`消防署合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('消防署をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('消防署GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('消防署GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な消防署の形状を作成
+            console.log('フォールバック: 基本的な消防署の形状を作成します');
+            createFallbackFireStation(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な消防署の形状を作成する関数
+function createFallbackFireStation(locationGroup, facilitySize, facilityHeight, color, scale) {
     const entrance = {
         width: facilitySize * 0.6,
         height: facilityHeight * 0.8,
@@ -3044,7 +5261,7 @@ function createFireStationBuilding(locationGroup, facilitySize, facilityHeight, 
         opacity: 0.8
     };
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0xFF0000, scale, {
         roof: { type: 'flat', color: 0x696969 },
         entrance: entrance,
         sign: sign
@@ -3053,6 +5270,65 @@ function createFireStationBuilding(locationGroup, facilitySize, facilityHeight, 
 
 // 警察署の建物を作成
 function createPoliceStationBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで警察署を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('警察署GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('警察署GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`警察署メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x0000FF, // ブルー（Blue）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`警察署合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('警察署をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('警察署GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('警察署GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な警察署の形状を作成
+            console.log('フォールバック: 基本的な警察署の形状を作成します');
+            createFallbackPoliceStation(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な警察署の形状を作成する関数
+function createFallbackPoliceStation(locationGroup, facilitySize, facilityHeight, color, scale) {
     const entrance = {
         width: facilitySize * 0.4,
         height: facilityHeight * 0.7,
@@ -3107,7 +5383,7 @@ function createPoliceStationBuilding(locationGroup, facilitySize, facilityHeight
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x0000FF, scale, {
         roof: { type: 'flat', color: 0x696969 },
         entrance: entrance,
         sign: sign,
@@ -3117,6 +5393,65 @@ function createPoliceStationBuilding(locationGroup, facilitySize, facilityHeight
 
 // 市役所の建物を作成
 function createCityHallBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで市役所を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('市役所GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('市役所GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`市役所メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x808080, // グレー（Gray）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`市役所合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('市役所をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('市役所GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('市役所GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な市役所の形状を作成
+            console.log('フォールバック: 基本的な市役所の形状を作成します');
+            createFallbackCityHall(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な市役所の形状を作成する関数
+function createFallbackCityHall(locationGroup, facilitySize, facilityHeight, color, scale) {
     const entrance = {
         width: facilitySize * 0.5,
         height: facilityHeight * 0.8,
@@ -3181,7 +5516,7 @@ function createCityHallBuilding(locationGroup, facilitySize, facilityHeight, col
         }
     ];
     
-    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, color, scale, {
+    createTransparentBuilding(locationGroup, facilitySize, facilityHeight, 0x808080, scale, {
         roof: { type: 'flat', color: 0x696969 },
         entrance: entrance,
         sign: sign,
@@ -3191,6 +5526,65 @@ function createCityHallBuilding(locationGroup, facilitySize, facilityHeight, col
 
 // 公園を作成する関数
 function createParkBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで公園を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('公園GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('公園GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`公園メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x228B22, // フォレストグリーン（ForestGreen）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`公園合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('公園をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('公園GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('公園GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な公園の形状を作成
+            console.log('フォールバック: 基本的な公園の形状を作成します');
+            createFallbackPark(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な公園の形状を作成する関数
+function createFallbackPark(locationGroup, facilitySize, facilityHeight, color, scale) {
     // 公園は建物ではなく、緑地と装飾物で表現
     
     // 地面（芝生）
@@ -3254,6 +5648,65 @@ function createParkBuilding(locationGroup, facilitySize, facilityHeight, color, 
 
 // 町の広場を作成する関数
 function createTownSquareBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
+    // GLBファイルを読み込んで町の広場を作成
+    const loader = new THREE.GLTFLoader();
+    const glbPath = 'src/glb/ComfyUI_00001_.glb';
+    console.log('町の広場GLBファイルを読み込み中:', glbPath);
+    
+    loader.load(
+        glbPath,
+        function(gltf) {
+            console.log('町の広場GLBファイルの読み込み成功:', gltf);
+            const model = gltf.scene;
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2; // 適切なサイズに調整
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, 0.5, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`町の広場メッシュ ${meshCount} を処理中:`, child.name || '無名');
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xA9A9A9, // ダークグレー（DarkGray）
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            console.log(`町の広場合計 ${meshCount} 個のメッシュを処理しました`);
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log('町の広場をGLBファイルから作成しました。');
+        },
+        function(progress) {
+            console.log('町の広場GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
+        },
+        function(error) {
+            console.error('町の広場GLBファイルの読み込みに失敗しました:', error);
+            
+            // フォールバック: 基本的な町の広場の形状を作成
+            console.log('フォールバック: 基本的な町の広場の形状を作成します');
+            createFallbackTownSquare(locationGroup, facilitySize, facilityHeight, color, scale);
+        }
+    );
+}
+
+// フォールバック用の基本的な町の広場の形状を作成する関数
+function createFallbackTownSquare(locationGroup, facilitySize, facilityHeight, color, scale) {
     // 町の広場も建物ではなく、石畳と装飾物で表現
     
     // 地面（石畳）

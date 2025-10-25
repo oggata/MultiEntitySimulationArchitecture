@@ -1,3 +1,115 @@
+// GLBモデルのキャッシュシステム
+const glbModelCache = {};
+const glbLoadingPromises = {};
+
+/**
+ * GLBモデルを読み込む（キャッシュ機能付き）
+ * @param {string} glbPath - GLBファイルのパス
+ * @returns {Promise} モデルを含むPromise
+ */
+function loadGLBModel(glbPath) {
+    // すでにキャッシュにある場合は、クローンを返す
+    if (glbModelCache[glbPath]) {
+        console.log(`キャッシュからGLBモデルを取得: ${glbPath}`);
+        return Promise.resolve(glbModelCache[glbPath].clone());
+    }
+    
+    // すでに読み込み中の場合は、その読み込みPromiseを返す
+    if (glbLoadingPromises[glbPath]) {
+        console.log(`GLBモデル読み込み待機中: ${glbPath}`);
+        return glbLoadingPromises[glbPath].then(model => model.clone());
+    }
+    
+    // 新規に読み込む
+    console.log(`新規にGLBモデルを読み込み: ${glbPath}`);
+    const loader = new THREE.GLTFLoader();
+    
+    const loadingPromise = new Promise((resolve, reject) => {
+        loader.load(
+            glbPath,
+            function(gltf) {
+                const model = gltf.scene;
+                // キャッシュに保存
+                glbModelCache[glbPath] = model;
+                console.log(`GLBモデルをキャッシュに保存: ${glbPath}`);
+                // 読み込み完了したのでPromiseを削除
+                delete glbLoadingPromises[glbPath];
+                resolve(model.clone());
+            },
+            function(progress) {
+                const percentComplete = (progress.loaded / progress.total * 100).toFixed(2);
+                console.log(`GLBファイル読み込み中 ${glbPath}: ${percentComplete}%`);
+            },
+            function(error) {
+                console.error(`GLBファイルの読み込みに失敗: ${glbPath}`, error);
+                // 読み込み失敗したのでPromiseを削除
+                delete glbLoadingPromises[glbPath];
+                reject(error);
+            }
+        );
+    });
+    
+    glbLoadingPromises[glbPath] = loadingPromise;
+    return loadingPromise;
+}
+
+/**
+ * GLBモデルから建物を作成する汎用ヘルパー関数
+ * @param {string} glbPath - GLBファイルのパス
+ * @param {Object} locationGroup - 建物を追加するグループ
+ * @param {number} facilitySize - 施設のサイズ
+ * @param {number} facilityHeight - 施設の高さ
+ * @param {number} color - 建物の色
+ * @param {number} scale - スケール
+ * @param {string} buildingName - 建物の名前
+ * @param {Function} fallbackFunc - フォールバック関数
+ * @param {number} yPosition - Y軸の位置（デフォルト: 0.5）
+ */
+function createBuildingFromGLB(glbPath, locationGroup, facilitySize, facilityHeight, color, scale, buildingName, fallbackFunc, yPosition = 0.5) {
+    loadGLBModel(glbPath)
+        .then(model => {
+            console.log(`${buildingName}モデルを取得`);
+            
+            // モデルのスケールを調整
+            const modelScale = facilitySize / 2;
+            model.scale.set(modelScale, modelScale, modelScale);
+            
+            // モデルを中央に配置
+            model.position.set(0, yPosition, 0);
+            
+            // モデルのマテリアルを明るい色に変更
+            let meshCount = 0;
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    meshCount++;
+                    
+                    // BasicMaterialで明るい色に設定
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    child.material = newMaterial;
+                }
+            });
+            
+            // 軽い環境光を追加
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            locationGroup.add(ambientLight);
+            
+            locationGroup.add(model);
+            console.log(`${buildingName}を作成しました（メッシュ数: ${meshCount}）`);
+        })
+        .catch(error => {
+            console.error(`${buildingName}GLBファイルの読み込みに失敗しました:`, error);
+            
+            // フォールバック: 基本的な建物の形状を作成
+            console.log(`フォールバック: 基本的な${buildingName}の形状を作成します`);
+            fallbackFunc(locationGroup, facilitySize, facilityHeight, color, scale);
+        });
+}
+
 // 建物カラー設定の読み込み
 let buildingColorsConfig;
 try {
@@ -934,60 +1046,16 @@ function createFallbackCafe(locationGroup, facilitySize, facilityHeight, color, 
 
 // 図書館の建物を作成
 function createLibraryBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // GLBファイルを読み込んで図書館を作成
-    const loader = new THREE.GLTFLoader();
-    const glbPath = 'src/glb/ComfyUI_00005_library.glb';
-    console.log('図書館GLBファイルを読み込み中:', glbPath);
-    
-    loader.load(
-        glbPath,
-        function(gltf) {
-            console.log('図書館GLBファイルの読み込み成功:', gltf);
-            const model = gltf.scene;
-            
-            // モデルのスケールを調整
-            const modelScale = facilitySize / 2; // 適切なサイズに調整
-            model.scale.set(modelScale, modelScale, modelScale);
-            
-            // モデルを中央に配置
-            model.position.set(0, 2.5, 0);
-            
-            // モデルのマテリアルを明るい色に変更
-            let meshCount = 0;
-            model.traverse(function(child) {
-                if (child.isMesh) {
-                    meshCount++;
-                    console.log(`図書館メッシュ ${meshCount} を処理中:`, child.name || '無名');
-                    
-                    // BasicMaterialで明るい色に設定
-                    const newMaterial = new THREE.MeshBasicMaterial({
-                        color: 0x87CEEB, // 空色（SkyBlue）
-                        transparent: true,
-                        opacity: 0.3,
-                        side: THREE.DoubleSide
-                    });
-                    child.material = newMaterial;
-                }
-            });
-            console.log(`図書館合計 ${meshCount} 個のメッシュを処理しました`);
-            
-            // 軽い環境光を追加
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
-            locationGroup.add(ambientLight);
-            
-            locationGroup.add(model);
-            console.log('図書館をGLBファイルから作成しました。');
-        },
-        function(progress) {
-            console.log('図書館GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
-        },
-        function(error) {
-            console.error('図書館GLBファイルの読み込みに失敗しました:', error);
-            
-            // フォールバック: 基本的な図書館の形状を作成
-            console.log('フォールバック: 基本的な図書館の形状を作成します');
-            createFallbackLibrary(locationGroup, facilitySize, facilityHeight, color, scale);
-        }
+    createBuildingFromGLB(
+        'src/glb/ComfyUI_00005_library.glb',
+        locationGroup,
+        facilitySize,
+        facilityHeight,
+        0x87CEEB, // 空色（SkyBlue）
+        scale,
+        '図書館',
+        createFallbackLibrary,
+        2.5 // Y位置
     );
 }
 
@@ -1070,60 +1138,16 @@ function createFallbackLibrary(locationGroup, facilitySize, facilityHeight, colo
 
 // スポーツジムの建物を作成
 function createGymBuilding(locationGroup, facilitySize, facilityHeight, color, scale) {
-    // GLBファイルを読み込んでジムを作成
-    const loader = new THREE.GLTFLoader();
-    const glbPath = 'src/glb/ComfyUI_00002_gym.glb';
-    console.log('ジムGLBファイルを読み込み中:', glbPath);
-    
-    loader.load(
-        glbPath,
-        function(gltf) {
-            console.log('ジムGLBファイルの読み込み成功:', gltf);
-            const model = gltf.scene;
-            
-            // モデルのスケールを調整
-            const modelScale = facilitySize / 2; // 適切なサイズに調整
-            model.scale.set(modelScale, modelScale, modelScale);
-            
-            // モデルを中央に配置
-            model.position.set(0, 2.5, 0);
-            
-            // モデルのマテリアルを明るい色に変更
-            let meshCount = 0;
-            model.traverse(function(child) {
-                if (child.isMesh) {
-                    meshCount++;
-                    console.log(`ジムメッシュ ${meshCount} を処理中:`, child.name || '無名');
-                    
-                    // BasicMaterialで明るい色に設定
-                    const newMaterial = new THREE.MeshBasicMaterial({
-                        color: 0xFF6347, // トマト色（Tomato）
-                        transparent: true,
-                        opacity: 0.3,
-                        side: THREE.DoubleSide
-                    });
-                    child.material = newMaterial;
-                }
-            });
-            console.log(`ジム合計 ${meshCount} 個のメッシュを処理しました`);
-            
-            // 軽い環境光を追加
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
-            locationGroup.add(ambientLight);
-            
-            locationGroup.add(model);
-            console.log('ジムをGLBファイルから作成しました。');
-        },
-        function(progress) {
-            console.log('ジムGLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
-        },
-        function(error) {
-            console.error('ジムGLBファイルの読み込みに失敗しました:', error);
-            
-            // フォールバック: 基本的なジムの形状を作成
-            console.log('フォールバック: 基本的なジムの形状を作成します');
-            createFallbackGym(locationGroup, facilitySize, facilityHeight, color, scale);
-        }
+    createBuildingFromGLB(
+        'src/glb/ComfyUI_00002_gym.glb',
+        locationGroup,
+        facilitySize,
+        facilityHeight,
+        0xFF6347, // トマト色（Tomato）
+        scale,
+        'ジム',
+        createFallbackGym,
+        2.5
     );
 }
 
@@ -1845,77 +1869,17 @@ function createDefaultBuilding(locationGroup, facilitySize, facilityHeight, colo
 
 // エージェントの自宅を作成する関数
 function createAgentHome(homeData) {
-    // 事前に作成された自宅の場合は座標を変更しない
-    if (homeData.isOccupied !== undefined) {
-        // 既存の自宅との重複チェック（警告のみ）
-        const existingHomes = locations.filter(loc => loc.isHome);
-        const isDuplicate = existingHomes.some(home => {
-            const distance = Math.sqrt(
-                (home.position.x - homeData.x) ** 2 + 
-                (home.position.z - homeData.z) ** 2
-            );
-            return distance < 3; // 3マス以内にある場合は重複とみなす
-        });
-        
-        if (isDuplicate) {
-            console.warn(`自宅「${homeData.name}」が既存の自宅と重複していますが、事前作成された自宅のため座標は変更しません。`);
-        }
-    } else {
-        // 従来の重複チェック（古いデータ用）
-        const existingHomes = locations.filter(loc => loc.isHome);
-        const isDuplicate = existingHomes.some(home => {
-            const distance = Math.sqrt(
-                (home.position.x - homeData.x) ** 2 + 
-                (home.position.z - homeData.z) ** 2
-            );
-            return distance < 3; // 3マス以内にある場合は重複とみなす
-        });
-        
-        if (isDuplicate) {
-            console.warn(`自宅「${homeData.name}」が既存の自宅と重複しています。座標を調整します。`);
-            // 重複している場合、新しい座標を生成
-            let attempts = 0;
-            const maxAttempts = 50;
-            
-            while (attempts < maxAttempts) {
-                const newX = Math.floor(Math.random() * 41) - 20;
-                const newZ = Math.floor(Math.random() * 41) - 20;
-                
-                const isTooClose = existingHomes.some(home => {
-                    const distance = Math.sqrt(
-                        (home.position.x - newX) ** 2 + 
-                        (home.position.z - newZ) ** 2
-                    );
-                    return distance < 3;
-                });
-                
-                if (!isTooClose) {
-                    homeData.x = newX;
-                    homeData.z = newZ;
-                    console.log(`自宅「${homeData.name}」の座標を (${newX}, ${newZ}) に調整しました。`);
-                    break;
-                }
-                
-                attempts++;
-            }
-            
-            if (attempts >= maxAttempts) {
-                console.error(`自宅「${homeData.name}」の重複回避に失敗しました。`);
-            }
-        }
-    }
+    // 重複チェックを削除：エディタで配置された座標をそのまま使用
+    console.log(`自宅「${homeData.name}」を座標 (${homeData.x}, ${homeData.z}) に配置`);
     
     const homeGroup = new THREE.Group();
     
-    // GLBファイルを読み込んで自宅を作成
-    const loader = new THREE.GLTFLoader();
+    // GLBファイルを読み込んで自宅を作成（キャッシュ機能付き）
     const glbPath = 'src/glb/ComfyUI_00004_.glb';
-    console.log('GLBファイルを読み込み中:', glbPath);
-    loader.load(
-        glbPath,
-        function(gltf) {
-            console.log('GLBファイルの読み込み成功:', gltf);
-            const model = gltf.scene;
+    
+    loadGLBModel(glbPath)
+        .then(model => {
+            console.log(`自宅「${homeData.name}」のモデルを取得`);
             
             // 自宅のサイズ（小サイズ）
             const homeSize = cityLayoutConfig.buildingSizes.small;
@@ -1932,7 +1896,6 @@ function createAgentHome(homeData) {
             model.traverse(function(child) {
                 if (child.isMesh) {
                     meshCount++;
-                    console.log(`メッシュ ${meshCount} を処理中:`, child.name || '無名');
                     
                     // BasicMaterialで非常に明るい薄い青色に設定（ライティングの影響を受けない）
                     const newMaterial = new THREE.MeshBasicMaterial({
@@ -1944,7 +1907,6 @@ function createAgentHome(homeData) {
                     child.material = newMaterial;
                 }
             });
-            console.log(`合計 ${meshCount} 個のメッシュを処理しました`);
             
             // BasicMaterialを使用しているためライティングは不要（影響を受けない）
             // ただし、視覚的な参考として軽いライトを追加
@@ -1960,19 +1922,15 @@ function createAgentHome(homeData) {
             // 入り口接続とlocations配列への追加
             createHomeConnections(homeGroup, homeData);
             
-            console.log(`自宅「${homeData.name}」をGLBファイルから作成しました。`);
-        },
-        function(progress) {
-            console.log('GLBファイル読み込み中...', (progress.loaded / progress.total * 100) + '%');
-        },
-        function(error) {
-            console.error('GLBファイルの読み込みに失敗しました:', error);
+            console.log(`自宅「${homeData.name}」を作成しました（メッシュ数: ${meshCount}）`);
+        })
+        .catch(error => {
+            console.error(`自宅「${homeData.name}」のGLB読み込みに失敗:`, error);
             
             // フォールバック: 基本的な家の形状を作成
             console.log('フォールバック: 基本的な家の形状を作成します');
             createFallbackHome(homeGroup, homeData);
-        }
-    );
+        });
 }
 
 // フォールバック用の基本的な家の形状を作成する関数

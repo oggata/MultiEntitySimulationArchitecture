@@ -57,88 +57,6 @@ function saveApiKeyToStorage(key) {
     localStorage.setItem('openai_api_key', key);
 }
 
-// エディタのチャンクデータから復元
-function loadEditorMapDataFromChunks() {
-    const chunkCount = parseInt(localStorage.getItem('mesa_editor_map_chunks') || '0');
-    if (chunkCount === 0) return null;
-    
-    console.log(`チャンクデータを復元中... (${chunkCount}個のチャンク)`);
-    
-    let dataString = '';
-    for (let i = 0; i < chunkCount; i++) {
-        const chunk = localStorage.getItem(`mesa_editor_map_chunk_${i}`);
-        if (chunk) {
-            dataString += chunk;
-        } else {
-            console.error(`チャンク ${i} が見つかりません`);
-            return null;
-        }
-    }
-    
-    try {
-        const compressedData = JSON.parse(dataString);
-        console.log('圧縮データを解凍中...');
-        
-        // 解凍処理
-        const gridData = [];
-        let index = 0;
-        // 情報からグリッドサイズを取得（なければ従来の1024）
-        let GRID_SIZE = 1024;
-        try {
-            const infoRaw = localStorage.getItem('mesa_editor_map_info');
-            if (infoRaw) {
-                const info = JSON.parse(infoRaw);
-                if (info && typeof info.gridSize === 'number' && info.gridSize > 0) {
-                    GRID_SIZE = info.gridSize;
-                }
-            }
-        } catch (_) {}
-        
-        for (let y = 0; y < GRID_SIZE; y++) {
-            gridData[y] = [];
-            for (let x = 0; x < GRID_SIZE; x++) {
-                if (index >= compressedData.length) {
-                    gridData[y][x] = 'empty';
-                    continue;
-                }
-                
-                const segment = compressedData[index];
-                if (segment.count <= 0) {
-                    index++;
-                    x--; // この位置を再処理
-                    continue;
-                }
-                
-                gridData[y][x] = segment.tile;
-                segment.count--;
-                
-                if (segment.count === 0) {
-                    index++;
-                }
-            }
-        }
-        
-        console.log('データの復元が完了しました');
-        return gridData;
-    } catch (error) {
-        console.error('チャンクデータの復元に失敗しました:', error);
-        return null;
-    }
-}
-
-// エディタデータをクリア
-function clearEditorMapData() {
-    // チャンクデータをクリア
-    const chunkCount = parseInt(localStorage.getItem('mesa_editor_map_chunks') || '0');
-    for (let i = 0; i < chunkCount; i++) {
-        localStorage.removeItem(`mesa_editor_map_chunk_${i}`);
-    }
-    localStorage.removeItem('mesa_editor_map_chunks');
-    localStorage.removeItem('mesa_editor_map_info');
-    localStorage.removeItem('mesa_editor_map_data'); // 後方互換性のため
-    console.log('エディタデータをクリアしました');
-}
-
 // Ollama設定をlocalStorageに保存
 function saveOllamaSettingsToStorage() {
     const ollamaUrl = document.getElementById('ollamaUrl') ? document.getElementById('ollamaUrl').value.trim() : '';
@@ -498,6 +416,22 @@ async function init() {
             
             console.log('✅ 地面メッシュとグリッドを追加しました');
             
+            // セグメンテーションモード用のRoadSystemを作成
+            const segRoadSystem = new RoadSystem(cityLayoutConfig);
+            segRoadSystem.roads = segResult.roads || [];
+            segRoadSystem.intersections = []; // セグメンテーションでは交差点は自動計算されない
+            
+            console.log(`📍 セグメンテーション道路システム初期化: ${segRoadSystem.roads.length}道路`);
+            
+            // セグメンテーションモード用の可視化システムを作成
+            let segVisualizationSystem = null;
+            if (typeof VisualizationSystem !== 'undefined') {
+                segVisualizationSystem = new VisualizationSystem(segRoadSystem, null, null);
+                console.log('✅ VisualizationSystemを初期化しました');
+            } else {
+                console.warn('⚠️ VisualizationSystemが見つかりません。道路可視化機能は利用できません。');
+            }
+            
             // セグメンテーションモード用のダミーcityLayoutオブジェクトを作成（互換性のため）
             cityLayout = {
                 gridSize: 200,
@@ -505,7 +439,12 @@ async function init() {
                 buildings: segResult.buildings || [],
                 facilities: [],
                 intersections: [],
-                getRoadSystem: () => null,
+                roadSystem: segRoadSystem,
+                visualizationSystem: segVisualizationSystem,
+                roadCenterLines: [],
+                intersectionPoints: [],
+                entranceConnections: [],
+                getRoadSystem: () => segRoadSystem,
                 getFacilitySystem: () => null,
                 getBuildingSystem: () => null,
                 drawCity: () => {
@@ -517,10 +456,20 @@ async function init() {
                     facilities: []
                 }),
                 visualizeRoadNetwork: () => {
-                    console.log('ℹ️ セグメンテーションモードでは道路可視化は現在サポートされていません');
+                    console.log('🛣️ セグメンテーションモード: 道路ネットワークを可視化します');
+                    if (segVisualizationSystem) {
+                        segVisualizationSystem.visualizeRoadNetwork();
+                    } else {
+                        console.warn('⚠️ VisualizationSystemが利用できません');
+                    }
                 },
                 clearVisualizations: () => {
-                    console.log('ℹ️ セグメンテーションモードでは可視化クリアは不要です');
+                    console.log('🗑️ セグメンテーションモード: 可視化をクリアします');
+                    if (segVisualizationSystem) {
+                        segVisualizationSystem.clearRoadNetworkVisualization();
+                    } else {
+                        console.warn('⚠️ VisualizationSystemが利用できません');
+                    }
                 }
             };
             
@@ -532,221 +481,67 @@ async function init() {
         console.log('従来の方式で都市を生成します。');
     }
     
-    // セグメンテーションベースでない場合、従来のシステムを使用
+    // セグメンテーションベースでない場合はエラー
     if (!useSegmentation) {
-        cityLayout = new CityLayoutManager(cityLayoutConfig);
+        console.error('❌ セグメンテーションマップが見つかりません');
+        console.log('⚠️ 以下のいずれかのセグメンテーションマップを用意してください:');
+        console.log('  1. src/json/city_segmentation.json (推奨)');
+        console.log('  2. src/json/city_segmentation_sample.json (サンプル)');
+        console.log('');
+        console.log('📚 セグメンテーションマップの作成方法:');
+        console.log('  • Google Colabで example/colab_3d_city_map.py を実行');
+        console.log('  • 航空写真をアップロード');
+        console.log('  • 生成されたJSONファイルを src/json/city_segmentation.json に配置');
+        console.log('');
+        console.log('詳細: SEGMENTATION_QUICKSTART.md をご確認ください');
         
-        // エディタデータが利用可能かチェック
-        const editorMapInfo = localStorage.getItem('mesa_editor_map_info');
+        // エラーメッセージをUIに表示
+        updateLoadingMessage('❌ セグメンテーションマップが見つかりません');
+        updateLoadingDetailMessage('src/json/city_segmentation.json を用意してください。詳細はコンソールをご確認ください。');
+        
+        // 空のcityLayoutを作成（クラッシュを防ぐため）
+        cityLayout = {
+            gridSize: 200,
+            roads: [],
+            buildings: [],
+            facilities: [],
+            intersections: [],
+            getRoadSystem: () => null,
+            getFacilitySystem: () => null,
+            getBuildingSystem: () => null,
+            drawCity: () => {},
+            generateCity: () => ({ roads: [], buildings: [], facilities: [] }),
+            visualizeRoadNetwork: () => {},
+            clearVisualizations: () => {}
+        };
+        
+        return; // 初期化を中断
+    }
     
-    if (editorMapInfo) {
-        try {
-            const mapInfo = JSON.parse(editorMapInfo);
-            console.log('エディタデータからマップを生成します');
-            window.isEditorMap = true;
-            
-            let editorMapData;
-            if (mapInfo.compressed) {
-                // 圧縮されたチャンクデータから復元
-                editorMapData = loadEditorMapDataFromChunks();
-            } else {
-                // 従来の形式（後方互換性）
-                const editorMapDataJson = localStorage.getItem('mesa_editor_map_data');
-                if (editorMapDataJson) {
-                    editorMapData = JSON.parse(editorMapDataJson);
-                }
-            }
-            
-            if (editorMapData) {
-                const mapLoader = new MapEditorLoader(cityLayoutConfig);
-                cityData = mapLoader.loadFromEditorData(editorMapData);
-
-                // エディタの1マス=自宅サイズに合わせてワールドサイズを設定
-                const worldSize = mapLoader.gridSize * mapLoader.scaleFactor;
-                cityLayout.gridSize = worldSize;
-                console.log(`エディタ地図に合わせてcityLayout.gridSizeを設定: ${worldSize}`);
-                
-                // エディタデータの統計情報を表示
-                const stats = mapLoader.getStatistics();
-                console.log('エディタデータ統計:', stats);
-                
-                // 道路データの詳細を確認
-                console.log('生成された道路データ:', cityData.roads.length, '本');
-                if (cityData.roads.length > 0) {
-                    console.log('最初の道路:', cityData.roads[0]);
-                    console.log('道路の座標範囲:');
-                    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-                    cityData.roads.forEach(road => {
-                        minX = Math.min(minX, road.start.x, road.end.x);
-                        maxX = Math.max(maxX, road.start.x, road.end.x);
-                        minZ = Math.min(minZ, road.start.z, road.end.z);
-                        maxZ = Math.max(maxZ, road.start.z, road.end.z);
-                    });
-                    console.log(`X: ${minX.toFixed(2)} ～ ${maxX.toFixed(2)}`);
-                    console.log(`Z: ${minZ.toFixed(2)} ～ ${maxZ.toFixed(2)}`);
-                }
-                
-                // エディタデータをcityLayoutに設定
-                cityLayout.roads = cityData.roads;
-                cityLayout.buildings = cityData.buildings;
-                cityLayout.facilities = cityData.facilities;
-                cityLayout.intersections = cityData.intersections;
-                
-                // エディタ地図でもgenerateCity()を呼び出してFacilitySystemを初期化
-                console.log('エディタ地図でgenerateCity()を呼び出します');
-                cityLayout.generateCity();
-                
-                // エディターマップ用にカメラをリセット
-                console.log('エディターマップ用にカメラをリセット');
-                cameraSystem.resetCamera();
-
-                // エディタ反映直後に道路を強制描画して存在をログ
-                if (cityLayout && cityLayout.getRoadSystem) {
-                    try {
-                        const rs = cityLayout.getRoadSystem();
-                        if (rs && typeof rs.drawRoads === 'function') {
-                            // RoadSystem にエディタ道路を同期してから描画
-                            clearRoadMeshes();
-                            rs.roads = Array.isArray(cityLayout.roads) ? cityLayout.roads : [];
-                            rs.intersections = Array.isArray(cityLayout.intersections) ? cityLayout.intersections : [];
-                            rs.drawRoads();
-                            console.log('forced drawRoads after editor import');
-                            if (typeof updateExistingRoadColors === 'function') {
-                                updateExistingRoadColors(cityLayoutConfig.roadColors.normalRoad);
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('forced drawRoads failed:', e);
-                        // フォールバック: シンプル描画
-                        try {
-                            if (Array.isArray(cityLayout.roads)) {
-                                clearRoadMeshes();
-                                if (!window.roadMeshes) window.roadMeshes = [];
-                                cityLayout.roads.forEach(road => {
-                                    const dx = road.end.x - road.start.x;
-                                    const dz = road.end.z - road.start.z;
-                                    // エディタでは斜めは描かない
-                                    if (window.isEditorMap && Math.abs(dx) > 1e-3 && Math.abs(dz) > 1e-3) return;
-                                    const length = Math.sqrt(dx * dx + dz * dz) || 2;
-                                    const angle = Math.atan2(dz, dx);
-                                    const width = cityLayoutConfig.roadWidth * (road.isMain ? 3 : 1);
-                                    const geom = new THREE.PlaneGeometry(length, width);
-                                    const mat = new THREE.MeshBasicMaterial({ color: cityLayoutConfig.roadColors.normalRoad, side: THREE.DoubleSide });
-                                    const mesh = new THREE.Mesh(geom, mat);
-                                    mesh.userData.isRoad = true;
-                                    mesh.position.set((road.start.x + road.end.x)/2, 0.2, (road.start.z + road.end.z)/2);
-                                    mesh.rotation.x = -Math.PI/2;
-                                    mesh.rotation.y = angle;
-                                    scene.add(mesh);
-                                    window.roadMeshes.push(mesh);
-                                });
-                                console.log(`fallback simple draw: roadMeshes=${window.roadMeshes.length}`);
-                                if (typeof updateExistingRoadColors === 'function') {
-                                    updateExistingRoadColors(cityLayoutConfig.roadColors.normalRoad);
-                                }
-                            }
-                        } catch (ee) {
-                            console.warn('fallback simple draw failed:', ee);
-                        }
-                    }
-                }
-                
-                // 使用済みのデータをクリア
-                clearEditorMapData();
-            } else {
-                throw new Error('エディタデータの復元に失敗しました');
-            }
-        } catch (error) {
-            console.error('エディタデータの読み込みに失敗しました:', error);
-            console.log('プログラム生成でマップを生成します');
-            cityData = cityLayout.generateCity();
-            // エラーの場合もクリア
-            clearEditorMapData();
-        }
-    } else {
-        // エディタデータがない場合、デフォルトマップの読み込みを試みる
-        console.log('エディタデータがありません。デフォルトマップを読み込みます...');
-        window.isEditorMap = false;
-        
-        try {
-            // デフォルトマップJSONを読み込む
-            const response = await fetch('src/json/city_map-default.json');
-            if (response.ok) {
-                const defaultMapData = await response.json();
-                console.log('デフォルトマップを読み込みました');
-                window.isEditorMap = true;
-                
-                const mapLoader = new MapEditorLoader(cityLayoutConfig);
-                cityData = mapLoader.loadFromEditorData(defaultMapData);
-                
-                // デフォルトマップに合わせてワールドサイズを設定
-                const worldSize = mapLoader.gridSize * mapLoader.scaleFactor;
-                cityLayout.gridSize = worldSize;
-                console.log(`デフォルトマップに合わせてcityLayout.gridSizeを設定: ${worldSize}`);
-                
-                // デフォルトマップデータをcityLayoutに設定
-                cityLayout.roads = cityData.roads;
-                cityLayout.buildings = cityData.buildings;
-                cityLayout.facilities = cityData.facilities;
-                cityLayout.intersections = cityData.intersections;
-                
-                // デフォルトマップでもgenerateCity()を呼び出してFacilitySystemを初期化
-                console.log('デフォルトマップでgenerateCity()を呼び出します');
-                cityLayout.generateCity();
-                
-                // カメラをリセット
-                console.log('デフォルトマップ用にカメラをリセット');
-                cameraSystem.resetCamera();
-                
-                // 道路を描画
-                if (cityLayout && cityLayout.getRoadSystem) {
-                    try {
-                        const rs = cityLayout.getRoadSystem();
-                        if (rs && typeof rs.drawRoads === 'function') {
-                            clearRoadMeshes();
-                            rs.roads = Array.isArray(cityLayout.roads) ? cityLayout.roads : [];
-                            rs.intersections = Array.isArray(cityLayout.intersections) ? cityLayout.intersections : [];
-                            rs.drawRoads();
-                            console.log('デフォルトマップの道路を描画しました');
-                            if (typeof updateExistingRoadColors === 'function') {
-                                updateExistingRoadColors(cityLayoutConfig.roadColors.normalRoad);
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('デフォルトマップの道路描画に失敗:', e);
-                    }
-                }
-                
-                console.log('デフォルトマップの読み込みが完了しました');
-            } else {
-                throw new Error('デフォルトマップファイルが見つかりません');
-            }
-        } catch (error) {
-            console.warn('デフォルトマップの読み込みに失敗:', error);
-            console.log('プログラム生成でマップを生成します');
-            window.isEditorMap = false;
-            cityData = cityLayout.generateCity();
-        }
-        }
-    } // useSegmentation の閉じ括弧
+    // 以下、マップが正常に読み込まれた後の処理（セグメンテーション or エラーケース後）
+    
+    // cityLayoutが存在しない場合はここで初期化を中断
+    if (!cityLayout) {
+        console.error('❌ cityLayoutが初期化されていません。処理を中断します。');
+        updateLoadingMessage('❌ 初期化エラー');
+        return;
+    }
     
     // 自宅を先に生成（セグメンテーションベースではスキップ）
     updateLoadingProgress(5);
-    if (!useSegmentation) {
-    if (typeof homeManager !== 'undefined') {
-        homeManager.initializeHomes();
-        console.log('自宅の初期化が完了しました');
+    if (useSegmentation) {
+        console.log('✅ セグメンテーションモード: 自宅生成はスキップ');
     }
     
-    console.log('建物と施設の生成が完了しました');
-
-    // 建物と施設の生成
+    // 建物と施設の生成（セグメンテーションベースではスキップ）
     updateLoadingProgress(6);
-    } // !useSegmentation の閉じ括弧
+    if (useSegmentation) {
+        console.log('✅ セグメンテーションモード: 建物生成はスキップ');
+    }
     
-    // 地面とグリッドの生成（一時停止用フラグ）
-    const SHOW_GROUND = !useSegmentation; // セグメンテーションベースでは地面は不要（セグメントに含まれる）
+    // 地面とグリッドの生成（セグメンテーションモードでは専用のものを使用）
     updateLoadingProgress(7);
+    const SHOW_GROUND = false; // セグメンテーションベースでは地面は専用のものを使用
     if (SHOW_GROUND) {
         // 無限大の地面（遠景用）
         const infiniteGroundGeometry = new THREE.PlaneGeometry(1000, 1000, 1, 1);
@@ -812,18 +607,25 @@ async function init() {
         scene.add(gridGroup);
     }
     
-    // 場所の作成
+    // 場所の作成（セグメンテーションモード以外）
     updateLoadingProgress(8);
-    createLocations();
+    if (!useSegmentation) {
+        createLocations();
+        console.log('従来方式で場所を作成しました');
+    } else {
+        console.log('✅ セグメンテーションモード: 場所はセグメントデータから既に作成済み');
+    }
     
-    // 自宅の3Dオブジェクトを作成
+    // 自宅の3Dオブジェクトを作成（セグメンテーションモード以外）
     updateLoadingProgress(9);
-    if (typeof homeManager !== 'undefined' && typeof createAgentHome === 'function') {
+    if (!useSegmentation && typeof homeManager !== 'undefined' && typeof createAgentHome === 'function') {
         const allHomes = homeManager.getAllHomes();
         allHomes.forEach(home => {
             createAgentHome(home);
         });
         console.log(`${allHomes.length}軒の自宅の3Dオブジェクトを作成しました`);
+    } else if (useSegmentation) {
+        console.log('✅ セグメンテーションモード: 建物はセグメントメッシュとして既に描画済み');
     }
     
     // カメラコントロールの設定
@@ -836,7 +638,12 @@ async function init() {
 
     // 都市全体の描画
     updateLoadingProgress(11);
-    cityLayout.drawCity();
+    if (cityLayout && typeof cityLayout.drawCity === 'function') {
+        cityLayout.drawCity();
+        console.log('✅ 都市の描画が完了しました');
+    } else {
+        console.log('ℹ️ cityLayout.drawCityが利用できません（セグメンテーションモードまたはエラー）');
+    }
     
     // 入り口接続は通常の道路描画に統合済み
 

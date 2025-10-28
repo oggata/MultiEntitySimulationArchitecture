@@ -368,16 +368,94 @@ class SegmentationMapLoader {
     
     /**
      * 道路ネットワークを取得（パスファインディング用）
-     * @returns {Array} 道路セグメントのリスト
+     * 道路セグメントの頂点から道路ポイントを抽出
+     * @returns {Array} 道路ポイントのリスト
      */
     getRoadNetwork() {
-        return this.roadSegments.map(road => ({
-            id: road.id,
-            x: road.center[0],
-            y: road.center[1],
-            z: road.center[2],
-            area: road.area
-        }));
+        const roadPoints = [];
+        
+        this.roadSegments.forEach(road => {
+            // 道路の頂点から道路ポイントを生成
+            if (road.vertices && road.vertices.length > 0) {
+                road.vertices.forEach((vertex, index) => {
+                    roadPoints.push({
+                        id: `${road.id}_v${index}`,
+                        roadSegmentId: road.id,
+                        x: vertex[0],
+                        y: vertex[1] || 0,
+                        z: vertex[2],
+                        area: road.area,
+                        neighbors: [] // 隣接ポイント（後で計算）
+                    });
+                });
+                
+                // 道路の中心点も追加（大きな道路の場合に重要）
+                roadPoints.push({
+                    id: `${road.id}_center`,
+                    roadSegmentId: road.id,
+                    x: road.center[0],
+                    y: road.center[1] || 0,
+                    z: road.center[2],
+                    area: road.area,
+                    neighbors: []
+                });
+            } else {
+                // 頂点情報がない場合は中心点のみ使用
+                roadPoints.push({
+                    id: `${road.id}_center`,
+                    roadSegmentId: road.id,
+                    x: road.center[0],
+                    y: road.center[1] || 0,
+                    z: road.center[2],
+                    area: road.area,
+                    neighbors: []
+                });
+            }
+        });
+        
+        // 近接ポイント間の接続を計算
+        this.calculateRoadPointNeighbors(roadPoints);
+        
+        console.log(`道路ネットワーク: ${roadPoints.length}ポイント生成`);
+        return roadPoints;
+    }
+    
+    /**
+     * 道路ポイント間の隣接関係を計算
+     * @param {Array} roadPoints - 道路ポイントの配列
+     */
+    calculateRoadPointNeighbors(roadPoints) {
+        const maxNeighborDistance = 25; // 隣接と見なす最大距離
+        
+        for (let i = 0; i < roadPoints.length; i++) {
+            const point1 = roadPoints[i];
+            
+            for (let j = i + 1; j < roadPoints.length; j++) {
+                const point2 = roadPoints[j];
+                
+                const dx = point1.x - point2.x;
+                const dz = point1.z - point2.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                // 同じ道路セグメント内、または近接している場合は接続
+                if (point1.roadSegmentId === point2.roadSegmentId || distance < maxNeighborDistance) {
+                    point1.neighbors.push({
+                        id: point2.id,
+                        x: point2.x,
+                        y: point2.y,
+                        z: point2.z,
+                        distance: distance
+                    });
+                    point2.neighbors.push({
+                        id: point1.id,
+                        x: point1.x,
+                        y: point1.y,
+                        z: point1.z,
+                        distance: distance
+                    });
+                }
+            }
+        }
     }
     
     /**

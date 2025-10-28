@@ -39,11 +39,12 @@ This application simulates a small city populated with autonomous agents (reside
 
 ### 🏙️ Virtual City Environment
 - **🆕 Segmentation-Based Maps**: Generate realistic 3D cities from aerial photographs using deep learning segmentation
-- **Procedural City Generation**: Automatically generates roads, buildings, and facilities
-- **Map Editor**: Create custom city layouts with drag-and-drop interface
+  - Load city layouts from aerial photo segmentation data
+  - Automatic building, road, and facility detection
+  - See [SEGMENTATION_QUICKSTART.md](SEGMENTATION_QUICKSTART.md) for setup guide
 - **Pathfinding System**: Agents navigate using A* pathfinding algorithm through the road network
 - **Multiple Facilities**: Cafes, parks, libraries, gyms, schools, hospitals, supermarkets, and more
-- **3D Visualization**: Realistic 3D environment with buildings, roads, and character models
+- **3D Visualization**: Realistic 3D environment with buildings, roads, and character models using Three.js
 
 ### 🎮 Interactive Controls
 - **Camera Modes**: 

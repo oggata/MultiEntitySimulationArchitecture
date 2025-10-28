@@ -426,7 +426,6 @@
     <script src="./src/core/config.js"></script>
     <script src="./src/core/log.js"></script>
     <script src="./src/core/camera-system.js"></script>
-    <script src="./src/core/main.js"></script>
     
     <!-- エージェントシステム -->
     <script src="./src/agents/agent-utils.js"></script>
@@ -438,14 +437,12 @@
     <script src="./src/agents/agent-core.js"></script>
     
     <!-- 都市システム -->
-    <script src="./src/city/buildings.js"></script>
     <script src="./src/city/road-system.js"></script>
     <script src="./src/city/building-system.js"></script>
     <script src="./src/city/facility-system.js"></script>
-    <script src="./src/city/map-editor-loader.js"></script>
     <script src="./src/city/city-layout-manager.js"></script>
     
-    <!-- セグメンテーションベースシステム（新） -->
+    <!-- セグメンテーションベースシステム -->
     <script src="./src/city/segmentation-loader.js"></script>
     <script src="./src/city/segmentation-city-manager.js"></script>
     
@@ -455,6 +452,9 @@
     <script src="./src/systems/weather.js"></script>
     <script src="./src/systems/vehicles.js"></script>
     <script src="./src/systems/video-generation-system.js"></script>
+    
+    <!-- メインスクリプト（最後に読み込む） -->
+    <script src="./src/core/main.js"></script>
     
     <!-- UIシステム -->
     <script src="./src/ui/character.js"></script>

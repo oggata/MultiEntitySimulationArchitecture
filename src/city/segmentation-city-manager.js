@@ -119,16 +119,35 @@ class SegmentationCityManager {
             }
         });
         
-        // 道路を変換
-        this.roads = this.segmentationLoader.getRoadNetwork().map(road => ({
-            id: road.id,
-            start: { x: road.x, y: 0, z: road.z },
-            end: { x: road.x, y: 0, z: road.z }, // セグメンテーションでは点として扱う
-            isRoad: true,
-            segmentId: road.id
-        }));
+        // 道路ポイントを取得
+        const roadPoints = this.segmentationLoader.getRoadNetwork();
         
-        console.log(`  変換完了: ${this.locations.length}施設, ${this.roads.length}道路セグメント`);
+        // 道路ポイントから道路セグメント（エッジ）を生成
+        this.roads = [];
+        const processedPairs = new Set();
+        
+        roadPoints.forEach(point => {
+            point.neighbors.forEach(neighbor => {
+                // 重複を避けるためのキー
+                const pairKey = [point.id, neighbor.id].sort().join('_');
+                
+                if (!processedPairs.has(pairKey)) {
+                    processedPairs.add(pairKey);
+                    
+                    this.roads.push({
+                        id: `road_${this.roads.length}`,
+                        start: { x: point.x, y: point.y, z: point.z },
+                        end: { x: neighbor.x, y: neighbor.y, z: neighbor.z },
+                        isRoad: true,
+                        isMain: false,
+                        roadSegmentId: point.roadSegmentId,
+                        distance: neighbor.distance
+                    });
+                }
+            });
+        });
+        
+        console.log(`  変換完了: ${this.locations.length}施設, ${roadPoints.length}道路ポイント, ${this.roads.length}道路セグメント`);
     }
     
     /**

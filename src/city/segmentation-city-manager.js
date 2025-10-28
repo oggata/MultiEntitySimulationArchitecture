@@ -82,6 +82,9 @@ class SegmentationCityManager {
                 // 施設タイプをMESAの形式に変換
                 const mesaType = this.convertFacilityTypeToMESA(facility.type);
                 
+                // セグメンテーションメッシュを取得
+                const buildingMesh = this.buildingMeshes ? this.buildingMeshes.get(building.id) : null;
+                
                 const location = {
                     id: building.id,
                     type: mesaType,
@@ -104,7 +107,10 @@ class SegmentationCityManager {
                         x: building.center[0],
                         y: 0,
                         z: building.center[2]
-                    }
+                    },
+                    // 施設視点用のプロパティ
+                    mesh: buildingMesh, // セグメンテーションメッシュへの参照
+                    isHome: mesaType === 'home' // 住宅かどうかのフラグ
                 };
                 
                 this.locations.push(location);
@@ -148,6 +154,23 @@ class SegmentationCityManager {
         });
         
         console.log(`  変換完了: ${this.locations.length}施設, ${roadPoints.length}道路ポイント, ${this.roads.length}道路セグメント`);
+        
+        // 施設の内訳をログ出力
+        const facilityCounts = {};
+        const homesCount = this.locations.filter(loc => loc.isHome).length;
+        const facilitiesCount = this.locations.filter(loc => !loc.isHome).length;
+        const withMeshCount = this.locations.filter(loc => loc.mesh).length;
+        
+        console.log(`  施設内訳:`);
+        console.log(`    - 住宅: ${homesCount}軒`);
+        console.log(`    - 施設: ${facilitiesCount}件`);
+        console.log(`    - メッシュあり: ${withMeshCount}件`);
+        
+        this.locations.forEach(loc => {
+            if (!loc.isHome) {
+                console.log(`    - ${loc.name} (ID: ${loc.id}, type: ${loc.type}, mesh: ${loc.mesh ? 'あり' : 'なし'})`);
+            }
+        });
     }
     
     /**

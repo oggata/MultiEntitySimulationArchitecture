@@ -227,14 +227,26 @@ class CameraSystem {
     
     // 施設視点に切り替え
     focusCameraOnFacilityByIndex(index, locations) {
+        // デバッグ: locationsの内容を確認
+        console.log(`📍 施設視点切り替え: 全locations数=${locations.length}`);
+        console.log(`  - 住宅以外: ${locations.filter(loc => !loc.isHome).length}件`);
+        console.log(`  - メッシュあり: ${locations.filter(loc => loc.mesh).length}件`);
+        
         // 実際に生成された施設のみを対象にする
         const facilities = locations.filter(loc => !loc.isHome && loc.mesh);
+        console.log(`  - フィルタ後の施設数: ${facilities.length}件`);
+        
         if (facilities.length === 0) {
+            console.warn('❌ 施設が見つかりません。全locationsを確認:');
+            locations.slice(0, 5).forEach(loc => {
+                console.log(`    - ${loc.name}: isHome=${loc.isHome}, mesh=${loc.mesh ? 'あり' : 'なし'}`);
+            });
             addLog('❌ 生成された施設が見つかりません', 'system');
             return;
         }
         
         const facility = facilities[index % facilities.length];
+        console.log(`  → 選択された施設: ${facility.name} (ID: ${facility.id})`);
         
         // カメラモードを設定
         this.cameraMode = 'facility';

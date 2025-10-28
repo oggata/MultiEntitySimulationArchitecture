@@ -248,9 +248,18 @@ class CameraSystem {
         // 施設の正しい位置情報を使用
         const pos = facility.position;
         
+        // セグメンテーションマップの場合は適切な距離を計算
+        let cameraHeight = 10;
+        let cameraDistance = 20;
+        
+        if (window.isSegmentationMap && this.cityRange) {
+            cameraHeight = Math.max(10, this.cityRange * 0.1);
+            cameraDistance = Math.max(20, this.cityRange * 0.3);
+        }
+        
         // カメラを施設の正面からより下向きに見下ろすように配置
-        this.camera.position.set(pos.x, 10, pos.z - 20);
-        this.camera.lookAt(pos.x, pos.y - 1000, pos.z);
+        this.camera.position.set(pos.x, cameraHeight, pos.z - cameraDistance);
+        this.camera.lookAt(pos.x, pos.y, pos.z);
         
         // ターゲットマーカーを表示
         this.createTargetMarker(pos, 0xFF0000);
@@ -391,8 +400,25 @@ class CameraSystem {
         this.targetFacility = null;
         this.cameraFollowEnabled = false;
         
+        // セグメンテーションマップの場合は都市の中心に合わせる
+        if (window.isSegmentationMap && this.cityCenter && this.cityRange) {
+            // 斜め45度くらいの角度で見下ろす
+            const viewDistance = this.cityRange * 0.6; // 少し近づける
+            const height = viewDistance * 0.8; // やや上から
+            const backDistance = viewDistance * 0.8;
+            
+            this.camera.position.set(
+                this.cityCenter.x,
+                height,
+                this.cityCenter.z + backDistance
+            );
+            this.camera.lookAt(this.cityCenter.x, 0, this.cityCenter.z);
+            console.log(`📷 セグメンテーションマップ: カメラをリセット`);
+            console.log(`   位置: (${this.cityCenter.x.toFixed(2)}, ${height.toFixed(2)}, ${(this.cityCenter.z + backDistance).toFixed(2)})`);
+            console.log(`   注視: (${this.cityCenter.x.toFixed(2)}, 0, ${this.cityCenter.z.toFixed(2)})`);
+        }
         // エディターマップの場合は北向き、少し高い位置から見下ろす
-        if (window.isEditorMap) {
+        else if (window.isEditorMap) {
             this.camera.position.set(0, 50, 60);
             
             // 見下ろす角度を設定

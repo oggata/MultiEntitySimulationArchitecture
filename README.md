@@ -38,7 +38,9 @@ This application simulates a small city populated with autonomous agents (reside
 ![1](./images/6.GIF)
 
 ### 🏙️ Virtual City Environment
+- **🆕 Segmentation-Based Maps**: Generate realistic 3D cities from aerial photographs using deep learning segmentation
 - **Procedural City Generation**: Automatically generates roads, buildings, and facilities
+- **Map Editor**: Create custom city layouts with drag-and-drop interface
 - **Pathfinding System**: Agents navigate using A* pathfinding algorithm through the road network
 - **Multiple Facilities**: Cafes, parks, libraries, gyms, schools, hospitals, supermarkets, and more
 - **3D Visualization**: Realistic 3D environment with buildings, roads, and character models
@@ -119,11 +121,35 @@ Agents can communicate through:
 - **Social Media**: Digital interactions through simulated social platforms
 
 ### City Layout
-The city is procedurally generated with:
+
+#### 🆕 Segmentation-Based Maps (NEW!)
+Generate realistic 3D cities from aerial photographs:
+1. **Upload** an aerial photo to Google Colab
+2. **Segment** using Segformer deep learning model (ADE20K)
+3. **Generate** 3D meshes with walls and proper heights
+4. **Import** JSON to MESA for instant simulation
+
+Features:
+- Real-world building shapes and layouts
+- Automatic facility assignment based on building size
+- Road network extraction from images
+- Multiple building categories (small, medium, large)
+
+See: `SEGMENTATION_QUICKSTART.md` for 5-minute setup guide
+
+#### Procedural Generation
+The city can also be procedurally generated with:
 - **Main Streets**: Primary roads connecting major areas
 - **Sub Streets**: Secondary roads within city blocks
 - **Buildings**: Various types (residential, commercial, public facilities)
 - **Intersections**: Traffic nodes for pathfinding
+
+#### Map Editor
+Create custom layouts with:
+- Drag-and-drop building placement
+- Road drawing tools
+- Facility type assignment
+- Export/import functionality
 
 ### Time System
 The simulation features a realistic time system:

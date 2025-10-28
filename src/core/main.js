@@ -379,11 +379,165 @@ async function init() {
     
     // 街のレイアウトを生成
     updateLoadingProgress(4);
-    cityLayout = new CityLayoutManager(cityLayoutConfig);
     
-    // エディタデータが利用可能かチェック
+    // セグメンテーションベースの都市生成を試みる
     let cityData;
-    const editorMapInfo = localStorage.getItem('mesa_editor_map_info');
+    let useSegmentation = false;
+    // 優先順位: city_segmentation.json > city_segmentation_sample.json
+    const segmentationPaths = [
+        'src/json/city_segmentation.json',
+        'src/json/city_segmentation_sample.json'
+    ];
+    
+    try {
+        console.log('🔍 セグメンテーションベースの都市データをチェック中...');
+        
+        let segmentationPath = null;
+        let segResponse = null;
+        
+        // 利用可能なセグメンテーションファイルを探す
+        for (const path of segmentationPaths) {
+            console.log(`  チェック中: ${path}`);
+            segResponse = await fetch(path);
+            if (segResponse.ok) {
+                segmentationPath = path;
+                console.log(`✅ セグメンテーションデータが見つかりました: ${path}`);
+                break;
+            }
+        }
+        
+        if (segmentationPath && segResponse.ok) {
+            useSegmentation = true;
+            
+            // セグメンテーションベースの都市マネージャーを初期化
+            const segCityManager = new SegmentationCityManager(scene);
+            const segResult = await segCityManager.loadFromSegmentationJSON(segmentationPath);
+            
+            // グローバル変数に設定
+            window.segmentationCityManager = segCityManager;
+            window.isSegmentationMap = true;
+            
+            // locationsをグローバルに設定（エージェントシステムが使用）
+            locations = segCityManager.getLocations();
+            window.locations = locations;
+            
+            console.log('🏙️ セグメンテーションベース都市の生成完了');
+            console.log(segResult.statistics);
+            
+            // シーンの状態を確認
+            console.log(`シーン内のオブジェクト数: ${scene.children.length}`);
+            const meshCount = scene.children.filter(obj => obj instanceof THREE.Mesh || obj instanceof THREE.Group).length;
+            console.log(`メッシュ/グループ数: ${meshCount}`);
+            
+            // 施設の座標範囲を確認
+            if (locations.length > 0) {
+                let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+                locations.forEach(loc => {
+                    minX = Math.min(minX, loc.x);
+                    maxX = Math.max(maxX, loc.x);
+                    minZ = Math.min(minZ, loc.z);
+                    maxZ = Math.max(maxZ, loc.z);
+                });
+                const centerX = (minX + maxX) / 2;
+                const centerZ = (minZ + maxZ) / 2;
+                const rangeX = maxX - minX;
+                const rangeZ = maxZ - minZ;
+                
+                console.log('📍 施設の座標範囲:');
+                console.log(`  X: ${minX.toFixed(2)} 〜 ${maxX.toFixed(2)} (範囲: ${rangeX.toFixed(2)})`);
+                console.log(`  Z: ${minZ.toFixed(2)} 〜 ${maxZ.toFixed(2)} (範囲: ${rangeZ.toFixed(2)})`);
+                console.log(`  中心: (${centerX.toFixed(2)}, ${centerZ.toFixed(2)})`);
+                
+                // カメラを施設の範囲に合わせて調整
+                // 斜め45度くらいの角度で見下ろすように配置
+                const mapRange = Math.max(rangeX, rangeZ);
+                const viewDistance = mapRange * 0.6; // 少し近づける
+                const cameraHeight = viewDistance * 0.8; // やや上から
+                const cameraBackDistance = viewDistance * 0.8;
+                
+                camera.position.set(
+                    centerX,
+                    cameraHeight,
+                    centerZ + cameraBackDistance
+                );
+                camera.lookAt(centerX, 0, centerZ);
+                
+                console.log(`📷 カメラを調整: 位置(${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
+                console.log(`📷 注視点: (${centerX.toFixed(2)}, 0, ${centerZ.toFixed(2)})`);
+                console.log(`📷 視距離: ${viewDistance.toFixed(2)}, 高さ: ${cameraHeight.toFixed(2)}`);
+                
+                // カメラシステムにも中心座標を保存
+                if (cameraSystem) {
+                    cameraSystem.cityCenter = { x: centerX, y: 0, z: centerZ };
+                    cameraSystem.cityRange = Math.max(rangeX, rangeZ);
+                }
+            }
+            
+            // セグメンテーションモード用の無限地面を追加
+            console.log('セグメンテーションマップ用の地面を追加...');
+            const segGroundSize = 2000; // 十分に大きな地面
+            
+            // 基本の地面
+            const segGroundGeometry = new THREE.PlaneGeometry(segGroundSize, segGroundSize);
+            const segGroundMaterial = new THREE.MeshBasicMaterial({
+                color: 0x1a1a1a, // 濃いグレー
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            const segGroundMesh = new THREE.Mesh(segGroundGeometry, segGroundMaterial);
+            segGroundMesh.rotation.x = -Math.PI / 2;
+            segGroundMesh.position.y = -0.5; // メッシュより少し下
+            scene.add(segGroundMesh);
+            
+            // グリッド線を追加（オプション）
+            const gridHelper = new THREE.GridHelper(segGroundSize, 100, 0x444444, 0x222222);
+            gridHelper.position.y = -0.4; // 地面より少し上
+            scene.add(gridHelper);
+            
+            console.log('✅ 地面メッシュとグリッドを追加しました');
+            
+            // セグメンテーションモード用のダミーcityLayoutオブジェクトを作成（互換性のため）
+            cityLayout = {
+                gridSize: 200,
+                roads: segResult.roads || [],
+                buildings: segResult.buildings || [],
+                facilities: [],
+                intersections: [],
+                getRoadSystem: () => null,
+                getFacilitySystem: () => null,
+                getBuildingSystem: () => null,
+                drawCity: () => {
+                    console.log('✅ セグメンテーションベース都市は既に描画済みです');
+                },
+                generateCity: () => ({
+                    roads: segResult.roads || [],
+                    buildings: segResult.buildings || [],
+                    facilities: []
+                }),
+                visualizeRoadNetwork: () => {
+                    console.log('ℹ️ セグメンテーションモードでは道路可視化は現在サポートされていません');
+                },
+                clearVisualizations: () => {
+                    console.log('ℹ️ セグメンテーションモードでは可視化クリアは不要です');
+                }
+            };
+            
+        } else {
+            console.log('ℹ️ セグメンテーションデータが見つかりません。従来の方式で生成します。');
+        }
+    } catch (error) {
+        console.warn('⚠️ セグメンテーションデータの読み込みに失敗:', error);
+        console.log('従来の方式で都市を生成します。');
+    }
+    
+    // セグメンテーションベースでない場合、従来のシステムを使用
+    if (!useSegmentation) {
+        cityLayout = new CityLayoutManager(cityLayoutConfig);
+        
+        // エディタデータが利用可能かチェック
+        const editorMapInfo = localStorage.getItem('mesa_editor_map_info');
     
     if (editorMapInfo) {
         try {
@@ -510,13 +664,75 @@ async function init() {
             clearEditorMapData();
         }
     } else {
-        console.log('プログラム生成でマップを生成します');
+        // エディタデータがない場合、デフォルトマップの読み込みを試みる
+        console.log('エディタデータがありません。デフォルトマップを読み込みます...');
         window.isEditorMap = false;
-        cityData = cityLayout.generateCity();
-    }
+        
+        try {
+            // デフォルトマップJSONを読み込む
+            const response = await fetch('src/json/city_map-default.json');
+            if (response.ok) {
+                const defaultMapData = await response.json();
+                console.log('デフォルトマップを読み込みました');
+                window.isEditorMap = true;
+                
+                const mapLoader = new MapEditorLoader(cityLayoutConfig);
+                cityData = mapLoader.loadFromEditorData(defaultMapData);
+                
+                // デフォルトマップに合わせてワールドサイズを設定
+                const worldSize = mapLoader.gridSize * mapLoader.scaleFactor;
+                cityLayout.gridSize = worldSize;
+                console.log(`デフォルトマップに合わせてcityLayout.gridSizeを設定: ${worldSize}`);
+                
+                // デフォルトマップデータをcityLayoutに設定
+                cityLayout.roads = cityData.roads;
+                cityLayout.buildings = cityData.buildings;
+                cityLayout.facilities = cityData.facilities;
+                cityLayout.intersections = cityData.intersections;
+                
+                // デフォルトマップでもgenerateCity()を呼び出してFacilitySystemを初期化
+                console.log('デフォルトマップでgenerateCity()を呼び出します');
+                cityLayout.generateCity();
+                
+                // カメラをリセット
+                console.log('デフォルトマップ用にカメラをリセット');
+                cameraSystem.resetCamera();
+                
+                // 道路を描画
+                if (cityLayout && cityLayout.getRoadSystem) {
+                    try {
+                        const rs = cityLayout.getRoadSystem();
+                        if (rs && typeof rs.drawRoads === 'function') {
+                            clearRoadMeshes();
+                            rs.roads = Array.isArray(cityLayout.roads) ? cityLayout.roads : [];
+                            rs.intersections = Array.isArray(cityLayout.intersections) ? cityLayout.intersections : [];
+                            rs.drawRoads();
+                            console.log('デフォルトマップの道路を描画しました');
+                            if (typeof updateExistingRoadColors === 'function') {
+                                updateExistingRoadColors(cityLayoutConfig.roadColors.normalRoad);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('デフォルトマップの道路描画に失敗:', e);
+                    }
+                }
+                
+                console.log('デフォルトマップの読み込みが完了しました');
+            } else {
+                throw new Error('デフォルトマップファイルが見つかりません');
+            }
+        } catch (error) {
+            console.warn('デフォルトマップの読み込みに失敗:', error);
+            console.log('プログラム生成でマップを生成します');
+            window.isEditorMap = false;
+            cityData = cityLayout.generateCity();
+        }
+        }
+    } // useSegmentation の閉じ括弧
     
-    // 自宅を先に生成
+    // 自宅を先に生成（セグメンテーションベースではスキップ）
     updateLoadingProgress(5);
+    if (!useSegmentation) {
     if (typeof homeManager !== 'undefined') {
         homeManager.initializeHomes();
         console.log('自宅の初期化が完了しました');
@@ -526,9 +742,10 @@ async function init() {
 
     // 建物と施設の生成
     updateLoadingProgress(6);
+    } // !useSegmentation の閉じ括弧
     
     // 地面とグリッドの生成（一時停止用フラグ）
-    const SHOW_GROUND = true;
+    const SHOW_GROUND = !useSegmentation; // セグメンテーションベースでは地面は不要（セグメントに含まれる）
     updateLoadingProgress(7);
     if (SHOW_GROUND) {
         // 無限大の地面（遠景用）
@@ -544,7 +761,7 @@ async function init() {
         scene.add(infiniteGroundMesh);
         
         // 地面（塗りつぶし）
-        const groundSize = cityLayout.gridSize;
+        const groundSize = cityLayout ? cityLayout.gridSize : 200;
         const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize, 1, 1);
         const groundMaterial = new THREE.MeshBasicMaterial({ 
             color: fieldColor,

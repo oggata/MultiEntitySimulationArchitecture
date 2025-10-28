@@ -372,13 +372,16 @@ class SegmentationMapLoader {
      * @returns {Array} 道路ポイントのリスト
      */
     getRoadNetwork() {
+        console.log(`🛣️ 道路ネットワーク生成開始: ${this.roadSegments.length}道路セグメント`);
         const roadPoints = [];
         
         this.roadSegments.forEach(road => {
+            console.log(`  道路ID ${road.id}: center=(${road.center}), vertices=${road.vertices ? road.vertices.length : 0}`);
+            
             // 道路の頂点から道路ポイントを生成
             if (road.vertices && road.vertices.length > 0) {
                 road.vertices.forEach((vertex, index) => {
-                    roadPoints.push({
+                    const point = {
                         id: `${road.id}_v${index}`,
                         roadSegmentId: road.id,
                         x: vertex[0],
@@ -386,11 +389,13 @@ class SegmentationMapLoader {
                         z: vertex[2],
                         area: road.area,
                         neighbors: [] // 隣接ポイント（後で計算）
-                    });
+                    };
+                    roadPoints.push(point);
+                    console.log(`    頂点${index}: (${point.x}, ${point.y}, ${point.z})`);
                 });
                 
                 // 道路の中心点も追加（大きな道路の場合に重要）
-                roadPoints.push({
+                const centerPoint = {
                     id: `${road.id}_center`,
                     roadSegmentId: road.id,
                     x: road.center[0],
@@ -398,10 +403,12 @@ class SegmentationMapLoader {
                     z: road.center[2],
                     area: road.area,
                     neighbors: []
-                });
+                };
+                roadPoints.push(centerPoint);
+                console.log(`    中心点: (${centerPoint.x}, ${centerPoint.y}, ${centerPoint.z})`);
             } else {
                 // 頂点情報がない場合は中心点のみ使用
-                roadPoints.push({
+                const centerPoint = {
                     id: `${road.id}_center`,
                     roadSegmentId: road.id,
                     x: road.center[0],
@@ -409,14 +416,18 @@ class SegmentationMapLoader {
                     z: road.center[2],
                     area: road.area,
                     neighbors: []
-                });
+                };
+                roadPoints.push(centerPoint);
+                console.log(`    中心点のみ: (${centerPoint.x}, ${centerPoint.y}, ${centerPoint.z})`);
             }
         });
+        
+        console.log(`  生成された道路ポイント数: ${roadPoints.length}`);
         
         // 近接ポイント間の接続を計算
         this.calculateRoadPointNeighbors(roadPoints);
         
-        console.log(`道路ネットワーク: ${roadPoints.length}ポイント生成`);
+        console.log(`✅ 道路ネットワーク生成完了: ${roadPoints.length}ポイント`);
         return roadPoints;
     }
     
@@ -426,6 +437,9 @@ class SegmentationMapLoader {
      */
     calculateRoadPointNeighbors(roadPoints) {
         const maxNeighborDistance = 25; // 隣接と見なす最大距離
+        console.log(`  隣接関係を計算中... (maxDistance: ${maxNeighborDistance})`);
+        
+        let connectionCount = 0;
         
         for (let i = 0; i < roadPoints.length; i++) {
             const point1 = roadPoints[i];
@@ -453,8 +467,20 @@ class SegmentationMapLoader {
                         z: point1.z,
                         distance: distance
                     });
+                    connectionCount++;
                 }
             }
+        }
+        
+        console.log(`  接続数: ${connectionCount}, 平均隣接数: ${(connectionCount * 2 / roadPoints.length).toFixed(1)}`);
+        
+        // 孤立したポイントを警告
+        const isolatedPoints = roadPoints.filter(p => p.neighbors.length === 0);
+        if (isolatedPoints.length > 0) {
+            console.warn(`  ⚠️ 孤立した道路ポイント: ${isolatedPoints.length}個`);
+            isolatedPoints.forEach(p => {
+                console.warn(`    - ${p.id}: (${p.x}, ${p.z})`);
+            });
         }
     }
     

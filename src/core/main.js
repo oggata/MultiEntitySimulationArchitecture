@@ -422,15 +422,19 @@ async function init() {
             segRoadSystem.intersections = []; // セグメンテーションでは交差点は自動計算されない
             
             console.log(`📍 セグメンテーション道路システム初期化: ${segRoadSystem.roads.length}道路`);
+            if (segRoadSystem.roads.length > 0) {
+                console.log(`  道路サンプル (最初の3本):`);
+                segRoadSystem.roads.slice(0, 3).forEach((road, i) => {
+                    console.log(`    ${i}: start=(${road.start.x.toFixed(1)}, ${road.start.z.toFixed(1)}), end=(${road.end.x.toFixed(1)}, ${road.end.z.toFixed(1)})`);
+                });
+            } else {
+                console.warn(`  ⚠️ 道路が0本です！`);
+            }
             
             // セグメンテーションモード用の可視化システムを作成
+            // 注意: VisualizationSystemは遅延初期化（visualizeRoadNetwork呼び出し時）
             let segVisualizationSystem = null;
-            if (typeof VisualizationSystem !== 'undefined') {
-                segVisualizationSystem = new VisualizationSystem(segRoadSystem, null, null);
-                console.log('✅ VisualizationSystemを初期化しました');
-            } else {
-                console.warn('⚠️ VisualizationSystemが見つかりません。道路可視化機能は利用できません。');
-            }
+            console.log('ℹ️ VisualizationSystemは遅延初期化されます（道路表示ボタンクリック時）');
             
             // セグメンテーションモード用のダミーcityLayoutオブジェクトを作成（互換性のため）
             cityLayout = {
@@ -457,18 +461,35 @@ async function init() {
                 }),
                 visualizeRoadNetwork: () => {
                     console.log('🛣️ セグメンテーションモード: 道路ネットワークを可視化します');
+                    
+                    // 遅延初期化: VisualizationSystemをここで初期化
+                    if (!segVisualizationSystem) {
+                        try {
+                            if (typeof window.VisualizationSystem !== 'undefined') {
+                                segVisualizationSystem = new window.VisualizationSystem(segRoadSystem, null, null);
+                                console.log('✅ VisualizationSystemを初期化しました（遅延初期化）');
+                            } else {
+                                console.error('❌ VisualizationSystemが定義されていません');
+                                console.log('   利用可能なグローバル変数:', Object.keys(window).filter(k => k.includes('System')));
+                                return;
+                            }
+                        } catch (error) {
+                            console.error('❌ VisualizationSystemの初期化に失敗:', error);
+                            return;
+                        }
+                    }
+                    
                     if (segVisualizationSystem) {
                         segVisualizationSystem.visualizeRoadNetwork();
-                    } else {
-                        console.warn('⚠️ VisualizationSystemが利用できません');
                     }
                 },
                 clearVisualizations: () => {
                     console.log('🗑️ セグメンテーションモード: 可視化をクリアします');
-                    if (segVisualizationSystem) {
+                    
+                    if (segVisualizationSystem && segVisualizationSystem.clearRoadNetworkVisualization) {
                         segVisualizationSystem.clearRoadNetworkVisualization();
-                    } else {
-                        console.warn('⚠️ VisualizationSystemが利用できません');
+                    } else if (!segVisualizationSystem) {
+                        console.log('ℹ️ まだ可視化されていません');
                     }
                 }
             };

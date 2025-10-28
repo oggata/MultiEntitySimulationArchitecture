@@ -196,58 +196,62 @@ class VisualizationSystem {
         if (this.facilitySystem && this.facilitySystem.facilities) {
             for (const facility of this.facilitySystem.facilities) {
                 const connection = this.facilitySystem.createEntranceConnection(facility);
-            if (connection) {
-                // 入り口接続の線を描画
-                const linePoints = [
-                    new THREE.Vector3(connection.start.x, 0.08, connection.start.z),
-                    new THREE.Vector3(connection.end.x, 0.08, connection.end.z)
-                ];
-                const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
-                const material = new THREE.LineBasicMaterial({ 
-                    color: 0xFF0000, // デバッグ用に赤色
-                    linewidth: 3,
-                    transparent: true,
-                    opacity: 0.8
-                });
-                
-                const line = new THREE.Line(geometry, material);
-                scene.add(line);
-                this.entranceConnections.push(line);
-                
-                // 入り口通路の地面（塗りつぶし）
-                const dx = connection.end.x - connection.start.x;
-                const dz = connection.end.z - connection.start.z;
-                const length = Math.sqrt(dx * dx + dz * dz);
-                const angle = Math.atan2(dz, dx);
-                const roadGeometry = new THREE.PlaneGeometry(length, 1.5);
-                const roadMaterial = new THREE.MeshBasicMaterial({ 
-                    color: 0xFF0000, // デバッグ用に赤色
-                    transparent: true,
-                    opacity: 0.9
-                });
-                const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
-                roadMesh.position.set(
-                    (connection.start.x + connection.end.x) / 2,
-                    0.15, // 地面より少し上に配置
-                    (connection.start.z + connection.end.z) / 2
-                );
-                roadMesh.rotation.x = -Math.PI / 2;
-                roadMesh.rotation.z = angle;
-                scene.add(roadMesh);
-                this.entranceConnections.push(roadMesh);
-                
-                // 入り口位置にマーカーを表示
-                const entranceGeometry = new THREE.SphereGeometry(0.3, 8, 8);
-                const entranceMaterial = new THREE.MeshBasicMaterial({ 
-                    color: 0x444444,
-                    transparent: true,
-                    opacity: 0.7
-                });
-                const entranceMarker = new THREE.Mesh(entranceGeometry, entranceMaterial);
-                entranceMarker.position.set(connection.start.x, 0.2, connection.start.z);
-                scene.add(entranceMarker);
-                this.entranceConnections.push(entranceMarker);
+                if (connection) {
+                    // 入り口接続の線を描画
+                    const linePoints = [
+                        new THREE.Vector3(connection.start.x, 0.08, connection.start.z),
+                        new THREE.Vector3(connection.end.x, 0.08, connection.end.z)
+                    ];
+                    const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
+                    const material = new THREE.LineBasicMaterial({ 
+                        color: 0xFF0000, // デバッグ用に赤色
+                        linewidth: 3,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    
+                    const line = new THREE.Line(geometry, material);
+                    scene.add(line);
+                    this.entranceConnections.push(line);
+                    
+                    // 入り口通路の地面（塗りつぶし）
+                    const dx = connection.end.x - connection.start.x;
+                    const dz = connection.end.z - connection.start.z;
+                    const length = Math.sqrt(dx * dx + dz * dz);
+                    const angle = Math.atan2(dz, dx);
+                    const roadGeometry = new THREE.PlaneGeometry(length, 1.5);
+                    const roadMaterial = new THREE.MeshBasicMaterial({ 
+                        color: 0xFF0000, // デバッグ用に赤色
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
+                    roadMesh.position.set(
+                        (connection.start.x + connection.end.x) / 2,
+                        0.15, // 地面より少し上に配置
+                        (connection.start.z + connection.end.z) / 2
+                    );
+                    roadMesh.rotation.x = -Math.PI / 2;
+                    roadMesh.rotation.z = angle;
+                    scene.add(roadMesh);
+                    this.entranceConnections.push(roadMesh);
+                    
+                    // 入り口位置にマーカーを表示
+                    const entranceGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+                    const entranceMaterial = new THREE.MeshBasicMaterial({ 
+                        color: 0x444444,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+                    const entranceMarker = new THREE.Mesh(entranceGeometry, entranceMaterial);
+                    entranceMarker.position.set(connection.start.x, 0.2, connection.start.z);
+                    scene.add(entranceMarker);
+                    this.entranceConnections.push(entranceMarker);
+                }
             }
+            console.log(`  ✅ 施設入り口接続を表示`);
+        } else {
+            console.log(`  ℹ️ 施設システムなし - 施設入り口接続をスキップ`);
         }
         
         // エージェントの自宅の入り口接続を描画
@@ -310,15 +314,16 @@ class VisualizationSystem {
                             transparent: true,
                             opacity: 0.7
                         });
-                const entranceMarker = new THREE.Mesh(entranceGeometry, entranceMaterial);
-                entranceMarker.position.set(connection.start.x, 0.2, connection.start.z);
-                scene.add(entranceMarker);
-                this.entranceConnections.push(entranceMarker);
+                        const entranceMarker = new THREE.Mesh(entranceGeometry, entranceMaterial);
+                        entranceMarker.position.set(connection.start.x, 0.2, connection.start.z);
+                        scene.add(entranceMarker);
+                        this.entranceConnections.push(entranceMarker);
+                    }
                 }
             }
-            console.log(`  ✅ 施設入り口接続を表示`);
+            console.log(`  ✅ エージェント自宅の入り口接続を表示`);
         } else {
-            console.log(`  ℹ️ 施設システムなし - 施設入り口接続をスキップ`);
+            console.log(`  ℹ️ エージェントなし - 自宅入り口接続をスキップ`);
         }
         
         console.log(`✅ 道路ネットワーク可視化完了`);
@@ -568,4 +573,10 @@ class VisualizationSystem {
             }
         }
     }
+}
+
+// グローバルにエクスポート
+if (typeof window !== 'undefined') {
+    window.VisualizationSystem = VisualizationSystem;
+    console.log('✅ VisualizationSystemをグローバルに公開しました');
 } 

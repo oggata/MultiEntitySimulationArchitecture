@@ -1,9 +1,9 @@
 // 視覚化システムを管理するクラス
 class VisualizationSystem {
-    constructor(roadSystem, buildingSystem, facilitySystem) {
+    constructor(roadSystem, buildingSystem = null, facilitySystem = null) {
         this.roadSystem = roadSystem;
-        this.buildingSystem = buildingSystem;
-        this.facilitySystem = facilitySystem;
+        this.buildingSystem = buildingSystem;  // セグメンテーションモードではnull
+        this.facilitySystem = facilitySystem;  // セグメンテーションモードではnull
         
         // 視覚化要素の管理
         this.pathLine = null;
@@ -366,166 +366,153 @@ class VisualizationSystem {
     drawEntranceConnections() {
         this.entranceConnections = [];
         
-        // 建物の入り口接続を描画
-        for (const building of this.buildingSystem.buildings) {
-            const connection = this.buildingSystem.createEntranceConnection(building);
-            if (connection) {
-                const dx = connection.end.x - connection.start.x;
-                const dz = connection.end.z - connection.start.z;
-                const length = Math.sqrt(dx * dx + dz * dz);
-                const angle = Math.atan2(dz, dx);
-                
-                // 入り口通路の地面
-                const pathGeometry = new THREE.PlaneGeometry(length, 1.5, Math.ceil(length), 2);
-                const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-                const pathMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
-                const path = new THREE.LineSegments(pathEdges, pathMaterial);
-                path.position.set(
-                    (connection.start.x + connection.end.x) / 2,
-                    0.03,
-                    (connection.start.z + connection.end.z) / 2
-                );
-                path.rotation.x = -Math.PI / 2;
-                path.rotation.z = angle;
-                scene.add(path);
-                this.entranceConnections.push(path);
-                
-                // 入り口の階段
-                const stepGeometry = new THREE.BoxGeometry(1.2, 0.1, 0.2);
-                const stepEdges = new THREE.EdgesGeometry(stepGeometry);
-                const stepMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
-                const step = new THREE.LineSegments(stepEdges, stepMaterial);
-                step.position.set(
-                    connection.start.x,
-                    0.05,
-                    connection.start.z
-                );
-                scene.add(step);
-                this.entranceConnections.push(step);
+        // 建物の入り口接続を描画（buildingSystemがある場合のみ）
+        if (this.buildingSystem && this.buildingSystem.buildings) {
+            for (const building of this.buildingSystem.buildings) {
+                const connection = this.buildingSystem.createEntranceConnection(building);
+                if (connection) {
+                    const dx = connection.end.x - connection.start.x;
+                    const dz = connection.end.z - connection.start.z;
+                    const length = Math.sqrt(dx * dx + dz * dz);
+                    const angle = Math.atan2(dz, dx);
+                    
+                    // 入り口通路の地面
+                    const pathGeometry = new THREE.PlaneGeometry(length, 1.5, Math.ceil(length), 2);
+                    const pathEdges = new THREE.EdgesGeometry(pathGeometry);
+                    const pathMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
+                    const path = new THREE.LineSegments(pathEdges, pathMaterial);
+                    path.position.set(
+                        (connection.start.x + connection.end.x) / 2,
+                        0.03,
+                        (connection.start.z + connection.end.z) / 2
+                    );
+                    path.rotation.x = -Math.PI / 2;
+                    path.rotation.z = angle;
+                    scene.add(path);
+                    this.entranceConnections.push(path);
+                    
+                    // 入り口の階段
+                    const stepGeometry = new THREE.BoxGeometry(1.2, 0.1, 0.2);
+                    const stepEdges = new THREE.EdgesGeometry(stepGeometry);
+                    const stepMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
+                    const step = new THREE.LineSegments(stepEdges, stepMaterial);
+                    step.position.set(
+                        connection.start.x,
+                        0.05,
+                        connection.start.z
+                    );
+                    scene.add(step);
+                    this.entranceConnections.push(step);
+                }
             }
         }
         
-        // 施設の入り口接続を描画
-        for (const facility of this.facilitySystem.facilities) {
-            const connection = this.facilitySystem.createEntranceConnection(facility);
-            if (connection) {
-                const dx = connection.end.x - connection.start.x;
-                const dz = connection.end.z - connection.start.z;
-                const length = Math.sqrt(dx * dx + dz * dz);
-                const angle = Math.atan2(dz, dx);
-                
-                // 入り口通路の地面
-                const pathGeometry = new THREE.PlaneGeometry(length, 2, Math.ceil(length), 2);
-                const pathEdges = new THREE.EdgesGeometry(pathGeometry);
-                const pathMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
-                const path = new THREE.LineSegments(pathEdges, pathMaterial);
-                path.position.set(
-                    (connection.start.x + connection.end.x) / 2,
-                    0.03,
-                    (connection.start.z + connection.end.z) / 2
-                );
-                path.rotation.x = -Math.PI / 2;
-                path.rotation.z = angle;
-                scene.add(path);
-                this.entranceConnections.push(path);
-                
-                // 入り口の階段
-                const stepGeometry = new THREE.BoxGeometry(1.5, 0.1, 0.3);
-                const stepEdges = new THREE.EdgesGeometry(stepGeometry);
-                const stepMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
-                const step = new THREE.LineSegments(stepEdges, stepMaterial);
-                step.position.set(
-                    connection.start.x,
-                    0.05,
-                    connection.start.z
-                );
-                scene.add(step);
-                this.entranceConnections.push(step);
+        // 施設の入り口接続を描画（facilitySystemがある場合のみ）
+        if (this.facilitySystem && this.facilitySystem.facilities) {
+            for (const facility of this.facilitySystem.facilities) {
+                const connection = this.facilitySystem.createEntranceConnection(facility);
+                if (connection) {
+                    const dx = connection.end.x - connection.start.x;
+                    const dz = connection.end.z - connection.start.z;
+                    const length = Math.sqrt(dx * dx + dz * dz);
+                    const angle = Math.atan2(dz, dx);
+                    
+                    // 入り口通路の地面
+                    const pathGeometry = new THREE.PlaneGeometry(length, 2, Math.ceil(length), 2);
+                    const pathEdges = new THREE.EdgesGeometry(pathGeometry);
+                    const pathMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
+                    const path = new THREE.LineSegments(pathEdges, pathMaterial);
+                    path.position.set(
+                        (connection.start.x + connection.end.x) / 2,
+                        0.03,
+                        (connection.start.z + connection.end.z) / 2
+                    );
+                    path.rotation.x = -Math.PI / 2;
+                    path.rotation.z = angle;
+                    scene.add(path);
+                    this.entranceConnections.push(path);
+                    
+                    // 入り口の階段
+                    const stepGeometry = new THREE.BoxGeometry(1.5, 0.1, 0.3);
+                    const stepEdges = new THREE.EdgesGeometry(stepGeometry);
+                    const stepMaterial = new THREE.LineBasicMaterial({ color: 0xF5F5F5 });
+                    const step = new THREE.LineSegments(stepEdges, stepMaterial);
+                    step.position.set(
+                        connection.start.x,
+                        0.05,
+                        connection.start.z
+                    );
+                    scene.add(step);
+                    this.entranceConnections.push(step);
+                }
             }
         }
     }
 
     // 入り口接続を通常の道路として描画
     drawEntranceConnectionsAsRoads() {
-        // 建物の入り口接続を描画
-        for (const building of this.buildingSystem.buildings) {
-            const connection = this.buildingSystem.createEntranceConnection(building);
-            if (connection) {
-                const dx = connection.end.x - connection.start.x;
-                const dz = connection.end.z - connection.start.z;
-                const length = Math.sqrt(dx * dx + dz * dz);
-                const angle = Math.atan2(dz, dx);
-                
-                // 入り口通路を道路として描画（他の道路と同じ色に統一）
-                const roadGeometry = new THREE.PlaneGeometry(length, 1.5);
-                const roadMaterial = new THREE.MeshBasicMaterial({ 
-                    color: cityLayoutConfig.roadColors.entranceRoad, // 設定ファイルから読み込み
-                    transparent: true,
-                    opacity: cityLayoutConfig.roadColors.opacity // 設定ファイルから読み込み
-                });
-                const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
-                roadMesh.position.set(
-                    (connection.start.x + connection.end.x) / 2,
-                    0.15, // 地面より少し上に配置（他の道路より高く）
-                    (connection.start.z + connection.end.z) / 2
-                );
-                roadMesh.rotation.x = -Math.PI / 2;
-                roadMesh.rotation.z = angle;
-                scene.add(roadMesh);
-                
-                // 境界線（無効化）
-                // const edges = new THREE.EdgesGeometry(roadGeometry);
-                // const lineMaterial = new THREE.LineBasicMaterial({ 
-                //     color: cityLayoutConfig.roadColors.borderLine, // 透明
-                //     linewidth: 2
-                // });
-                // const line = new THREE.LineSegments(edges, lineMaterial);
-                // line.position.copy(roadMesh.position);
-                // line.rotation.copy(roadMesh.rotation);
-                // scene.add(line);
+        // 建物の入り口接続を描画（buildingSystemがある場合のみ）
+        if (this.buildingSystem && this.buildingSystem.buildings) {
+            for (const building of this.buildingSystem.buildings) {
+                const connection = this.buildingSystem.createEntranceConnection(building);
+                if (connection) {
+                    const dx = connection.end.x - connection.start.x;
+                    const dz = connection.end.z - connection.start.z;
+                    const length = Math.sqrt(dx * dx + dz * dz);
+                    const angle = Math.atan2(dz, dx);
+                    
+                    // 入り口通路を道路として描画（他の道路と同じ色に統一）
+                    const roadGeometry = new THREE.PlaneGeometry(length, 1.5);
+                    const roadMaterial = new THREE.MeshBasicMaterial({ 
+                        color: cityLayoutConfig.roadColors.entranceRoad, // 設定ファイルから読み込み
+                        transparent: true,
+                        opacity: cityLayoutConfig.roadColors.opacity // 設定ファイルから読み込み
+                    });
+                    const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
+                    roadMesh.position.set(
+                        (connection.start.x + connection.end.x) / 2,
+                        0.15, // 地面より少し上に配置（他の道路より高く）
+                        (connection.start.z + connection.end.z) / 2
+                    );
+                    roadMesh.rotation.x = -Math.PI / 2;
+                    roadMesh.rotation.z = angle;
+                    scene.add(roadMesh);
+                }
             }
         }
         
-        // 施設の入り口接続を描画
-        for (const facility of this.facilitySystem.facilities) {
-            const connection = this.facilitySystem.createEntranceConnection(facility);
-            if (connection) {
-                const dx = connection.end.x - connection.start.x;
-                const dz = connection.end.z - connection.start.z;
-                const length = Math.sqrt(dx * dx + dz * dz);
-                const angle = Math.atan2(dz, dx);
-                
-                // 入り口通路を道路として描画（他の道路と同じ色に統一）
-                const roadGeometry = new THREE.PlaneGeometry(length, 2);
-                const roadMaterial = new THREE.MeshBasicMaterial({ 
-                    color: cityLayoutConfig.roadColors.entranceRoad, // 設定ファイルから読み込み
-                    transparent: true,
-                    opacity: cityLayoutConfig.roadColors.opacity // 設定ファイルから読み込み
-                });
-                const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
-                roadMesh.position.set(
-                    (connection.start.x + connection.end.x) / 2,
-                    0.15, // 地面より少し上に配置（他の道路より高く）
-                    (connection.start.z + connection.end.z) / 2
-                );
-                roadMesh.rotation.x = -Math.PI / 2;
-                roadMesh.rotation.z = angle;
-                scene.add(roadMesh);
-                
-                // 境界線（無効化）
-                // const edges = new THREE.EdgesGeometry(roadGeometry);
-                // const lineMaterial = new THREE.LineBasicMaterial({ 
-                //     color: cityLayoutConfig.roadColors.borderLine, // 透明
-                //     linewidth: 2
-                // });
-                // const line = new THREE.LineSegments(edges, lineMaterial);
-                // line.position.copy(roadMesh.position);
-                // line.rotation.copy(roadMesh.rotation);
-                // scene.add(line);
+        // 施設の入り口接続を描画（facilitySystemがある場合のみ）
+        if (this.facilitySystem && this.facilitySystem.facilities) {
+            for (const facility of this.facilitySystem.facilities) {
+                const connection = this.facilitySystem.createEntranceConnection(facility);
+                if (connection) {
+                    const dx = connection.end.x - connection.start.x;
+                    const dz = connection.end.z - connection.start.z;
+                    const length = Math.sqrt(dx * dx + dz * dz);
+                    const angle = Math.atan2(dz, dx);
+                    
+                    // 入り口通路を道路として描画（他の道路と同じ色に統一）
+                    const roadGeometry = new THREE.PlaneGeometry(length, 2);
+                    const roadMaterial = new THREE.MeshBasicMaterial({ 
+                        color: cityLayoutConfig.roadColors.entranceRoad, // 設定ファイルから読み込み
+                        transparent: true,
+                        opacity: cityLayoutConfig.roadColors.opacity // 設定ファイルから読み込み
+                    });
+                    const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
+                    roadMesh.position.set(
+                        (connection.start.x + connection.end.x) / 2,
+                        0.15, // 地面より少し上に配置（他の道路より高く）
+                        (connection.start.z + connection.end.z) / 2
+                    );
+                    roadMesh.rotation.x = -Math.PI / 2;
+                    roadMesh.rotation.z = angle;
+                    scene.add(roadMesh);
+                }
             }
         }
-        // エージェントの自宅の入り口接続も道路として描画
-        if (window.agents && window.agents.length > 0) {
+        
+        // エージェントの自宅の入り口接続も道路として描画（buildingSystemがある場合のみ）
+        if (this.buildingSystem && window.agents && window.agents.length > 0) {
             for (const agent of window.agents) {
                 if (agent.home) {
                     const homeBuilding = {

@@ -683,6 +683,45 @@ button:disabled {
     text-shadow: none;
 }
 
+/* カメラデバッグ表示 */
+.camera-debug-display {
+    background: rgba(0,0,0,0.85);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    line-height: 1.6;
+    margin: 10px 0;
+    border: 1px solid #4CAF50;
+}
+
+.camera-debug-display .debug-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #4CAF50;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #4CAF50;
+    padding-bottom: 4px;
+}
+
+.camera-debug-display .debug-item {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+}
+
+.camera-debug-display .debug-label {
+    color: #aaa;
+    margin-right: 10px;
+}
+
+.camera-debug-display .debug-value {
+    color: #fff;
+    font-weight: bold;
+}
+
 /* コミュニケーション機能のスタイル */
 .communication-controls {
     margin: 10px 0;

@@ -123,6 +123,27 @@
                     <button id="autoViewBtn" style="background-color: #4CAF50; color: white;">🎬 自動視点 (5秒)</button>
                     <button id="resetCamera">全体表示</button>
                 </div>
+                
+                <div class="camera-debug-display" id="cameraDebugDisplay">
+                    <div class="debug-title">📷 Camera Debug Info</div>
+                    <div class="debug-item">
+                        <span class="debug-label">Position:</span>
+                        <span class="debug-value" id="debugCameraPosition">-</span>
+                    </div>
+                    <div class="debug-item">
+                        <span class="debug-label">Rotation:</span>
+                        <span class="debug-value" id="debugCameraRotation">-</span>
+                    </div>
+                    <div class="debug-item">
+                        <span class="debug-label">LookAt:</span>
+                        <span class="debug-value" id="debugCameraLookAt">-</span>
+                    </div>
+                    <div class="debug-item">
+                        <span class="debug-label">Distance:</span>
+                        <span class="debug-value" id="debugCameraDistance">-</span>
+                    </div>
+                </div>
+                
                 <div class="communication-controls">
                     <button id="callAgentBtn" disabled>📞 電話をかける</button>
                     <button id="messageAgentBtn" disabled>💬 メッセージを送る</button>
@@ -438,9 +459,6 @@
     
     <!-- 都市システム -->
     <script src="./src/city/road-system.js"></script>
-    <script src="./src/city/building-system.js"></script>
-    <script src="./src/city/facility-system.js"></script>
-    <script src="./src/city/city-layout-manager.js"></script>
     
     <!-- セグメンテーションベースシステム -->
     <script src="./src/city/segmentation-loader.js"></script>

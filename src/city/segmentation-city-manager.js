@@ -257,6 +257,14 @@ class SegmentationCityManager {
     }
     
     /**
+     * バウンディングボックスを取得
+     * @returns {Object} バウンディングボックス
+     */
+    getBoundingBox() {
+        return this.segmentationLoader.getBoundingBox();
+    }
+    
+    /**
      * 統計情報を取得
      * @returns {Object} 統計情報
      */

@@ -287,7 +287,9 @@ class SegmentationMapLoader {
                     side: THREE.DoubleSide,
                     shininess: 30,
                     specular: 0x222222,
-                    flatShading: false
+                    flatShading: false,
+                    transparent: true,
+                    opacity: 0.5
                 });
                 
                 const mesh = new THREE.Mesh(geometry, material);
@@ -510,6 +512,58 @@ class SegmentationMapLoader {
     }
     
     /**
+     * 全メッシュのバウンディングボックスを取得
+     * @returns {Object} バウンディングボックス {minX, maxX, minY, maxY, minZ, maxZ}
+     */
+    getBoundingBox() {
+        if (!this.meshData || this.meshData.length === 0) {
+            return { minX: -100, maxX: 100, minY: 0, maxY: 10, minZ: -100, maxZ: 100 };
+        }
+        
+        let minX = Infinity, maxX = -Infinity;
+        let minY = Infinity, maxY = -Infinity;
+        let minZ = Infinity, maxZ = -Infinity;
+        
+        this.meshData.forEach(mesh => {
+            if (mesh.bbox && mesh.bbox.min && mesh.bbox.max) {
+                // bboxが完全に存在する場合
+                minX = Math.min(minX, mesh.bbox.min[0]);
+                maxX = Math.max(maxX, mesh.bbox.max[0]);
+                minY = Math.min(minY, mesh.bbox.min[1]);
+                maxY = Math.max(maxY, mesh.bbox.max[1]);
+                minZ = Math.min(minZ, mesh.bbox.min[2]);
+                maxZ = Math.max(maxZ, mesh.bbox.max[2]);
+            } else if (mesh.center) {
+                // centerしかない場合
+                minX = Math.min(minX, mesh.center[0]);
+                maxX = Math.max(maxX, mesh.center[0]);
+                minY = Math.min(minY, mesh.center[1] || 0);
+                maxY = Math.max(maxY, mesh.center[1] || 0);
+                minZ = Math.min(minZ, mesh.center[2]);
+                maxZ = Math.max(maxZ, mesh.center[2]);
+            } else if (mesh.vertices && mesh.vertices.length > 0) {
+                // 頂点情報から計算
+                mesh.vertices.forEach(v => {
+                    minX = Math.min(minX, v[0]);
+                    maxX = Math.max(maxX, v[0]);
+                    minY = Math.min(minY, v[1] || 0);
+                    maxY = Math.max(maxY, v[1] || 0);
+                    minZ = Math.min(minZ, v[2]);
+                    maxZ = Math.max(maxZ, v[2]);
+                });
+            }
+        });
+        
+        // 値が有効かチェック
+        if (!isFinite(minX) || !isFinite(maxX)) {
+            console.warn('⚠️ バウンディングボックスの計算に失敗しました。デフォルト値を使用します。');
+            return { minX: -100, maxX: 100, minY: 0, maxY: 10, minZ: -100, maxZ: 100 };
+        }
+        
+        return { minX, maxX, minY, maxY, minZ, maxZ };
+    }
+    
+    /**
      * 統計情報を取得
      * @returns {Object} 統計情報
      */
@@ -520,12 +574,15 @@ class SegmentationMapLoader {
             facilityCount[facility.type] = (facilityCount[facility.type] || 0) + 1;
         });
         
+        const bbox = this.getBoundingBox();
+        
         return {
             totalSegments: this.meshData ? this.meshData.length : 0,
             roadSegments: this.roadSegments.length,
             buildingSegments: this.buildingSegments.length,
             facilityDistribution: facilityCount,
-            categories: this.metadata ? this.metadata.categories : {}
+            categories: this.metadata ? this.metadata.categories : {},
+            boundingBox: bbox
         };
     }
 }

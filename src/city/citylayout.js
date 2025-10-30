@@ -1272,7 +1272,7 @@ calculateMinDistanceToRoads(x, z) {
             const buildingMaterial = new THREE.MeshBasicMaterial({ 
                 color: buildingColor, 
                 transparent: true, 
-                opacity: 0.3 
+                opacity: 0.5 
             });
             const buildingMesh = new THREE.Mesh(geometry, buildingMaterial);
             buildingMesh.position.set(building.x, building.size/2, building.z);
@@ -1334,7 +1334,7 @@ calculateMinDistanceToRoads(x, z) {
             const roofMaterial = new THREE.MeshBasicMaterial({ 
                 color: 0xF5F5DC, 
                 transparent: true, 
-                opacity: 0.4 
+                opacity: 0.5 
             });
             const roof = new THREE.Mesh(roofGeometry, roofMaterial);
             roof.position.set(building.x, building.size + 0.1, building.z);

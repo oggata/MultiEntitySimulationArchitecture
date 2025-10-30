@@ -366,52 +366,80 @@ async function init() {
                 console.log(`  Z: ${minZ.toFixed(2)} 〜 ${maxZ.toFixed(2)} (範囲: ${rangeZ.toFixed(2)})`);
                 console.log(`  中心: (${centerX.toFixed(2)}, ${centerZ.toFixed(2)})`);
                 
-                // カメラを施設の範囲に合わせて調整
-                // 斜め45度くらいの角度で見下ろすように配置
-                const mapRange = Math.max(rangeX, rangeZ);
-                const viewDistance = mapRange * 0.6; // 少し近づける
-                const cameraHeight = viewDistance * 0.8; // やや上から
-                const cameraBackDistance = viewDistance * 0.8;
+                // カメラを最適な位置に配置（ユーザー指定の初期位置）
+                camera.position.set(-1.9, 23.7, -17.1);
                 
-                camera.position.set(
-                    centerX,
-                    cameraHeight,
-                    centerZ + cameraBackDistance
-                );
-                camera.lookAt(centerX, 0, centerZ);
+                // 回転を直接設定（度数法→弧度法）
+                camera.rotation.order = 'XYZ';  // 回転順序を変更
+                camera.rotation.x = -112.6 * Math.PI / 180;
+                camera.rotation.y = 0.1 * Math.PI / 180;
+                camera.rotation.z = 179.8 * Math.PI / 180;
                 
-                console.log(`📷 カメラを調整: 位置(${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
-                console.log(`📷 注視点: (${centerX.toFixed(2)}, 0, ${centerZ.toFixed(2)})`);
-                console.log(`📷 視距離: ${viewDistance.toFixed(2)}, 高さ: ${cameraHeight.toFixed(2)}`);
+                // 変更を強制的に適用
+                camera.updateMatrixWorld(true);
                 
-                // カメラシステムにも中心座標を保存
+                // カメラシステムの設定
                 if (cameraSystem) {
-                    cameraSystem.cityCenter = { x: centerX, y: 0, z: centerZ };
+                    // カメラモードをfreeに設定
+                    cameraSystem.cameraMode = 'free';
+                    cameraSystem.cameraFollowEnabled = false;
+                    
+                    // 初期回転を保持（updateCameraRotation()をスキップ）
+                    cameraSystem.preserveInitialRotation = true;
+                    
+                    // 中心座標を保存
+                    cameraSystem.cityCenter = { x: 4.8, y: 0.0, z: -0.6 };
                     cameraSystem.cityRange = Math.max(rangeX, rangeZ);
                 }
+                
+                // 距離を計算（注視点までの距離）
+                const dx = camera.position.x - 4.8;
+                const dy = camera.position.y - 0.0;
+                const dz = camera.position.z - (-0.6);
+                const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                
+                console.log(`📷 カメラを調整: 位置(${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`);
+                console.log(`📷 回転: (${(-112.6).toFixed(1)}°, ${(0.1).toFixed(1)}°, ${(179.8).toFixed(1)}°)`);
+                console.log(`📷 参考距離: ${distance.toFixed(1)}`);
+                console.log(`📷 カメラモード: ${cameraSystem.cameraMode}`);
             }
             
-            // セグメンテーションモード用の無限地面を追加
+            // セグメンテーションモード用の地面を追加（データの範囲に合わせて）
             console.log('セグメンテーションマップ用の地面を追加...');
-            const segGroundSize = 2000; // 十分に大きな地面
             
-            // 基本の地面
-            const segGroundGeometry = new THREE.PlaneGeometry(segGroundSize, segGroundSize);
+            // セグメンテーションデータのバウンディングボックスから地面のサイズを計算
+            const bbox = segCityManager.getBoundingBox();
+            const bboxRangeX = bbox.maxX - bbox.minX;
+            const bboxRangeZ = bbox.maxZ - bbox.minZ;
+            const padding = Math.max(bboxRangeX, bboxRangeZ) * 0.15; // 15%の余白
+            
+            const groundSizeX = bboxRangeX + padding;
+            const groundSizeZ = bboxRangeZ + padding;
+            const groundCenterX = (bbox.minX + bbox.maxX) / 2;
+            const groundCenterZ = (bbox.minZ + bbox.maxZ) / 2;
+            
+            console.log(`  セグメントデータ範囲: X[${bbox.minX.toFixed(1)}, ${bbox.maxX.toFixed(1)}], Z[${bbox.minZ.toFixed(1)}, ${bbox.maxZ.toFixed(1)}]`);
+            console.log(`  地面サイズ: ${groundSizeX.toFixed(1)} x ${groundSizeZ.toFixed(1)}`);
+            console.log(`  地面中心: (${groundCenterX.toFixed(1)}, ${groundCenterZ.toFixed(1)})`);
+            
+            // 基本の地面（セグメントの隙間を埋める）
+            const segGroundGeometry = new THREE.PlaneGeometry(groundSizeX, groundSizeZ);
             const segGroundMaterial = new THREE.MeshBasicMaterial({
                 color: 0x1a1a1a, // 濃いグレー
                 transparent: true,
-                opacity: 0.3,
+                opacity: 0.8,
                 side: THREE.DoubleSide,
-                depthWrite: false
+                depthWrite: true
             });
             const segGroundMesh = new THREE.Mesh(segGroundGeometry, segGroundMaterial);
             segGroundMesh.rotation.x = -Math.PI / 2;
-            segGroundMesh.position.y = -0.5; // メッシュより少し下
+            segGroundMesh.position.set(groundCenterX, -0.1, groundCenterZ); // メッシュより少し下
             scene.add(segGroundMesh);
             
-            // グリッド線を追加（オプション）
-            const gridHelper = new THREE.GridHelper(segGroundSize, 100, 0x444444, 0x222222);
-            gridHelper.position.y = -0.4; // 地面より少し上
+            // グリッド線を追加（データの範囲に合わせて）
+            const gridSize = Math.max(groundSizeX, groundSizeZ);
+            const gridHelper = new THREE.GridHelper(gridSize, Math.min(100, Math.ceil(gridSize / 5)), 0x444444, 0x222222);
+            gridHelper.position.set(groundCenterX, -0.05, groundCenterZ); // 地面より少し上
             scene.add(gridHelper);
             
             console.log('✅ 地面メッシュとグリッドを追加しました');
@@ -496,10 +524,12 @@ async function init() {
             
         } else {
             console.log('ℹ️ セグメンテーションデータが見つかりません。従来の方式で生成します。');
+            useSegmentation = false;
         }
     } catch (error) {
         console.warn('⚠️ セグメンテーションデータの読み込みに失敗:', error);
         console.log('従来の方式で都市を生成します。');
+        useSegmentation = false;
     }
     
     // セグメンテーションベースでない場合はエラー
@@ -517,8 +547,8 @@ async function init() {
         console.log('詳細: SEGMENTATION_QUICKSTART.md をご確認ください');
         
         // エラーメッセージをUIに表示
-        updateLoadingMessage('❌ セグメンテーションマップが見つかりません');
-        updateLoadingDetailMessage('src/json/city_segmentation.json を用意してください。詳細はコンソールをご確認ください。');
+        // updateLoadingMessage('❌ セグメンテーションマップが見つかりません');
+        // updateLoadingDetailMessage('src/json/city_segmentation.json を用意してください。詳細はコンソールをご確認ください。');
         
         // 空のcityLayoutを作成（クラッシュを防ぐため）
         cityLayout = {
@@ -544,7 +574,7 @@ async function init() {
     // cityLayoutが存在しない場合はここで初期化を中断
     if (!cityLayout) {
         console.error('❌ cityLayoutが初期化されていません。処理を中断します。');
-        updateLoadingMessage('❌ 初期化エラー');
+        // updateLoadingMessage('❌ 初期化エラー');
         return;
     }
     
@@ -1360,6 +1390,50 @@ function setTimeSpeed() {
     document.getElementById('speed').textContent = `${timeSpeed}x`;
 }
 
+// カメラデバッグ情報を更新
+function updateCameraDebugDisplay() {
+    if (!camera) return;
+    
+    const positionEl = document.getElementById('debugCameraPosition');
+    const rotationEl = document.getElementById('debugCameraRotation');
+    const lookAtEl = document.getElementById('debugCameraLookAt');
+    const distanceEl = document.getElementById('debugCameraDistance');
+    
+    if (positionEl) {
+        positionEl.textContent = `(${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`;
+    }
+    
+    if (rotationEl) {
+        const rotX = (camera.rotation.x * 180 / Math.PI).toFixed(1);
+        const rotY = (camera.rotation.y * 180 / Math.PI).toFixed(1);
+        const rotZ = (camera.rotation.z * 180 / Math.PI).toFixed(1);
+        rotationEl.textContent = `(${rotX}°, ${rotY}°, ${rotZ}°)`;
+    }
+    
+    if (lookAtEl && cameraSystem && cameraSystem.cityCenter) {
+        const center = cameraSystem.cityCenter;
+        lookAtEl.textContent = `(${center.x.toFixed(1)}, ${center.y.toFixed(1)}, ${center.z.toFixed(1)})`;
+    } else if (lookAtEl) {
+        lookAtEl.textContent = '(0, 0, 0)';
+    }
+    
+    if (distanceEl && cameraSystem && cameraSystem.cityCenter) {
+        const center = cameraSystem.cityCenter;
+        const dx = camera.position.x - center.x;
+        const dy = camera.position.y - center.y;
+        const dz = camera.position.z - center.z;
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        distanceEl.textContent = distance.toFixed(1);
+    } else if (distanceEl) {
+        const distance = Math.sqrt(
+            camera.position.x * camera.position.x +
+            camera.position.y * camera.position.y +
+            camera.position.z * camera.position.z
+        );
+        distanceEl.textContent = distance.toFixed(1);
+    }
+}
+
 // アニメーションループ
 function animate() {
     requestAnimationFrame(animate);
@@ -1400,6 +1474,9 @@ function animate() {
     if (Math.floor(clock.getElapsedTime() * 2) % 1 === 0) {
         cameraSystem.updateCameraTargetDisplay();
     }
+    
+    // カメラデバッグ情報を更新
+    updateCameraDebugDisplay();
     
     // ターゲットマーカーのアニメーション
     if (window.targetMarkerAnimation) {

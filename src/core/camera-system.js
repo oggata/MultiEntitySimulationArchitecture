@@ -42,6 +42,12 @@ class CameraSystem {
         this.mouseY = 0;
         this.isMouseDown = false;
         this.isPanelDragging = false;
+        
+        // 初期回転保持フラグ
+        this.preserveInitialRotation = false;
+        
+        // ハイライトされている施設メッシュ
+        this.highlightedFacilityMesh = null;
     }
     
     // カメラの初期化
@@ -156,7 +162,10 @@ class CameraSystem {
             }
             
             // カメラの向きを維持（マウスで設定された角度を保持）
-            this.updateCameraRotation();
+            // 初期回転を保持する場合はupdateCameraRotationをスキップ
+            if (!this.preserveInitialRotation) {
+                this.updateCameraRotation();
+            }
         }
     }
     
@@ -190,6 +199,12 @@ class CameraSystem {
         
         // ターゲットマーカーを削除
         this.removeTargetMarker();
+        
+        // ハイライトを解除
+        if (this.highlightedFacilityMesh) {
+            this.unhighlightFacilityMesh(this.highlightedFacilityMesh);
+            this.highlightedFacilityMesh = null;
+        }
         
         // カメラモードを設定
         this.cameraMode = 'agent';
@@ -248,6 +263,17 @@ class CameraSystem {
         const facility = facilities[index % facilities.length];
         console.log(`  → 選択された施設: ${facility.name} (ID: ${facility.id})`);
         
+        // 前回ハイライトした施設のハイライトを解除
+        if (this.highlightedFacilityMesh) {
+            this.unhighlightFacilityMesh(this.highlightedFacilityMesh);
+        }
+        
+        // 新しい施設をハイライト
+        if (facility.mesh) {
+            this.highlightFacilityMesh(facility.mesh);
+            this.highlightedFacilityMesh = facility.mesh;
+        }
+        
         // カメラモードを設定
         this.cameraMode = 'facility';
         this.targetFacility = facility;
@@ -273,13 +299,10 @@ class CameraSystem {
         this.camera.position.set(pos.x, cameraHeight, pos.z - cameraDistance);
         this.camera.lookAt(pos.x, pos.y, pos.z);
         
-        // ターゲットマーカーを表示
-        this.createTargetMarker(pos, 0xFF0000);
-        
         // カメラモード表示を更新
         this.updateCameraModeDisplay();
         
-        addLog(`🏢 ${facility.name}の視点に切り替えました（ターゲットマーカー表示）`, 'system');
+        addLog(`🏢 ${facility.name}の視点に切り替えました`, 'system');
     }
     
     // 自動視点切り替えを開始
@@ -407,27 +430,37 @@ class CameraSystem {
         // ターゲットマーカーを削除
         this.removeTargetMarker();
         
+        // ハイライトを解除
+        if (this.highlightedFacilityMesh) {
+            this.unhighlightFacilityMesh(this.highlightedFacilityMesh);
+            this.highlightedFacilityMesh = null;
+        }
+        
         this.cameraMode = 'free';
         this.targetAgent = null;
         this.targetFacility = null;
         this.cameraFollowEnabled = false;
         
-        // セグメンテーションマップの場合は都市の中心に合わせる
-        if (window.isSegmentationMap && this.cityCenter && this.cityRange) {
-            // 斜め45度くらいの角度で見下ろす
-            const viewDistance = this.cityRange * 0.6; // 少し近づける
-            const height = viewDistance * 0.8; // やや上から
-            const backDistance = viewDistance * 0.8;
+        // セグメンテーションマップの場合は初期設定の位置に戻す
+        if (window.isSegmentationMap) {
+            // 初期位置に戻す
+            this.camera.position.set(-1.9, 23.7, -17.1);
             
-            this.camera.position.set(
-                this.cityCenter.x,
-                height,
-                this.cityCenter.z + backDistance
-            );
-            this.camera.lookAt(this.cityCenter.x, 0, this.cityCenter.z);
-            console.log(`📷 セグメンテーションマップ: カメラをリセット`);
-            console.log(`   位置: (${this.cityCenter.x.toFixed(2)}, ${height.toFixed(2)}, ${(this.cityCenter.z + backDistance).toFixed(2)})`);
-            console.log(`   注視: (${this.cityCenter.x.toFixed(2)}, 0, ${this.cityCenter.z.toFixed(2)})`);
+            // 初期回転を設定
+            this.camera.rotation.order = 'XYZ';
+            this.camera.rotation.x = -112.6 * Math.PI / 180;
+            this.camera.rotation.y = 0.1 * Math.PI / 180;
+            this.camera.rotation.z = 179.8 * Math.PI / 180;
+            
+            // 初期回転を保持
+            this.preserveInitialRotation = true;
+            
+            // 変更を強制的に適用
+            this.camera.updateMatrixWorld(true);
+            
+            console.log(`📷 セグメンテーションマップ: カメラを初期位置にリセット`);
+            console.log(`   位置: (-1.9, 23.7, -17.1)`);
+            console.log(`   回転: (-112.6°, 0.1°, 179.8°)`);
         }
         // エディターマップの場合は北向き、少し高い位置から見下ろす
         else if (window.isEditorMap) {
@@ -576,6 +609,14 @@ class CameraSystem {
                 const deltaX = event.clientX - this.mouseX;
                 const deltaY = event.clientY - this.mouseY;
                 
+                // マウスで回転を変更する場合は初期回転保持を解除
+                if (this.preserveInitialRotation && (deltaX !== 0 || deltaY !== 0)) {
+                    this.preserveInitialRotation = false;
+                    // 現在のカメラ回転からcameraRotationX/Yを設定
+                    this.cameraRotationX = this.camera.rotation.x;
+                    this.cameraRotationY = this.camera.rotation.y;
+                }
+                
                 // マウスの移動量に応じてカメラの回転角度を更新
                 this.cameraRotationY -= deltaX * 0.01; // 左右の回転
                 this.cameraRotationX -= deltaY * 0.01; // 上下の回転
@@ -653,6 +694,40 @@ class CameraSystem {
         if (this.renderer) {
             this.renderer.setSize(width, height);
         }
+    }
+    
+    // 施設メッシュをハイライト
+    highlightFacilityMesh(mesh) {
+        if (!mesh || !mesh.material) return;
+        
+        // 元のマテリアル設定を保存
+        if (!mesh.userData.originalMaterial) {
+            mesh.userData.originalMaterial = {
+                emissive: mesh.material.emissive ? mesh.material.emissive.clone() : new THREE.Color(0x000000),
+                emissiveIntensity: mesh.material.emissiveIntensity || 0,
+                opacity: mesh.material.opacity || 1.0
+            };
+        }
+        
+        // ハイライト色を設定（黄色の発光）
+        mesh.material.emissive = new THREE.Color(0xffff00);
+        mesh.material.emissiveIntensity = 0.6;
+        mesh.material.opacity = 0.8;
+        
+        console.log(`✨ 施設をハイライト: ${mesh.userData.label || 'Unknown'} (ID: ${mesh.userData.segmentId})`);
+    }
+    
+    // 施設メッシュのハイライトを解除
+    unhighlightFacilityMesh(mesh) {
+        if (!mesh || !mesh.material || !mesh.userData.originalMaterial) return;
+        
+        // 元のマテリアル設定に戻す
+        const original = mesh.userData.originalMaterial;
+        mesh.material.emissive = original.emissive.clone();
+        mesh.material.emissiveIntensity = original.emissiveIntensity;
+        mesh.material.opacity = original.opacity;
+        
+        console.log(`🔅 施設のハイライトを解除: ${mesh.userData.label || 'Unknown'} (ID: ${mesh.userData.segmentId})`);
     }
 }
 

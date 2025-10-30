@@ -84,6 +84,12 @@ class VisualizationSystem {
         
         console.log(`🛣️ 道路ネットワーク可視化: ${this.roadSystem.roads.length}本の道路, ${this.roadSystem.intersections.length}個の交差点`);
         
+        // セグメンテーションモードの場合は道路メッシュの輪郭を表示
+        if (window.isSegmentationMap && window.segCityManager && window.segCityManager.meshGroups) {
+            this.visualizeSegmentationRoadNetwork();
+            return;
+        }
+        
         // 交差点を表示
         this.intersectionPoints = [];
         if (this.roadSystem.intersections && this.roadSystem.intersections.length > 0) {
@@ -327,6 +333,123 @@ class VisualizationSystem {
         }
         
         console.log(`✅ 道路ネットワーク可視化完了`);
+    }
+    
+    // セグメンテーション道路ネットワークの可視化
+    visualizeSegmentationRoadNetwork() {
+        console.log(`🛣️ セグメンテーション道路ネットワークを可視化します`);
+        
+        const meshGroups = window.segCityManager.meshGroups;
+        const roadGroup = meshGroups['road'];
+        
+        if (!roadGroup) {
+            console.warn('⚠️ 道路メッシュグループが見つかりません');
+            return;
+        }
+        
+        this.roadCenterLines = [];
+        let meshCount = 0;
+        
+        // 道路グループ内の各メッシュの輪郭エッジを可視化
+        roadGroup.traverse((object) => {
+            if (object.isMesh) {
+                // EdgesGeometryを使って輪郭エッジを抽出（角度閾値30度）
+                const edgesGeometry = new THREE.EdgesGeometry(object.geometry, 30);
+                
+                // ワールド座標に変換するためのマトリックスを適用
+                edgesGeometry.applyMatrix4(object.matrixWorld);
+                
+                // LineSegmentsで描画（輪郭線）
+                const material = new THREE.LineBasicMaterial({ 
+                    color: 0xFFFF00,  // 黄色
+                    linewidth: 2,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const lineSegments = new THREE.LineSegments(edgesGeometry, material);
+                
+                // 少し上に配置して地面と重ならないように
+                lineSegments.position.y = 0.2;
+                
+                scene.add(lineSegments);
+                this.roadCenterLines.push(lineSegments);
+                meshCount++;
+            }
+        });
+        
+        console.log(`  ✅ ${meshCount}個の道路メッシュの輪郭を表示`);
+        
+        // 道路セグメントの中心線も表示
+        this.visualizeRoadCenterLines();
+        
+        console.log(`✅ セグメンテーション道路ネットワーク可視化完了`);
+    }
+    
+    // 道路セグメントの中心線を可視化
+    visualizeRoadCenterLines() {
+        const segLoader = window.segCityManager.segmentationLoader;
+        const roadSegments = segLoader.roadSegments;
+        
+        if (!roadSegments || roadSegments.length === 0) {
+            console.log(`  ℹ️ 道路セグメントデータがありません`);
+            return;
+        }
+        
+        let centerLineCount = 0;
+        
+        // 各道路セグメントの中心線を描画
+        roadSegments.forEach(road => {
+            if (!road.center) return;
+            
+            // 道路の中心点
+            const center = new THREE.Vector3(road.center[0], 0.3, road.center[2]);
+            
+            // 道路が持つ頂点から最も近い頂点ペアを見つけて中心線を引く
+            if (road.vertices && road.vertices.length >= 2) {
+                // 道路の形状に沿った中心線を作成
+                // 頂点を使って道路の流れを表現
+                const points = [];
+                
+                // 頂点の中心を計算して中心線のポイントとする
+                const numPoints = Math.min(road.vertices.length, 10); // 最大10ポイント
+                const step = Math.max(1, Math.floor(road.vertices.length / numPoints));
+                
+                for (let i = 0; i < road.vertices.length; i += step) {
+                    const vertex = road.vertices[i];
+                    points.push(new THREE.Vector3(vertex[0], 0.3, vertex[2]));
+                }
+                
+                // 最後の頂点も追加
+                if (road.vertices.length > 1 && points.length > 0) {
+                    const lastVertex = road.vertices[road.vertices.length - 1];
+                    const lastPoint = new THREE.Vector3(lastVertex[0], 0.3, lastVertex[2]);
+                    
+                    // 最後のポイントと異なる場合のみ追加
+                    if (lastPoint.distanceTo(points[points.length - 1]) > 1) {
+                        points.push(lastPoint);
+                    }
+                }
+                
+                // 中心線を描画
+                if (points.length >= 2) {
+                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const material = new THREE.LineBasicMaterial({ 
+                        color: 0xFF6600,  // オレンジ色で中心線を強調
+                        linewidth: 3,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    
+                    const line = new THREE.Line(geometry, material);
+                    scene.add(line);
+                    this.roadCenterLines.push(line);
+                    centerLineCount++;
+                }
+            }
+        });
+        
+        console.log(`  ✅ ${centerLineCount}本の道路中心線を表示`);
     }
     
     // 道路ネットワーク表示をクリア

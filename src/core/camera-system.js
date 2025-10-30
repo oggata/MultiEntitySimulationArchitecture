@@ -164,6 +164,12 @@ class CameraSystem {
                 this.camera.position.add(up.clone().multiplyScalar(-moveAmount));
             }
             
+            // カメラの高さ制限（地面より下に潜らないように）
+            const minCameraHeight = 0.5; // 地面（Y=0）より少し上
+            if (this.camera.position.y < minCameraHeight) {
+                this.camera.position.y = minCameraHeight;
+            }
+            
             // カメラの向きを維持（マウスで設定された角度を保持）
             // 初期回転を保持する場合はupdateCameraRotationをスキップ
             if (!this.preserveInitialRotation) {
@@ -653,8 +659,10 @@ class CameraSystem {
                 const heightChange = event.deltaY > 0 ? 1.0 : -1.0; // 上スクロールで上昇、下スクロールで下降
                 this.camera.position.y += heightChange;
                 
-                // 高さの制限を設定（10から50の範囲）
-                this.camera.position.y = Math.max(10, Math.min(50, this.camera.position.y));
+                // 高さの制限を設定（地面より下に潜らないように、上限は柔軟に）
+                const minCameraHeight = 0.5; // 地面（Y=0）より少し上
+                const maxCameraHeight = 200; // 上限を高めに設定
+                this.camera.position.y = Math.max(minCameraHeight, Math.min(maxCameraHeight, this.camera.position.y));
                 
                 // カメラの向きを維持
                 this.updateCameraRotation();

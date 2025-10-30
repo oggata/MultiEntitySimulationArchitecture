@@ -521,3 +521,73 @@ function drawEnergyChart(agent) {
     
     ctx.stroke();
 }
+
+// エージェント活性度設定の初期化
+function setupActivityLevelControls() {
+    const activityRadios = document.querySelectorAll('input[name="activityLevel"]');
+    const currentActivityLevel = document.getElementById('currentActivityLevel');
+    const thinkingFrequency = document.getElementById('thinkingFrequency');
+    const goOutProbability = document.getElementById('goOutProbability');
+    
+    // 活性度の設定情報
+    const activitySettings = {
+        1: {
+            label: '低活性 (1)',
+            thinkingDuration: 30000, // 30秒
+            goOutMultiplier: 0.1 // 外出確率10%
+        },
+        10: {
+            label: '中活性 (10)',
+            thinkingDuration: 15000, // 15秒
+            goOutMultiplier: 0.5 // 外出確率50%
+        },
+        50: {
+            label: '高活性 (50)',
+            thinkingDuration: 5000, // 5秒
+            goOutMultiplier: 1.5 // 外出確率150%（積極的）
+        }
+    };
+    
+    // ラジオボタンの変更イベント
+    activityRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const level = parseInt(e.target.value);
+            window.activityLevel = level;
+            
+            const settings = activitySettings[level];
+            currentActivityLevel.textContent = settings.label;
+            thinkingFrequency.textContent = `${settings.thinkingDuration / 1000}秒ごと`;
+            goOutProbability.textContent = `${Math.round(settings.goOutMultiplier * 100)}%`;
+            
+            // 既存エージェントの設定も更新
+            if (window.agents && window.agents.length > 0) {
+                window.agents.forEach(agent => {
+                    agent.thinkingDuration = settings.thinkingDuration;
+                    agent.activityMultiplier = settings.goOutMultiplier;
+                });
+                console.log(`✅ 活性度を${settings.label}に変更しました`);
+                console.log(`  思考頻度: ${settings.thinkingDuration / 1000}秒ごと`);
+                console.log(`  外出確率: ${Math.round(settings.goOutMultiplier * 100)}%`);
+                console.log(`  影響エージェント数: ${window.agents.length}人`);
+            }
+            
+            // localStorageに保存
+            localStorage.setItem('activityLevel', level);
+        });
+    });
+    
+    // 保存された設定を読み込み
+    const savedLevel = localStorage.getItem('activityLevel');
+    if (savedLevel) {
+        const radio = document.querySelector(`input[name="activityLevel"][value="${savedLevel}"]`);
+        if (radio) {
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change'));
+        }
+    }
+}
+
+// ページ読み込み時に活性度設定を初期化
+document.addEventListener('DOMContentLoaded', () => {
+    setupActivityLevelControls();
+});

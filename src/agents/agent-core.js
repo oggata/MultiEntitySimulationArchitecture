@@ -66,7 +66,22 @@ class Agent {
         // タイミング制御
         this.lastActionTime = Date.now();
         this.lastThoughtTime = Date.now();
-        this.thinkingDuration = 5000 + Math.random() * 10000; // 5-15秒
+        
+        // 活性度に基づく思考頻度の設定
+        const activityLevel = window.activityLevel || 1;
+        if (activityLevel === 1) {
+            this.thinkingDuration = 30000; // 30秒（低活性）
+            this.activityMultiplier = 0.1; // 外出確率10%
+        } else if (activityLevel === 10) {
+            this.thinkingDuration = 15000; // 15秒（中活性）
+            this.activityMultiplier = 0.5; // 外出確率50%
+        } else if (activityLevel === 50) {
+            this.thinkingDuration = 5000; // 5秒（高活性）
+            this.activityMultiplier = 1.5; // 外出確率150%
+        } else {
+            this.thinkingDuration = 5000 + Math.random() * 10000; // デフォルト: 5-15秒
+            this.activityMultiplier = 0.5;
+        }
         
         // 3Dモデル
         this.createModel(data.color);
@@ -250,6 +265,29 @@ class Agent {
         }
     }
 
+    // 角度をスムーズに補間する関数
+    smoothRotate(currentAngle, targetAngle, deltaTime) {
+        // 回転速度（ラジアン/秒）
+        const rotationSpeed = 5.0; // 値を大きくすると速く回転
+        
+        // 角度の差を計算（-π〜πの範囲に正規化）
+        let angleDiff = targetAngle - currentAngle;
+        
+        // 角度差を-π〜πの範囲に収める（最短経路で回転）
+        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+        
+        // 回転量を計算
+        const rotationAmount = rotationSpeed * deltaTime;
+        
+        // 目標角度に近い場合は直接設定、そうでなければ補間
+        if (Math.abs(angleDiff) < rotationAmount) {
+            return targetAngle;
+        } else {
+            return currentAngle + Math.sign(angleDiff) * rotationAmount;
+        }
+    }
+    
     update(deltaTime) {
         // 初期位置の設定（初回のみ）
         if (this.mesh && !this.initialPositionSet) {
@@ -283,7 +321,10 @@ class Agent {
             
             const distance = this.mesh.position.distanceTo(this.movementTarget);
             
-            if (distance > 0.5) {
+            // 到達判定距離（経路ポイントの場合は大きめに、最終目的地の場合は小さく）
+            const arrivalThreshold = (this.currentPath && this.currentPathIndex < this.currentPath.length - 1) ? 2.0 : 0.5;
+            
+            if (distance > arrivalThreshold) {
                 const currentSpeed = this.speed * this.energy;
                 
                 // シンプルな移動処理：常に直接移動
@@ -291,8 +332,26 @@ class Agent {
                 this.mesh.position.copy(newPosition);
                 this.mesh.position.y = 0;
 
-                // 移動方向に応じてエージェントの向きを更新
-                this.mesh.rotation.y = Math.atan2(direction.x, direction.z);
+                // 目標回転角度を計算（先読みして次の経路ポイントも考慮）
+                let targetRotation = Math.atan2(direction.x, direction.z);
+                
+                // 次の経路ポイントが近い場合は、その先の方向も考慮してスムーズに曲がる
+                if (this.currentPath && this.currentPathIndex < this.currentPath.length - 2 && distance < 5.0) {
+                    const nextPoint = this.currentPath[this.currentPathIndex + 1];
+                    const nextDirection = new THREE.Vector3(
+                        nextPoint.x - this.mesh.position.x,
+                        0,
+                        nextPoint.z - this.mesh.position.z
+                    ).normalize();
+                    
+                    // 現在の方向と次の方向を補間（距離に応じて重み付け）
+                    const blendFactor = 1.0 - (distance / 5.0); // 近いほど次の方向に重み
+                    const blendedDirection = direction.clone().lerp(nextDirection, blendFactor * 0.5);
+                    targetRotation = Math.atan2(blendedDirection.x, blendedDirection.z);
+                }
+                
+                // 移動方向に応じてエージェントの向きをスムーズに更新
+                this.mesh.rotation.y = this.smoothRotate(this.mesh.rotation.y, targetRotation, deltaTime);
             } else if (this.currentPath && this.currentPathIndex < this.currentPath.length - 1) {
                 // 次の経路ポイントへ移動
                 this.currentPathIndex++;
@@ -302,11 +361,12 @@ class Agent {
                     this.currentPath[this.currentPathIndex].z
                 );
 
-                // 新しい移動方向に応じてエージェントの向きを更新
+                // 新しい移動方向の向きを計算（スムーズに回転させるため即座には適用しない）
                 const newDirection = new THREE.Vector3()
                     .subVectors(this.movementTarget, this.mesh.position)
                     .normalize();
-                this.mesh.rotation.y = Math.atan2(newDirection.x, newDirection.z);
+                const targetRotation = Math.atan2(newDirection.x, newDirection.z);
+                // 次のフレームでスムーズに回転が始まる
 
                 addLog(`🔄 ${this.name}が経路ポイント${this.currentPathIndex + 1}/${this.currentPath.length}へ向かっています`, 'move');
             } else if (this.targetLocation) {
@@ -452,9 +512,20 @@ class Agent {
         const currentMood = this.calculateMood();
         const topicPrompt = document.getElementById('topicPrompt') ? document.getElementById('topicPrompt').value.trim() : '';
         const themeContext = topicPrompt ? `\n\n話題のテーマ: ${topicPrompt}\nこのテーマに関連する話題や関心事についても考えてください。` : '';
+        
+        // 活性度に応じた行動指示
+        let activityInstruction = '';
+        if (this.activityMultiplier <= 0.1) {
+            activityInstruction = '\n- あなたはあまり外出したくない性格です。できるだけ家にいることを好みます。';
+        } else if (this.activityMultiplier >= 1.0) {
+            activityInstruction = '\n- あなたは非常に活動的な性格です。積極的に外出して色々な場所を訪れることを好みます。';
+        } else {
+            activityInstruction = '\n- あなたは適度に外出することを楽しみます。';
+        }
+        
         return `
 あなたは${this.name}（${this.age}歳）です。\n
-【現在の状況】\n- 時間帯: ${timeOfDay}\n- 現在地: ${this.currentLocation.name}\n- 体力: ${Math.round(this.energy * 100)}%\n- 気分: ${currentMood}\n- 最近の出来事: ${recentMemories || 'なし'}\n${nearbyAgents.length > 0 ? `- 近くにいる人: ${nearbyAgents.map(a => a.name).join(', ')}` : ''}\n\n【ペルソナ】\n- 性格: ${this.personality.description}\n- 価値観: ${this.personality.values}\n- 夢・目標: ${this.personality.goals}\n- 趣味: ${(this.background && this.background.hobbies) ? this.background.hobbies.join(', ') : ''}\n\n【ルール】\n- 夜間（22:00-6:00）は必ず自宅に帰ること\n- 施設名は必ず既存のもの（${locations.map(l => l.name).join('、')}）から選ぶこと\n- できるだけ現実的な行動を1つだけ提案してください\n- 例: {\"action\":\"move\",\"target\":\"図書館\",\"reason\":\"起業のための本を探す\"}\n${themeContext}\n\n今の状況で、あなたが最もしたいこと・すべきことを1つだけJSON形式で答えてください。`;
+【現在の状況】\n- 時間帯: ${timeOfDay}\n- 現在地: ${this.currentLocation.name}\n- 体力: ${Math.round(this.energy * 100)}%\n- 気分: ${currentMood}\n- 最近の出来事: ${recentMemories || 'なし'}\n${nearbyAgents.length > 0 ? `- 近くにいる人: ${nearbyAgents.map(a => a.name).join(', ')}` : ''}\n\n【ペルソナ】\n- 性格: ${this.personality.description}\n- 価値観: ${this.personality.values}\n- 夢・目標: ${this.personality.goals}\n- 趣味: ${(this.background && this.background.hobbies) ? this.background.hobbies.join(', ') : ''}${activityInstruction}\n\n【ルール】\n- 夜間（22:00-6:00）は必ず自宅に帰ること\n- 施設名は必ず既存のもの（${locations.map(l => l.name).join('、')}）から選ぶこと\n- できるだけ現実的な行動を1つだけ提案してください\n- 例: {\"action\":\"move\",\"target\":\"図書館\",\"reason\":\"起業のための本を探す\"}\n${themeContext}\n\n今の状況で、あなたが最もしたいこと・すべきことを1つだけJSON形式で答えてください。`;
     }
     
     executeDecision(decision) {

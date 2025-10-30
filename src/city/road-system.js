@@ -319,18 +319,14 @@ class RoadSystem {
         this.roads.push(...shortRoads);
     }
 
-    // 道路上の点を取得
+    // 道路上の点を取得（最適化版：開始点と終了点のみ）
     getRoadPoints(road) {
-        const points = [];
-        const steps = 100;
-        for (let i = 0; i <= steps; i++) {
-            const t = i / steps;
-            points.push({
-                x: road.start.x + (road.end.x - road.start.x) * t,
-                z: road.start.z + (road.end.z - road.start.z) * t
-            });
-        }
-        return points;
+        // セグメンテーションマップでは、道路は既に細かいセグメントに分割されているため
+        // さらに細分化する必要はない
+        return [
+            { x: road.start.x, z: road.start.z },
+            { x: road.end.x, z: road.end.z }
+        ];
     }
 
     // 点と線分の距離を計算
@@ -389,26 +385,59 @@ class RoadSystem {
         return Math.sqrt((x - closestX) * (x - closestX) + (z - closestZ) * (z - closestZ));
     }
 
-    // 最も近い道路上の点を見つける
+    // 最も近い道路上の点を見つける（最適化版：線分上の最近点を計算）
     findNearestRoadPoint(x, z) {
         let minDistance = Infinity;
         let nearestPoint = null;
 
         for (const road of this.roads) {
-            const points = this.getRoadPoints(road);
-            for (const point of points) {
-                const distance = Math.sqrt(
-                    Math.pow(x - point.x, 2) + 
-                    Math.pow(z - point.z, 2)
-                );
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nearestPoint = point;
-                }
+            // 道路の線分上で最も近い点を計算
+            const closestPoint = this.getClosestPointOnRoadSegment(x, z, road);
+            
+            const distance = Math.sqrt(
+                Math.pow(x - closestPoint.x, 2) + 
+                Math.pow(z - closestPoint.z, 2)
+            );
+            
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestPoint = closestPoint;
             }
         }
 
         return nearestPoint;
+    }
+    
+    // 道路セグメント上の最も近い点を計算
+    getClosestPointOnRoadSegment(x, z, road) {
+        const x1 = road.start.x;
+        const z1 = road.start.z;
+        const x2 = road.end.x;
+        const z2 = road.end.z;
+        
+        // 線分のベクトル
+        const dx = x2 - x1;
+        const dz = z2 - z1;
+        
+        // 線分の長さの2乗
+        const lengthSquared = dx * dx + dz * dz;
+        
+        // 線分が点の場合
+        if (lengthSquared === 0) {
+            return { x: x1, z: z1 };
+        }
+        
+        // パラメータt（0〜1の範囲）を計算
+        let t = ((x - x1) * dx + (z - z1) * dz) / lengthSquared;
+        
+        // tを0〜1の範囲に制限
+        t = Math.max(0, Math.min(1, t));
+        
+        // 線分上の最も近い点
+        return {
+            x: x1 + t * dx,
+            z: z1 + t * dz
+        };
     }
 
     // 最も近い道路を検索

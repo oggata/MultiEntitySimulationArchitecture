@@ -9,6 +9,10 @@ let timeSpeed = 1;
 let currentTime = 8 * 60; // 8:00 AM in minutes
 const clock = new THREE.Clock();
 
+// エージェント活性度設定
+let activityLevel = 1; // 1=低活性, 10=中活性, 50=高活性
+window.activityLevel = activityLevel; // グローバルに公開
+
 // カメラシステム
 let cameraSystem = null;
 
@@ -556,6 +560,67 @@ async function init() {
                     }
                     
                     return path;
+                },
+                // 経路の視覚化（デバッグ用）
+                pathLine: null,
+                pathPoints: [],
+                visualizePath: (path, color = 0x00ff00) => {
+                    console.log(`🗺️ 経路を視覚化: ${path ? path.length : 0}ポイント`);
+                    
+                    // 既存の経路表示を削除
+                    cityLayout.clearPathVisualization();
+                    
+                    if (!path || path.length < 2) return;
+                    
+                    // 経路の線を作成
+                    const points = [];
+                    for (const point of path) {
+                        points.push(new THREE.Vector3(point.x, 0.5, point.z)); // 地面より高く
+                    }
+                    
+                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const material = new THREE.LineBasicMaterial({
+                        color: color,
+                        linewidth: 5,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    
+                    cityLayout.pathLine = new THREE.Line(geometry, material);
+                    scene.add(cityLayout.pathLine);
+                    
+                    // 経路ポイントにマーカーを追加
+                    path.forEach((point, index) => {
+                        const markerGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+                        const markerMaterial = new THREE.MeshBasicMaterial({
+                            color: index === 0 ? 0x00ff00 : (index === path.length - 1 ? 0xff0000 : color),
+                            transparent: true,
+                            opacity: 0.8
+                        });
+                        const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+                        marker.position.set(point.x, 0.5, point.z);
+                        scene.add(marker);
+                        cityLayout.pathPoints.push(marker);
+                    });
+                    
+                    console.log(`  ✅ 経路を視覚化しました: ${path.length}ポイント`);
+                },
+                clearPathVisualization: () => {
+                    if (cityLayout.pathLine) {
+                        scene.remove(cityLayout.pathLine);
+                        cityLayout.pathLine.geometry.dispose();
+                        cityLayout.pathLine.material.dispose();
+                        cityLayout.pathLine = null;
+                    }
+                    
+                    if (cityLayout.pathPoints) {
+                        for (const point of cityLayout.pathPoints) {
+                            scene.remove(point);
+                            point.geometry.dispose();
+                            point.material.dispose();
+                        }
+                        cityLayout.pathPoints = [];
+                    }
                 }
             };
             

@@ -87,6 +87,32 @@
                     <button id="pauseBtn" disabled>一時停止</button>
                     <button id="timeSpeedBtn">時間速度: <span id="speed">1x</span></button>
                 </div>
+                
+                <div class="activity-level-section" style="margin-top: 20px; padding: 15px; background-color: #f5f5f5; border-radius: 8px;">
+                    <h4 style="margin: 0 0 10px 0; color: #333;">🚶 エージェント活性度</h4>
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">
+                        エージェントがどれくらい積極的に外出するかを設定します
+                    </p>
+                    <div class="activity-level-controls">
+                        <label style="display: block; margin-bottom: 10px;">
+                            <input type="radio" name="activityLevel" value="1" checked>
+                            <span style="font-weight: bold;">低活性 (1)</span> - ほとんど家にいます
+                        </label>
+                        <label style="display: block; margin-bottom: 10px;">
+                            <input type="radio" name="activityLevel" value="10">
+                            <span style="font-weight: bold;">中活性 (10)</span> - 時々外出します
+                        </label>
+                        <label style="display: block; margin-bottom: 10px;">
+                            <input type="radio" name="activityLevel" value="50">
+                            <span style="font-weight: bold;">高活性 (50)</span> - 積極的に外出します
+                        </label>
+                    </div>
+                    <div class="activity-level-details" style="margin-top: 10px; padding: 10px; background-color: #e8f5e9; border-radius: 5px; font-size: 12px;">
+                        <strong>現在の設定:</strong> <span id="currentActivityLevel">低活性 (1)</span><br>
+                        <span style="color: #666;">思考頻度: <span id="thinkingFrequency">30秒ごと</span></span><br>
+                        <span style="color: #666;">外出確率: <span id="goOutProbability">10%</span></span>
+                    </div>
+                </div>
             </div>
             
             <!-- エージェント管理タブ -->

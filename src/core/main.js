@@ -465,6 +465,10 @@ async function init() {
             let segVisualizationSystem = null;
             console.log('ℹ️ VisualizationSystemは遅延初期化されます（道路表示ボタンクリック時）');
             
+            // セグメンテーションモード用のPathfindingSystemを作成
+            const segPathfindingSystem = new PathfindingSystem(segRoadSystem);
+            console.log('✅ PathfindingSystemを初期化しました');
+            
             // セグメンテーションモード用のダミーcityLayoutオブジェクトを作成（互換性のため）
             cityLayout = {
                 gridSize: 200,
@@ -520,6 +524,38 @@ async function init() {
                     } else if (!segVisualizationSystem) {
                         console.log('ℹ️ まだ可視化されていません');
                     }
+                },
+                // パスファインディングメソッド（エージェントが使用）
+                findPath: (start, end) => {
+                    console.log(`🗺️ 経路探索: (${start.x.toFixed(1)}, ${start.z.toFixed(1)}) → (${end.x.toFixed(1)}, ${end.z.toFixed(1)})`);
+                    const path = segPathfindingSystem.findPath(start, end);
+                    
+                    if (path && path.length > 0) {
+                        console.log(`  ✅ 経路発見: ${path.length}ポイント`);
+                        if (path.length <= 10) {
+                            path.forEach((p, i) => console.log(`    ${i}: (${p.x.toFixed(1)}, ${p.z.toFixed(1)})`));
+                        } else {
+                            console.log(`    開始: (${path[0].x.toFixed(1)}, ${path[0].z.toFixed(1)})`);
+                            console.log(`    ... (${path.length - 2}個の中間ポイント)`);
+                            console.log(`    終了: (${path[path.length - 1].x.toFixed(1)}, ${path[path.length - 1].z.toFixed(1)})`);
+                        }
+                    } else {
+                        console.warn(`  ⚠️ 経路が見つかりません。直線経路を使用します。`);
+                    }
+                    
+                    return path;
+                },
+                findPathToBuilding: (start, building) => {
+                    console.log(`🏢 建物への経路探索: (${start.x.toFixed(1)}, ${start.z.toFixed(1)}) → 建物(${building.x.toFixed(1)}, ${building.z.toFixed(1)})`);
+                    const path = segPathfindingSystem.findPathToBuilding(start, building);
+                    
+                    if (path && path.length > 0) {
+                        console.log(`  ✅ 建物への経路発見: ${path.length}ポイント`);
+                    } else {
+                        console.warn(`  ⚠️ 建物への経路が見つかりません`);
+                    }
+                    
+                    return path;
                 }
             };
             

@@ -6,12 +6,21 @@ class PathfindingSystem {
 
     // 2点間の経路を計算（A*アルゴリズムを使用）
     findPath(start, end) {
+        // デバッグ: 道路システムの状態を確認
+        if (this.roadSystem.roads.length === 0) {
+            console.warn('⚠️ PathfindingSystem: 道路データがありません');
+            return [start, end]; // 直線経路を返す
+        }
+        
         // 開始点と終了点から最も近い道路上の点を見つける
         const startRoadPoint = this.roadSystem.findNearestRoadPoint(start.x, start.z);
         const endRoadPoint = this.roadSystem.findNearestRoadPoint(end.x, end.z);
 
         if (!startRoadPoint || !endRoadPoint) {
-            return null;
+            console.warn('⚠️ PathfindingSystem: 道路上の点が見つかりません');
+            console.log(`  開始点: (${start.x.toFixed(1)}, ${start.z.toFixed(1)}) → 道路点: ${startRoadPoint ? 'あり' : 'なし'}`);
+            console.log(`  終了点: (${end.x.toFixed(1)}, ${end.z.toFixed(1)}) → 道路点: ${endRoadPoint ? 'あり' : 'なし'}`);
+            return [start, end]; // 直線経路を返す
         }
 
         // A*アルゴリズムで経路を計算
@@ -21,6 +30,10 @@ class PathfindingSystem {
             // 開始点と終了点を追加
             path.unshift(start);
             path.push(end);
+        } else {
+            // 経路が見つからない場合は直線経路
+            console.warn('⚠️ PathfindingSystem: A*で経路が見つかりません。直線経路を使用。');
+            return [start, end];
         }
 
         return path;
@@ -37,8 +50,13 @@ class PathfindingSystem {
         // 初期化
         gScore.set(this.pointToString(start), 0);
         fScore.set(this.pointToString(start), this.heuristic(start, end));
+        
+        let iterations = 0;
+        const maxIterations = 1000; // 無限ループ防止
 
-        while (openSet.length > 0) {
+        while (openSet.length > 0 && iterations < maxIterations) {
+            iterations++;
+            
             // fScoreが最小のノードを選択
             let current = openSet.reduce((min, node) => {
                 const currentF = fScore.get(this.pointToString(node)) || Infinity;
@@ -48,7 +66,9 @@ class PathfindingSystem {
 
             // 目的地に到達
             if (this.pointDistance(current, end) < 1.0) {
-                return this.reconstructPath(cameFrom, current);
+                const finalPath = this.reconstructPath(cameFrom, current);
+                console.log(`✅ A*: 経路発見 (${iterations}回反復, ${finalPath.length}ポイント)`);
+                return finalPath;
             }
 
             // 現在のノードを処理済みに
@@ -57,6 +77,11 @@ class PathfindingSystem {
 
             // 隣接ノードを探索
             const neighbors = this.getRoadNeighbors(current);
+            
+            if (neighbors.length === 0 && iterations < 5) {
+                console.warn(`⚠️ A*: 隣接ノードなし at (${current.x.toFixed(1)}, ${current.z.toFixed(1)})`);
+            }
+            
             for (const neighbor of neighbors) {
                 const neighborStr = this.pointToString(neighbor);
                 
@@ -86,7 +111,7 @@ class PathfindingSystem {
     // 道路上の隣接点を取得
     getRoadNeighbors(point) {
         const neighbors = [];
-        const searchRadius = 15; // 隣接点を探す半径
+        const searchRadius = 25; // 隣接点を探す半径（セグメンテーションマップ用に拡大）
 
         // 交差点を隣接点として追加
         for (const intersection of this.roadSystem.intersections) {
@@ -96,22 +121,48 @@ class PathfindingSystem {
             }
         }
 
-        // 同じ道路上の近い点を隣接点として追加
+        // 道路セグメント（start-end形式）から隣接点を見つける
         for (const road of this.roadSystem.roads) {
-            const roadPoints = this.roadSystem.getRoadPoints(road);
-            for (const roadPoint of roadPoints) {
-                const distance = this.pointDistance(point, roadPoint);
-                if (distance <= searchRadius && distance > 0.1) {
-                    // 同じ道路上にあるかチェック
-                    const distToRoad = this.roadSystem.pointToLineDistance(roadPoint.x, roadPoint.z, road);
-                    if (distToRoad < 0.5) {
-                        neighbors.push(roadPoint);
-                    }
+            // 道路の開始点と終了点をチェック
+            const startDist = this.pointDistance(point, road.start);
+            const endDist = this.pointDistance(point, road.end);
+            
+            // 開始点が近い場合、終了点を隣接点として追加
+            if (startDist <= searchRadius && startDist > 0.1) {
+                // 現在のポイントが開始点に近いなら、終了点を隣接点に
+                if (startDist < 1.0) {
+                    neighbors.push({ x: road.end.x, z: road.end.z });
+                } else {
+                    // 開始点自体を隣接点に
+                    neighbors.push({ x: road.start.x, z: road.start.z });
+                }
+            }
+            
+            // 終了点が近い場合、開始点を隣接点として追加
+            if (endDist <= searchRadius && endDist > 0.1) {
+                // 現在のポイントが終了点に近いなら、開始点を隣接点に
+                if (endDist < 1.0) {
+                    neighbors.push({ x: road.start.x, z: road.start.z });
+                } else {
+                    // 終了点自体を隣接点に
+                    neighbors.push({ x: road.end.x, z: road.end.z });
                 }
             }
         }
 
-        return neighbors;
+        // 重複を削除（同じ座標の点が複数追加される可能性がある）
+        const uniqueNeighbors = [];
+        const seen = new Set();
+        
+        for (const neighbor of neighbors) {
+            const key = `${neighbor.x.toFixed(1)},${neighbor.z.toFixed(1)}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueNeighbors.push(neighbor);
+            }
+        }
+
+        return uniqueNeighbors;
     }
 
     // ヒューリスティック関数（直線距離）

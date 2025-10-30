@@ -722,6 +722,44 @@ button:disabled {
     font-weight: bold;
 }
 
+/* カテゴリハイライトコントロール */
+.category-highlight-controls {
+    margin: 15px 0;
+    padding: 10px 0;
+    border-top: 1px solid #333;
+}
+
+.category-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.category-highlight-btn {
+    padding: 6px 8px;
+    font-size: 11px;
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.category-highlight-btn:hover {
+    background: #3a3a3a;
+    border-color: #666;
+}
+
+.category-highlight-btn.active {
+    background: #00ffff;
+    color: #000;
+    border-color: #00ffff;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
 /* コミュニケーション機能のスタイル */
 .communication-controls {
     margin: 10px 0;

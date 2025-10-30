@@ -48,6 +48,9 @@ class CameraSystem {
         
         // ハイライトされている施設メッシュ
         this.highlightedFacilityMesh = null;
+        
+        // カテゴリ別にハイライトされているメッシュ
+        this.highlightedCategoryMeshes = new Map(); // category -> array of meshes
     }
     
     // カメラの初期化
@@ -728,6 +731,84 @@ class CameraSystem {
         mesh.material.opacity = original.opacity;
         
         console.log(`🔅 施設のハイライトを解除: ${mesh.userData.label || 'Unknown'} (ID: ${mesh.userData.segmentId})`);
+    }
+    
+    // カテゴリ全体をハイライト
+    highlightCategory(category, meshGroups) {
+        if (!meshGroups || !meshGroups[category]) {
+            console.warn(`カテゴリが見つかりません: ${category}`);
+            return;
+        }
+        
+        const group = meshGroups[category];
+        const meshes = [];
+        
+        // グループ内の全メッシュをハイライト
+        group.traverse((object) => {
+            if (object.isMesh && object.material) {
+                // 元のマテリアル設定を保存
+                if (!object.userData.originalMaterial) {
+                    object.userData.originalMaterial = {
+                        emissive: object.material.emissive ? object.material.emissive.clone() : new THREE.Color(0x000000),
+                        emissiveIntensity: object.material.emissiveIntensity || 0,
+                        opacity: object.material.opacity || 1.0
+                    };
+                }
+                
+                // ハイライト色を設定（シアン色の発光）
+                object.material.emissive = new THREE.Color(0x00ffff);
+                object.material.emissiveIntensity = 0.5;
+                object.material.opacity = 0.9;
+                
+                meshes.push(object);
+            }
+        });
+        
+        // ハイライトされたメッシュを記録
+        this.highlightedCategoryMeshes.set(category, meshes);
+        
+        console.log(`✨ カテゴリをハイライト: ${category} (${meshes.length}メッシュ)`);
+    }
+    
+    // カテゴリのハイライトを解除
+    unhighlightCategory(category) {
+        if (!this.highlightedCategoryMeshes.has(category)) return;
+        
+        const meshes = this.highlightedCategoryMeshes.get(category);
+        
+        meshes.forEach(mesh => {
+            if (mesh && mesh.material && mesh.userData.originalMaterial) {
+                // 元のマテリアル設定に戻す
+                const original = mesh.userData.originalMaterial;
+                mesh.material.emissive = original.emissive.clone();
+                mesh.material.emissiveIntensity = original.emissiveIntensity;
+                mesh.material.opacity = original.opacity;
+            }
+        });
+        
+        this.highlightedCategoryMeshes.delete(category);
+        
+        console.log(`🔅 カテゴリのハイライトを解除: ${category} (${meshes.length}メッシュ)`);
+    }
+    
+    // 全カテゴリのハイライトを解除
+    unhighlightAllCategories() {
+        const categories = Array.from(this.highlightedCategoryMeshes.keys());
+        categories.forEach(category => {
+            this.unhighlightCategory(category);
+        });
+        console.log(`🔅 全カテゴリのハイライトを解除しました`);
+    }
+    
+    // カテゴリハイライトのトグル
+    toggleCategoryHighlight(category, meshGroups) {
+        if (this.highlightedCategoryMeshes.has(category)) {
+            this.unhighlightCategory(category);
+            return false; // ハイライト解除
+        } else {
+            this.highlightCategory(category, meshGroups);
+            return true; // ハイライト設定
+        }
     }
 }
 

@@ -333,6 +333,7 @@ async function init() {
             
             // グローバル変数に設定
             window.segmentationCityManager = segCityManager;
+            window.segCityManager = segCityManager; // 短縮名も追加
             window.isSegmentationMap = true;
             
             // locationsをグローバルに設定（エージェントシステムが使用）
@@ -911,6 +912,45 @@ async function init() {
                 autoViewBtn.style.backgroundColor = '#4CAF50';
                 autoViewBtn.textContent = '🎬 自動視点 (5秒)';
             }
+        });
+    }
+    
+    // カテゴリハイライトボタンのイベント登録
+    const categoryButtons = document.querySelectorAll('.category-highlight-btn');
+    categoryButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const category = button.getAttribute('data-category');
+            
+            // セグメンテーションマップが読み込まれているか確認
+            if (!window.segCityManager || !window.segCityManager.meshGroups) {
+                addLog('⚠️ セグメンテーションデータが読み込まれていません', 'system');
+                return;
+            }
+            
+            // ハイライトをトグル
+            const isHighlighted = cameraSystem.toggleCategoryHighlight(category, window.segCityManager.meshGroups);
+            
+            // ボタンの見た目を切り替え
+            if (isHighlighted) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        });
+    });
+    
+    // 全ハイライト解除ボタンのイベント登録
+    const clearAllHighlightsBtn = document.getElementById('clearAllHighlightsBtn');
+    if (clearAllHighlightsBtn) {
+        clearAllHighlightsBtn.addEventListener('click', () => {
+            cameraSystem.unhighlightAllCategories();
+            
+            // 全ボタンのactiveクラスを削除
+            categoryButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            addLog('🔅 全カテゴリのハイライトを解除しました', 'system');
         });
     }
 

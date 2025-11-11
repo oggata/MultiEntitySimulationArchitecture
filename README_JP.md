@@ -97,3 +97,16 @@ https://huggingface.co/spaces/oggata/map-segment-tool
 [![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/TdENtAnuuX)
 
 
+## Note
+
+アプリのバージョンアップ(配布バージョンにエラーがある場合は自身でビルドしてご利用ください)
+
+   ```bash
+      //install
+      npm install --save-dev electron-builder
+      
+      //package.jsonを修正
+
+      //build
+      npm run build:mac
+   ```

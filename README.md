@@ -94,3 +94,18 @@ Agent actions are output to a video file.
 Stay updated on the latest development, share ideas, and connect with other users.
 
 [![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/TdENtAnuuX)
+
+
+## Note
+
+App version update (If the distributed version has errors, please build it yourself and use it)
+
+   ```bash
+      //install
+      npm install --save-dev electron-builder
+      
+      //package.jsonを修正
+
+      //build
+      npm run build:mac
+   ```

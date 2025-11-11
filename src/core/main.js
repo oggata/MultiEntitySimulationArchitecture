@@ -16,11 +16,6 @@ window.activityLevel = activityLevel; // グローバルに公開
 // カメラシステム
 let cameraSystem = null;
 
-// フィールド色設定
-let fieldColor = 0x2d2d2d; // デフォルトはブラック
-let groundMesh = null;
-let infiniteGroundMesh = null;
-
 // 天候システム（weather.jsで定義されるため、ここでは宣言のみ）
 
 // グローバル変数をwindowに公開
@@ -99,159 +94,6 @@ function updateLlmCallCountDisplay() {
         countDisplay.textContent = llmCallCount;
     }
 }
-
-// フィールド色に合わせて道路色を更新する関数
-function updateRoadColorsByField(fieldColorHex) {
-    // フィールド色からプリセット名を特定
-    let fieldPreset = 'gray'; // デフォルト
-    for (const [presetName, preset] of Object.entries(fieldColorPresets)) {
-        if (preset.color === fieldColorHex) {
-            fieldPreset = presetName;
-            break;
-        }
-    }
-    
-    // 対応する道路色を取得
-    const roadColor = roadColorByField[fieldPreset] || 0x444444;
-    
-    console.log(`フィールド色変更: ${fieldPreset} → 道路色: ${roadColor.toString(16)}`);
-    
-    // 既存の道路の色を更新
-    updateExistingRoadColors(roadColor);
-    
-    // 建物色も更新
-    updateBuildingColorsByField(fieldPreset);
-}
-
-// フィールド色に合わせて建物色を更新する関数
-function updateBuildingColorsByField(fieldPreset) {
-    const buildingColors = buildingColorByField[fieldPreset];
-    if (!buildingColors) {
-        console.log(`フィールドプリセット "${fieldPreset}" の建物色設定が見つかりません`);
-        return;
-    }
-    
-    console.log(`建物色を更新: ${fieldPreset} フィールド`);
-    
-    // locationDataの色を更新
-    locationData.forEach(location => {
-        const buildingType = getBuildingTypeFromName(location.name);
-        if (buildingType && buildingColors[buildingType]) {
-            location.color = buildingColors[buildingType];
-            console.log(`${location.name}の色を更新: ${buildingColors[buildingType].toString(16)}`);
-        }
-    });
-    
-    // 既存の建物の色を更新
-    updateExistingBuildingColors(buildingColors);
-}
-
-// 建物名から建物タイプを取得する関数
-function getBuildingTypeFromName(buildingName) {
-    const nameToType = {
-        'カフェ': 'cafe',
-        '公園': 'park',
-        '図書館': 'library',
-        'スポーツジム': 'gym',
-        '町の広場': 'plaza',
-        '学校': 'school',
-        '病院': 'hospital',
-        'スーパーマーケット': 'supermarket',
-        'ファミレス': 'familyRestaurant',
-        '郵便局': 'postOffice',
-        '銀行': 'bank',
-        '美容院': 'beautySalon',
-        'クリーニング店': 'cleaning',
-        '薬局': 'pharmacy',
-        '本屋': 'bookstore',
-        'コンビニ': 'convenience'
-    };
-    
-    return nameToType[buildingName] || null;
-}
-
-// 既存の建物の色を更新する関数
-function updateExistingBuildingColors(buildingColors) {
-    // シーン内の全ての建物メッシュを更新
-    scene.children.forEach(child => {
-        if (child.material && child.material.color) {
-            const currentColor = child.material.color.getHex();
-            
-            // 建物メッシュかどうかを判定（建物の色の範囲をチェック）
-            if (isBuildingMesh(child)) {
-                // 建物タイプを特定して色を更新
-                const buildingType = identifyBuildingType(child);
-                if (buildingType && buildingColors[buildingType]) {
-                    child.material.color.setHex(buildingColors[buildingType]);
-                    //console.log(`建物の色を更新: ${currentColor.toString(16)} → ${buildingColors[buildingType].toString(16)}`);
-                }
-            }
-        }
-    });
-}
-
-// メッシュが建物かどうかを判定する関数
-function isBuildingMesh(mesh) {
-    // 建物の特徴的な色やプロパティで判定
-    if (mesh.material && mesh.material.color) {
-        const color = mesh.material.color.getHex();
-        // 建物で使用される色の範囲をチェック
-        const buildingColors = [
-            0x8B4513, 0x228B22, 0x4682B4, 0xFF6347, 0x90EE90, 0x87CEEB, 0xFFFFFF, 0xFFD700,
-            0xFF69B4, 0x4169E1, 0x32CD32, 0xFF1493, 0x20B2AA, 0x00CED1, 0xFF4500,
-            0x9370DB, 0x8A2BE2, 0x9932CC, 0xDA70D6, 0xDDA0DD, 0xBA55D3, 0xE6E6FA, 0xFF00FF,
-            0xEE82EE, 0x8B008B, 0x9400D3, 0x696969, 0x808080, 0x2F4F4F, 0x708090, 0x778899,
-            0xB0C4DE, 0xF5F5F5, 0xD3D3D3, 0xC0C0C0, 0x556B2F, 0xDC143C, 0x00CED1, 0xFF4500,
-            0x4169E1, 0x1E90FF, 0x00BFFF, 0x0000CD, 0x191970, 0x000080, 0x0066CC, 0x483D8B,
-            0x6495ED, 0xD2691E, 0xFFA500, 0xFF8C00, 0xFF6347, 0xCD853F, 0xDAA520, 0xFF7F50,
-            0xFFB6C1, 0x98FB98, 0xE6E6FA, 0xFFC0CB, 0xDDA0DD, 0xFFF0F5, 0xDB7093, 0xC71585,
-            0xBC8F8F
-        ];
-        
-        return buildingColors.includes(color);
-    }
-    return false;
-}
-
-// 建物タイプを特定する関数
-function identifyBuildingType(mesh) {
-    // 位置や色から建物タイプを推測
-    // 実際の実装では、より詳細な判定ロジックが必要
-    const color = mesh.material.color.getHex();
-    
-    // 色から建物タイプを推測
-    const colorToType = {
-        0x8B4513: 'cafe',      // 茶色 → カフェ
-        0x228B22: 'park',      // 緑 → 公園
-        0x4682B4: 'library',   // 青 → 図書館
-        0xFF6347: 'gym',       // 赤 → スポーツジム
-        0x90EE90: 'plaza',     // 薄緑 → 町の広場
-        0x87CEEB: 'school',    // 空色 → 学校
-        0xFFFFFF: 'hospital',  // 白 → 病院
-        0xFFD700: 'supermarket', // 金色 → スーパーマーケット
-        0xFF69B4: 'familyRestaurant', // ピンク → ファミレス
-        0x4169E1: 'postOffice', // ロイヤルブルー → 郵便局
-        0x32CD32: 'bank',      // ライムグリーン → 銀行
-        0xFF1493: 'beautySalon', // ディープピンク → 美容院
-        0x20B2AA: 'cleaning',  // ライトシーグリーン → クリーニング店
-        0x00CED1: 'pharmacy',  // ダークターコイズ → 薬局
-        0xFF4500: 'convenience' // オレンジレッド → コンビニ
-    };
-    
-    return colorToType[color] || null;
-}
-
-// フィールド色のプリセット
-const fieldColorPresets = {
-    green: { name: 'グリーン', color: 0xB8E6B8 },
-    purple: { name: 'パープル', color: 0x8B5A8B }, // より濃い紫に変更
-    black: { name: 'ブラック', color: 0x2d2d2d },
-    blue: { name: 'ブルー', color: 0xB8E6F0 },
-    orange: { name: 'オレンジ', color: 0xF0E6B8 },
-    pink: { name: 'ピンク', color: 0xF0B8E6 },
-    gray: { name: 'グレー', color: 0xC0C0C0 },
-    brown: { name: 'ブラウン', color: 0xD2B48C }
-};
 
 // Three.jsの初期化
 async function init() {
@@ -699,11 +541,11 @@ async function init() {
         // 無限大の地面（遠景用）
         const infiniteGroundGeometry = new THREE.PlaneGeometry(1000, 1000, 1, 1);
         const infiniteGroundMaterial = new THREE.MeshBasicMaterial({ 
-            color: fieldColor,
+            color: 0x2d2d2d,
             transparent: false,
             depthWrite: false
         });
-        infiniteGroundMesh = new THREE.Mesh(infiniteGroundGeometry, infiniteGroundMaterial);
+        const infiniteGroundMesh = new THREE.Mesh(infiniteGroundGeometry, infiniteGroundMaterial);
         infiniteGroundMesh.rotation.x = -Math.PI / 2;
         infiniteGroundMesh.position.y = -0.02;
         scene.add(infiniteGroundMesh);
@@ -712,12 +554,12 @@ async function init() {
         const groundSize = cityLayout ? cityLayout.gridSize : 200;
         const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize, 1, 1);
         const groundMaterial = new THREE.MeshBasicMaterial({ 
-            color: fieldColor,
+            color: 0x2d2d2d,
             transparent: true,
             opacity: 0.5,
             depthWrite: false
         });
-        groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+        const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
         groundMesh.rotation.x = -Math.PI / 2;
         groundMesh.position.y = 0.01;
         scene.add(groundMesh);
@@ -901,16 +743,8 @@ async function init() {
         createWeatherDisplay();
     }
 
-    // 車両システムの初期化
-    updateLoadingProgress(14);
-    setTimeout(() => {
-        if (typeof initializeVehicleSystem === 'function') {
-            initializeVehicleSystem();
-        }
-    }, 1000); // 1秒後に初期化
-
     // 動画生成システムの初期化
-    updateLoadingProgress(15, '動画生成システムを初期化中...');
+    updateLoadingProgress(14, '動画生成システムを初期化中...');
     if (typeof initializeVideoGenerationSystem === 'function') {
         initializeVideoGenerationSystem();
     }
@@ -1081,83 +915,6 @@ async function init() {
         });
     }
 
-    // 車両システムのイベント登録
-    const vehicleCountSlider = document.getElementById('vehicleCount');
-    const currentVehicleCount = document.getElementById('currentVehicleCount');
-    const vehicleStatsCurrent = document.getElementById('vehicleStatsCurrent');
-    const vehicleStatsInterval = document.getElementById('vehicleStatsInterval');
-    const clearAllVehiclesBtn = document.getElementById('clearAllVehiclesBtn');
-    const toggleVehicleSystemBtn = document.getElementById('toggleVehicleSystemBtn');
-
-    if (vehicleCountSlider) {
-        vehicleCountSlider.addEventListener('input', (e) => {
-            const count = parseInt(e.target.value);
-            currentVehicleCount.textContent = count;
-            setVehicleCount(count);
-        });
-    }
-
-    if (clearAllVehiclesBtn) {
-        clearAllVehiclesBtn.addEventListener('click', () => {
-            if (vehicleManager) {
-                vehicleManager.clearAllVehicles();
-                addLog('🚗 すべての車両を削除しました', 'system');
-            }
-        });
-    }
-
-    if (toggleVehicleSystemBtn) {
-        toggleVehicleSystemBtn.addEventListener('click', () => {
-            if (vehicleManager) {
-                const isEnabled = vehicleManager.maxVehicles > 0;
-                if (isEnabled) {
-                    vehicleManager.setMaxVehicles(0);
-                    toggleVehicleSystemBtn.textContent = '車両システムON';
-                    addLog('🚗 車両システムを停止しました', 'system');
-                } else {
-                    vehicleManager.setMaxVehicles(15);
-                    toggleVehicleSystemBtn.textContent = '車両システムOFF';
-                    addLog('🚗 車両システムを開始しました', 'system');
-                }
-            }
-        });
-    }
-
-    // 車両統計の定期更新
-    setInterval(() => {
-        if (vehicleManager) {
-            const stats = vehicleManager.getStats();
-            if (vehicleStatsCurrent) vehicleStatsCurrent.textContent = stats.current;
-            if (vehicleStatsInterval) vehicleStatsInterval.textContent = stats.spawnInterval;
-        }
-    }, 1000);
-
-    // フィールド色選択ボタンのイベント登録
-    const colorButtons = document.querySelectorAll('.color-btn');
-    colorButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const colorKey = button.getAttribute('data-color');
-            if (fieldColorPresets[colorKey]) {
-                const colorHex = fieldColorPresets[colorKey].color;
-                changeFieldColor(colorHex);
-                
-                // 選択されたボタンをハイライト
-                colorButtons.forEach(btn => btn.classList.remove('selected'));
-                button.classList.add('selected');
-                
-                addLog(`🎨 フィールド色を${fieldColorPresets[colorKey].name}に変更しました`, 'system');
-            }
-        });
-    });
-    
-    // デフォルトでブラックを選択状態にする
-    const blackButton = document.querySelector('[data-color="black"]');
-    if (blackButton) {
-        blackButton.classList.add('selected');
-    }
-    
-    // 初期フィールド色に合わせて道路色を設定
-    updateRoadColorsByField(fieldColor);
 }
 
 // パネルドラッグ状態を監視する関数をグローバルに公開
@@ -1587,9 +1344,6 @@ function animate() {
     // 天候の更新
     updateWeather();
     
-    // 車両システムの更新
-    updateVehicleSystem(deltaTime);
-    
     // 動画生成システムの更新
     if (videoGenerationSystem) {
         videoGenerationSystem.update(deltaTime);
@@ -1999,69 +1753,6 @@ function createDistantMountains() {
     scene.add(mountainGroup);
 }
 
-
-
-// フィールド色を変更する関数
-function changeFieldColor(colorHex) {
-    fieldColor = colorHex;
-    
-    // 地面の色を更新
-    if (groundMesh) {
-        groundMesh.material.color.setHex(colorHex);
-    }
-    
-    // 無限平面の色を更新
-    if (infiniteGroundMesh) {
-        infiniteGroundMesh.material.color.setHex(colorHex);
-    }
-    
-    // フィールド色に合わせて道路色を更新（更新対象の件数もログ）
-    updateRoadColorsByField(colorHex);
-    console.log(`after changeFieldColor: roadMeshes=${window.roadMeshes ? window.roadMeshes.length : 0}`);
-    
-    console.log(`フィールド色を変更しました: ${colorHex.toString(16)}`);
-}
-
-// グローバルスコープに公開
-window.changeFieldColor = changeFieldColor;
-
-// 既存の道路の色を更新する関数
-function updateExistingRoadColors(roadColor) {
-    // シーン全体を走査して道路フラグ付きオブジェクトを更新（ネスト対応）
-    let updatedCount = 0;
-    if (scene && typeof scene.traverse === 'function') {
-        scene.traverse(obj => {
-            if (obj && obj.userData && obj.userData.isRoad && obj.material && obj.material.color) {
-                obj.material.color.setHex(roadColor);
-                updatedCount++;
-            }
-        });
-    }
-    // フォールバック: 収集配列があれば直接更新
-    if (updatedCount === 0 && window.roadMeshes && window.roadMeshes.length > 0) {
-        window.roadMeshes.forEach(mesh => {
-            if (mesh && mesh.material && mesh.material.color) {
-                mesh.material.color.setHex(roadColor);
-                updatedCount++;
-            }
-        });
-    }
-    if (window.roadEdgeLines && window.roadEdgeLines.length > 0) {
-        window.roadEdgeLines.forEach(line => {
-            if (line && line.material && line.material.color) {
-                line.material.color.setHex(0xFFFFFF);
-            }
-        });
-    }
-    console.log(`updateExistingRoadColors: ${updatedCount}個の道路メッシュを更新`);
-    
-    // 設定ファイルの道路色も更新
-    cityLayoutConfig.roadColors.mainRoad = roadColor;
-    cityLayoutConfig.roadColors.normalRoad = roadColor;
-    cityLayoutConfig.roadColors.entranceRoad = roadColor;
-    cityLayoutConfig.roadColors.homeRoad = roadColor;
-}
-
 // ローディング画面管理
 let loadingProgress = 0;
 let loadingSteps = [
@@ -2078,7 +1769,6 @@ let loadingSteps = [
     { message: '都市全体を描画中...', detail: '建物と道路の最終描画' },
     { message: 'UIパネルを初期化中...', detail: 'コントロールパネルの設定' },
     { message: '天候システムを初期化中...', detail: '天候エフェクトの準備' },
-    { message: '車両システムを初期化中...', detail: '車両管理システムの準備' },
     { message: '動画生成システムを初期化中...', detail: '動画生成機能の準備' },
     { message: '道路沿いに木を配置中...', detail: '街路樹の配置' },
     { message: '最終調整中...', detail: 'システム全体の最終チェック' }

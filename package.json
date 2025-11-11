@@ -16,7 +16,7 @@
         "dmg",
         "zip"
       ],
-      "icon": "build/icon.icns"
+      "icon": "icons/mesa.icns"
     },
     "dmg": {
       "contents": [

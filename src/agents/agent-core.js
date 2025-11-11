@@ -165,6 +165,62 @@ class Agent {
         });
     }
     
+    // 経路を曲線的に補間する
+    generateSmoothPath(path) {
+        if (!path || path.length < 2) return path;
+        
+        const smoothPath = [];
+        
+        // 最初のポイントは必ず含める
+        smoothPath.push(path[0]);
+        
+        // 3点以上ある場合は、Catmull-Rom曲線で補間
+        for (let i = 0; i < path.length - 1; i++) {
+            const p0 = path[Math.max(0, i - 1)];
+            const p1 = path[i];
+            const p2 = path[i + 1];
+            const p3 = path[Math.min(path.length - 1, i + 2)];
+            
+            // 2点間に複数の補間ポイントを生成
+            const numInterpPoints = 3; // 各セグメント間に3つの補間ポイント
+            
+            for (let t = 0; t <= numInterpPoints; t++) {
+                const t_normalized = t / numInterpPoints;
+                
+                // Catmull-Rom曲線による補間
+                const interpPoint = this.catmullRomInterpolation(p0, p1, p2, p3, t_normalized);
+                
+                // 最後のポイント以外を追加（重複を避ける）
+                if (t < numInterpPoints || i === path.length - 2) {
+                    smoothPath.push(interpPoint);
+                }
+            }
+        }
+        
+        return smoothPath;
+    }
+    
+    // Catmull-Rom曲線による補間
+    catmullRomInterpolation(p0, p1, p2, p3, t) {
+        const t2 = t * t;
+        const t3 = t2 * t;
+        
+        // Catmull-Rom曲線の係数
+        const v0 = (p2.x - p0.x) * 0.5;
+        const v1 = (p3.x - p1.x) * 0.5;
+        const x = (2 * p1.x - 2 * p2.x + v0 + v1) * t3 + 
+                  (-3 * p1.x + 3 * p2.x - 2 * v0 - v1) * t2 + 
+                  v0 * t + p1.x;
+        
+        const v0z = (p2.z - p0.z) * 0.5;
+        const v1z = (p3.z - p1.z) * 0.5;
+        const z = (2 * p1.z - 2 * p2.z + v0z + v1z) * t3 + 
+                  (-3 * p1.z + 3 * p2.z - 2 * v0z - v1z) * t2 + 
+                  v0z * t + p1.z;
+        
+        return { x, z };
+    }
+    
     moveToLocation(location) {
         // 現在の場所から離れる際に待機スポットを解放
         if (this.currentLocation && this.currentLocation !== location) {
@@ -176,43 +232,49 @@ class Agent {
         // 移動開始時に思考を一時停止
         this.lastThoughtTime = Date.now();
         
-        // 建物や施設への移動かどうかを判定
-        const isBuildingOrFacility = location.name !== this.home.name;
+        // 常に道路ネットワークベースの経路探索を使用
+        console.log(`🗺️ ${this.name}: ${location.name}への経路を計算中...`);
+        console.log(`  現在位置: (${this.mesh.position.x.toFixed(1)}, ${this.mesh.position.z.toFixed(1)})`);
+        console.log(`  目的地: (${location.position.x.toFixed(1)}, ${location.position.z.toFixed(1)})`);
         
-        let path;
-        if (isBuildingOrFacility) {
-            // 建物や施設への移動の場合、対応する建物オブジェクトを探す
-            const building = findBuildingForLocation(location);
-            if (building) {
-                // 建物への経路を計算（入り口経由）
-                path = cityLayout.findPathToBuilding(
-                    { x: this.mesh.position.x, z: this.mesh.position.z },
-                    building
-                );
-            } else {
-                // 建物が見つからない場合は直接移動
-                path = [
-                    { x: this.mesh.position.x, z: this.mesh.position.z },
-                    { x: location.position.x, z: location.position.z }
-                ];
-            }
-        } else {
-            // 自宅への移動は通常の経路探索
-            path = cityLayout.findPath(
+        let path = cityLayout.findPath(
+            { x: this.mesh.position.x, z: this.mesh.position.z },
+            { x: location.position.x, z: location.position.z }
+        );
+        
+        // 経路が見つからない、または2ポイント以下（直線）の場合は警告
+        if (!path || path.length === 0) {
+            console.warn(`  ⚠️ 経路が見つかりません。直線で移動します。`);
+            path = [
                 { x: this.mesh.position.x, z: this.mesh.position.z },
                 { x: location.position.x, z: location.position.z }
-            );
-            
-            // 経路が見つからない場合は直接移動
-            if (!path || path.length === 0) {
-                path = [
-                    { x: this.mesh.position.x, z: this.mesh.position.z },
-                    { x: location.position.x, z: location.position.z }
-                ];
-            }
+            ];
+        } else if (path.length === 2) {
+            console.warn(`  ⚠️ 経路が2ポイントのみ（直線）です。道路経由ルートが使われていません。`);
         }
 
         if (path && path.length > 0) {
+            console.log(`📍 ${this.name}が取得した元の経路: ${path.length}ポイント`);
+            path.forEach((p, i) => {
+                if (i < 10) { // 最初の10ポイントのみ表示
+                    console.log(`  ${i}: (${p.x.toFixed(1)}, ${p.z.toFixed(1)})`);
+                }
+            });
+            if (path.length > 10) {
+                console.log(`  ... (残り${path.length - 10}ポイント)`);
+            }
+            
+            // 経路を曲線的に補間（よりスムーズな移動）
+            const originalLength = path.length;
+            if (path.length >= 3) {
+                path = this.generateSmoothPath(path);
+                console.log(`📐 ${this.name}の経路を曲線補間: ${originalLength}ポイント → ${path.length}ポイント`);
+                console.log(`  補間後の最初の5ポイント:`);
+                path.slice(0, 5).forEach((p, i) => {
+                    console.log(`    ${i}: (${p.x.toFixed(1)}, ${p.z.toFixed(1)})`);
+                });
+            }
+            
             // 最初の点を目標地点として設定
             this.movementTarget = new THREE.Vector3(
                 path[0].x,

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>パスファインディング デバッグ</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #ffffff;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 10px;
+            background: #2d2d2d;
+            border: 1px solid #444;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        .info { color: #2196f3; }
+        .warning { color: #ff9800; }
+    </style>
+</head>
+<body>
+    <h1>🔍 パスファインディング デバッグツール</h1>
+    
+    <div>
+        <button onclick="checkRoadData()">1. 道路データを確認</button>
+        <button onclick="testPathfinding()">2. パスファインディングをテスト</button>
+        <button onclick="testWaypointSelection()">3. 経由ポイント選択をテスト</button>
+        <button onclick="clearOutput()">クリア</button>
+    </div>
+    
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = message;
+            output.appendChild(div);
+            console.log(message);
+        }
+        
+        function clearOutput() {
+            output.innerHTML = '';
+        }
+        
+        function checkRoadData() {
+            clearOutput();
+            log('=== 道路データチェック ===', 'info');
+            
+            if (typeof window.cityLayout === 'undefined') {
+                log('❌ cityLayoutが定義されていません', 'error');
+                log('ヒント: MESAアプリケーションを先に起動してください', 'warning');
+                return;
+            }
+            
+            const roads = window.cityLayout.roads;
+            
+            if (!roads) {
+                log('❌ cityLayout.roadsが未定義', 'error');
+                return;
+            }
+            
+            log(`✅ 道路数: ${roads.length}`, 'success');
+            
+            if (roads.length === 0) {
+                log('❌ 道路データが空です', 'error');
+                return;
+            }
+            
+            log('最初の5つの道路:', 'info');
+            roads.slice(0, 5).forEach((road, i) => {
+                log(`  ${i}: start=(${road.start.x.toFixed(1)}, ${road.start.z.toFixed(1)}), end=(${road.end.x.toFixed(1)}, ${road.end.z.toFixed(1)})`, 'info');
+            });
+            
+            // 道路の範囲を計算
+            let minX = Infinity, maxX = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+            
+            roads.forEach(road => {
+                minX = Math.min(minX, road.start.x, road.end.x);
+                maxX = Math.max(maxX, road.start.x, road.end.x);
+                minZ = Math.min(minZ, road.start.z, road.end.z);
+                maxZ = Math.max(maxZ, road.start.z, road.end.z);
+            });
+            
+            log(`道路ネットワークの範囲:`, 'info');
+            log(`  X: ${minX.toFixed(1)} 〜 ${maxX.toFixed(1)} (幅: ${(maxX - minX).toFixed(1)}m)`, 'info');
+            log(`  Z: ${minZ.toFixed(1)} 〜 ${maxZ.toFixed(1)} (高さ: ${(maxZ - minZ).toFixed(1)}m)`, 'info');
+        }
+        
+        function testPathfinding() {
+            clearOutput();
+            log('=== パスファインディングテスト ===', 'info');
+            
+            if (typeof window.cityLayout === 'undefined' || !window.cityLayout.findPath) {
+                log('❌ cityLayout.findPathが利用できません', 'error');
+                return;
+            }
+            
+            // テスト用の開始点と終了点
+            const start = { x: 0, z: 0 };
+            const end = { x: 50, z: 50 };
+            
+            log(`開始点: (${start.x}, ${start.z})`, 'info');
+            log(`終了点: (${end.x}, ${end.z})`, 'info');
+            
+            try {
+                const path = window.cityLayout.findPath(start, end);
+                
+                if (!path) {
+                    log('❌ 経路がnullです', 'error');
+                    return;
+                }
+                
+                log(`✅ 経路が見つかりました: ${path.length}ポイント`, 'success');
+                
+                log('経路の全ポイント:', 'info');
+                path.forEach((p, i) => {
+                    log(`  ${i}: (${p.x.toFixed(1)}, ${p.z.toFixed(1)})`, 'info');
+                });
+                
+                // 直線かどうかチェック
+                if (path.length === 2) {
+                    log('⚠️ 経路が2ポイントのみ（直線）です', 'warning');
+                } else if (path.length < 5) {
+                    log('⚠️ 経路ポイントが少ないです（中間ポイント不足）', 'warning');
+                } else {
+                    log(`✅ 経路ポイントが十分にあります（${path.length}ポイント）`, 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ エラー: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        function testWaypointSelection() {
+            clearOutput();
+            log('=== 経由ポイント選択テスト ===', 'info');
+            
+            if (typeof window.cityLayout === 'undefined') {
+                log('❌ cityLayoutが定義されていません', 'error');
+                return;
+            }
+            
+            const roads = window.cityLayout.roads;
+            
+            if (!roads || roads.length === 0) {
+                log('❌ 道路データがありません', 'error');
+                return;
+            }
+            
+            // テスト用の開始点と終了点（道路ネットワークの範囲内）
+            const startPoint = { x: -10, z: -10 };
+            const endPoint = { x: 30, z: 30 };
+            
+            log(`開始点: (${startPoint.x}, ${startPoint.z})`, 'info');
+            log(`終了点: (${endPoint.x}, ${endPoint.z})`, 'info');
+            
+            const dx = endPoint.x - startPoint.x;
+            const dz = endPoint.z - startPoint.z;
+            const totalDistance = Math.sqrt(dx * dx + dz * dz);
+            
+            log(`直線距離: ${totalDistance.toFixed(1)}m`, 'info');
+            
+            // 候補ポイントを収集
+            const candidatePoints = [];
+            
+            roads.forEach((road, roadIndex) => {
+                const points = [
+                    { x: road.start.x, z: road.start.z, label: 'start' },
+                    { x: (road.start.x + road.end.x) / 2, z: (road.start.z + road.end.z) / 2, label: 'mid' },
+                    { x: road.end.x, z: road.end.z, label: 'end' }
+                ];
+                
+                points.forEach(point => {
+                    // 進行度を計算
+                    const progressX = point.x - startPoint.x;
+                    const progressZ = point.z - startPoint.z;
+                    const progress = (progressX * dx + progressZ * dz) / (totalDistance * totalDistance);
+                    
+                    if (progress > 0.05 && progress < 0.95) {
+                        candidatePoints.push({
+                            x: point.x,
+                            z: point.z,
+                            progress: progress,
+                            roadIndex: roadIndex,
+                            label: point.label
+                        });
+                    }
+                });
+            });
+            
+            log(`候補ポイント: ${candidatePoints.length}個`, candidatePoints.length > 0 ? 'success' : 'error');
+            
+            if (candidatePoints.length === 0) {
+                log('❌ 候補ポイントが見つかりませんでした', 'error');
+                log('原因: 道路が開始点と終了点の範囲外にある可能性があります', 'warning');
+                return;
+            }
+            
+            // 進行度でソート
+            candidatePoints.sort((a, b) => a.progress - b.progress);
+            
+            log('最初の10個の候補ポイント:', 'info');
+            candidatePoints.slice(0, 10).forEach((p, i) => {
+                log(`  ${i}: progress=${p.progress.toFixed(2)}, pos=(${p.x.toFixed(1)}, ${p.z.toFixed(1)}), label=${p.label}`, 'info');
+            });
+            
+            // 3つのポイントを選択
+            const numWaypoints = 3;
+            const interval = (candidatePoints.length - 1) / (numWaypoints + 1);
+            
+            log(`選択された経由ポイント:`, 'success');
+            for (let i = 1; i <= numWaypoints; i++) {
+                const index = Math.round(i * interval);
+                if (index < candidatePoints.length) {
+                    const p = candidatePoints[index];
+                    log(`  ${i}: (${p.x.toFixed(1)}, ${p.z.toFixed(1)}) - progress=${p.progress.toFixed(2)}`, 'success');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+

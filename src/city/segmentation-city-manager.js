@@ -128,7 +128,7 @@ class SegmentationCityManager {
         // 道路ポイントを取得
         const roadPoints = this.segmentationLoader.getRoadNetwork();
         
-        // 道路ポイントから道路セグメント（エッジ）を生成
+        // 道路ポイントから道路セグメント（エッジ）を生成（中間ポイント付き）
         this.roads = [];
         const processedPairs = new Set();
         
@@ -140,15 +140,67 @@ class SegmentationCityManager {
                 if (!processedPairs.has(pairKey)) {
                     processedPairs.add(pairKey);
                     
-                    this.roads.push({
-                        id: `road_${this.roads.length}`,
-                        start: { x: point.x, y: point.y, z: point.z },
-                        end: { x: neighbor.x, y: neighbor.y, z: neighbor.z },
-                        isRoad: true,
-                        isMain: false,
-                        roadSegmentId: point.roadSegmentId,
-                        distance: neighbor.distance
-                    });
+                    // 道路セグメントの長さを計算
+                    const dx = neighbor.x - point.x;
+                    const dz = neighbor.z - point.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    // 長い道路セグメントには中間ポイントを追加
+                    const minSegmentLength = 5.0; // 5m以上の道路には中間ポイントを追加
+                    
+                    if (distance > minSegmentLength) {
+                        // 中間ポイントの数を距離に応じて決定
+                        const numIntermediatePoints = Math.floor(distance / minSegmentLength);
+                        
+                        // 開始点から順番に道路セグメントを作成
+                        let prevPoint = point;
+                        
+                        for (let i = 1; i <= numIntermediatePoints; i++) {
+                            const t = i / (numIntermediatePoints + 1);
+                            const intermediatePoint = {
+                                x: point.x + dx * t,
+                                y: point.y,
+                                z: point.z + dz * t
+                            };
+                            
+                            // 前のポイントから中間ポイントへの道路セグメント
+                            this.roads.push({
+                                id: `road_${this.roads.length}`,
+                                start: { x: prevPoint.x, y: prevPoint.y, z: prevPoint.z },
+                                end: intermediatePoint,
+                                isRoad: true,
+                                isMain: false,
+                                roadSegmentId: point.roadSegmentId,
+                                distance: distance / (numIntermediatePoints + 1),
+                                isIntermediate: true // 中間セグメントフラグ
+                            });
+                            
+                            prevPoint = intermediatePoint;
+                        }
+                        
+                        // 最後の中間ポイントから終点への道路セグメント
+                        this.roads.push({
+                            id: `road_${this.roads.length}`,
+                            start: { x: prevPoint.x, y: prevPoint.y, z: prevPoint.z },
+                            end: { x: neighbor.x, y: neighbor.y, z: neighbor.z },
+                            isRoad: true,
+                            isMain: false,
+                            roadSegmentId: point.roadSegmentId,
+                            distance: distance / (numIntermediatePoints + 1),
+                            isIntermediate: true
+                        });
+                    } else {
+                        // 短い道路はそのまま
+                        this.roads.push({
+                            id: `road_${this.roads.length}`,
+                            start: { x: point.x, y: point.y, z: point.z },
+                            end: { x: neighbor.x, y: neighbor.y, z: neighbor.z },
+                            isRoad: true,
+                            isMain: false,
+                            roadSegmentId: point.roadSegmentId,
+                            distance: distance
+                        });
+                    }
                 }
             });
         });

@@ -12,14 +12,25 @@ class PathfindingSystem {
             return [start, end]; // 直線経路を返す
         }
         
+        console.log(`🗺️ 経路探索開始: (${start.x.toFixed(1)}, ${start.z.toFixed(1)}) → (${end.x.toFixed(1)}, ${end.z.toFixed(1)})`);
+        
+        // 強制的に道路を経由する経路を生成
+        const roadBasedPath = this.findRoadBasedPath(start, end);
+        
+        if (roadBasedPath && roadBasedPath.length >= 3) {
+            console.log(`  ✅ 道路ベース経路: ${roadBasedPath.length}ポイント（道路経由: ${roadBasedPath.length - 2}ポイント）`);
+            return roadBasedPath;
+        }
+        
+        // フォールバック: 従来のA*
+        console.log(`  ℹ️ 従来のA*にフォールバック`);
+        
         // 開始点と終了点から最も近い道路上の点を見つける
         const startRoadPoint = this.roadSystem.findNearestRoadPoint(start.x, start.z);
         const endRoadPoint = this.roadSystem.findNearestRoadPoint(end.x, end.z);
 
         if (!startRoadPoint || !endRoadPoint) {
             console.warn('⚠️ PathfindingSystem: 道路上の点が見つかりません');
-            console.log(`  開始点: (${start.x.toFixed(1)}, ${start.z.toFixed(1)}) → 道路点: ${startRoadPoint ? 'あり' : 'なし'}`);
-            console.log(`  終了点: (${end.x.toFixed(1)}, ${end.z.toFixed(1)}) → 道路点: ${endRoadPoint ? 'あり' : 'なし'}`);
             return [start, end]; // 直線経路を返す
         }
 
@@ -30,6 +41,7 @@ class PathfindingSystem {
             // 開始点と終了点を追加
             path.unshift(start);
             path.push(end);
+            console.log(`  ✅ A*経路: ${path.length}ポイント`);
         } else {
             // 経路が見つからない場合は直線経路
             console.warn('⚠️ PathfindingSystem: A*で経路が見つかりません。直線経路を使用。');
@@ -37,6 +49,181 @@ class PathfindingSystem {
         }
 
         return path;
+    }
+    
+    // 道路ネットワークを強制的に経由する経路を生成
+    findRoadBasedPath(start, end) {
+        console.log(`  🛣️ 道路ベース経路を生成中...`);
+        
+        // 開始点から最も近い道路ポイントを見つける
+        const startRoadPoint = this.roadSystem.findNearestRoadPoint(start.x, start.z);
+        if (!startRoadPoint) {
+            console.log(`    ⚠️ 開始点の近くに道路が見つかりません`);
+            return null;
+        }
+        
+        // 終了点から最も近い道路ポイントを見つける
+        const endRoadPoint = this.roadSystem.findNearestRoadPoint(end.x, end.z);
+        if (!endRoadPoint) {
+            console.log(`    ⚠️ 終了点の近くに道路が見つかりません`);
+            return null;
+        }
+        
+        console.log(`    開始道路点: (${startRoadPoint.x.toFixed(1)}, ${startRoadPoint.z.toFixed(1)})`);
+        console.log(`    終了道路点: (${endRoadPoint.x.toFixed(1)}, ${endRoadPoint.z.toFixed(1)})`);
+        
+        // 開始点と終了点の間に、道路上の中間ポイントを3つ選ぶ
+        const waypoints = this.selectWaypointsAlongRoute(startRoadPoint, endRoadPoint, 3);
+        
+        console.log(`    選択された経由ポイント: ${waypoints.length}個`);
+        
+        if (waypoints.length === 0) {
+            console.warn(`    ⚠️ 経由ポイントが見つかりませんでした。開始道路点と終了道路点のみ使用します。`);
+            // 経由ポイントがない場合でも、開始道路点と終了道路点は含める
+            const fullPath = [
+                start,
+                startRoadPoint,
+                endRoadPoint,
+                end
+            ];
+            console.log(`    ✅ 簡易経路を生成: ${fullPath.length}ポイント`);
+            return fullPath;
+        }
+        
+        waypoints.forEach((wp, i) => {
+            console.log(`      ${i + 1}: (${wp.x.toFixed(1)}, ${wp.z.toFixed(1)})`);
+        });
+        
+        // 経路を構築: 開始点 → 開始道路点 → 経由点1 → 経由点2 → 経由点3 → 終了道路点 → 終了点
+        const fullPath = [
+            start,
+            startRoadPoint,
+            ...waypoints,
+            endRoadPoint,
+            end
+        ];
+        
+        console.log(`    ✅ 完全経路を生成: ${fullPath.length}ポイント`);
+        
+        return fullPath;
+    }
+    
+    // 開始点と終了点の間に、道路上の中間ポイントを選択
+    selectWaypointsAlongRoute(startPoint, endPoint, numWaypoints) {
+        const waypoints = [];
+        
+        // 開始点と終了点の方向ベクトル
+        const dx = endPoint.x - startPoint.x;
+        const dz = endPoint.z - startPoint.z;
+        const totalDistance = Math.sqrt(dx * dx + dz * dz);
+        
+        console.log(`    ルート距離: ${totalDistance.toFixed(1)}m`);
+        
+        // 道路セグメントから候補ポイントを収集
+        const candidatePoints = [];
+        
+        // 道路セグメントの開始点、中点、終了点すべてを候補に
+        this.roadSystem.roads.forEach((road, roadIndex) => {
+            const points = [
+                { x: road.start.x, z: road.start.z, label: 'start' },
+                { x: (road.start.x + road.end.x) / 2, z: (road.start.z + road.end.z) / 2, label: 'mid' },
+                { x: road.end.x, z: road.end.z, label: 'end' }
+            ];
+            
+            points.forEach(point => {
+                // 開始点-終了点の直線からの距離を計算
+                const distanceFromLine = this.pointToLineDistance(
+                    point.x, point.z,
+                    startPoint.x, startPoint.z,
+                    endPoint.x, endPoint.z
+                );
+                
+                // より寛容な距離基準（全体距離の80%以内）
+                const maxDistanceFromLine = Math.max(totalDistance * 0.8, 30); // 最低でも30m
+                
+                if (distanceFromLine < maxDistanceFromLine) {
+                    // 開始点からの進行度を計算
+                    const progressX = point.x - startPoint.x;
+                    const progressZ = point.z - startPoint.z;
+                    const progress = (progressX * dx + progressZ * dz) / (totalDistance * totalDistance);
+                    
+                    // より広い範囲で進行度をチェック（0.05〜0.95）
+                    if (progress > 0.05 && progress < 0.95) {
+                        candidatePoints.push({
+                            x: point.x,
+                            z: point.z,
+                            progress: progress,
+                            distanceFromLine: distanceFromLine,
+                            roadIndex: roadIndex,
+                            label: point.label
+                        });
+                    }
+                }
+            });
+        });
+        
+        if (candidatePoints.length === 0) {
+            console.warn(`    ⚠️ 候補ポイントが見つかりません（全${this.roadSystem.roads.length}道路を検索）`);
+            console.log(`      開始点: (${startPoint.x.toFixed(1)}, ${startPoint.z.toFixed(1)})`);
+            console.log(`      終了点: (${endPoint.x.toFixed(1)}, ${endPoint.z.toFixed(1)})`);
+            return [];
+        }
+        
+        console.log(`    候補ポイント: ${candidatePoints.length}個（全${this.roadSystem.roads.length}道路から）`);
+        
+        // 候補ポイントを進行度でソート
+        candidatePoints.sort((a, b) => a.progress - b.progress);
+        
+        // デバッグ: 最初と最後の候補を表示
+        if (candidatePoints.length > 0) {
+            console.log(`      最初の候補: progress=${candidatePoints[0].progress.toFixed(2)}, 距離=${candidatePoints[0].distanceFromLine.toFixed(1)}m`);
+            console.log(`      最後の候補: progress=${candidatePoints[candidatePoints.length - 1].progress.toFixed(2)}, 距離=${candidatePoints[candidatePoints.length - 1].distanceFromLine.toFixed(1)}m`);
+        }
+        
+        // より確実にポイントを選択
+        if (candidatePoints.length < numWaypoints) {
+            // 候補が少ない場合は全て使用
+            console.log(`    候補が少ないため、全${candidatePoints.length}個を使用`);
+            return candidatePoints.map(p => ({ x: p.x, z: p.z }));
+        }
+        
+        // 等間隔にポイントを選択
+        const interval = (candidatePoints.length - 1) / (numWaypoints + 1);
+        
+        for (let i = 1; i <= numWaypoints; i++) {
+            const index = Math.round(i * interval);
+            if (index < candidatePoints.length) {
+                waypoints.push({
+                    x: candidatePoints[index].x,
+                    z: candidatePoints[index].z
+                });
+            }
+        }
+        
+        return waypoints;
+    }
+    
+    // 点と直線の距離を計算
+    pointToLineDistance(px, pz, x1, z1, x2, z2) {
+        const dx = x2 - x1;
+        const dz = z2 - z1;
+        const lengthSquared = dx * dx + dz * dz;
+        
+        if (lengthSquared === 0) {
+            // 線分が点の場合
+            return Math.sqrt((px - x1) * (px - x1) + (pz - z1) * (pz - z1));
+        }
+        
+        // 点から直線への垂線の足のパラメータt
+        let t = ((px - x1) * dx + (pz - z1) * dz) / lengthSquared;
+        t = Math.max(0, Math.min(1, t));
+        
+        // 垂線の足の座標
+        const projX = x1 + t * dx;
+        const projZ = z1 + t * dz;
+        
+        // 点から垂線の足までの距離
+        return Math.sqrt((px - projX) * (px - projX) + (pz - projZ) * (pz - projZ));
     }
 
     // A*アルゴリズムによる経路探索

@@ -60,6 +60,8 @@ $ ollama run llama3.2
 
 航空写真から簡易的なセグメンテーションマップを作成できます。
 
+#### GoogleColabを利用する
+
 1.GoogleColabに下記のPythonを読み込みます。
 
 https://github.com/oggata/MultiEntitySimulationArchitecture/blob/main/example/colab_3d_city_map.py
@@ -72,6 +74,14 @@ https://github.com/oggata/MultiEntitySimulationArchitecture/blob/main/example/co
 
 ![画面](./images/Segment-3.png)
 
+#### Hugging Faceを利用する
+
+下記のツールにアクセスすることで同様のセグメンテーションデータを作成することができます。
+
+https://huggingface.co/spaces/oggata/map-segment-tool
+
+
+![画面](./images/segment-tool.png)
 
 ### 動画ファイルへ出力
 

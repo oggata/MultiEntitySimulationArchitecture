@@ -1,303 +1,80 @@
 # MESA (Multi-Entity Simulation Architecture)
 
-A 3D autonomous agent simulation that creates a virtual city where AI-powered residents live their daily lives with realistic behaviors, interactions, and decision-making processes.
+A 3D autonomous agent simulation that creates virtual cities where AI-powered residents go about their daily lives with realistic behaviors, interactions, and decision-making processes.
 
-https://oggata.github.io/MultiEntitySimulationArchitecture/
+![Screen](./images/Walk-sim.gif)
 
-[![](https://img.youtube.com/vi/5NguBippS0c/0.jpg)](https://www.youtube.com/watch?v=5NguBippS0c)
+## Main System Setup
 
-## Overview
+### For Mac
 
-This application simulates a small city populated with autonomous agents (residents) who have unique personalities, daily routines, and the ability to make decisions using AI language models. The simulation runs in a 3D environment built with Three.js, featuring a procedurally generated city layout with roads, buildings, and facilities.
+1. Download mesa-1.0.0-arm64.dmg
+https://github.com/oggata/MultiEntitySimulationArchitecture/blob/main/install/mesa-1.0.0-arm64.dmg
+2. Install from the dmg file
+![Screen](./images/install.png)
+3. Launch
 
-## Features
+### Windows and Others (Runs in Browser)
 
-### 🤖 Autonomous Agents
-- **AI-Powered Decision Making**: Each agent uses OpenAI or Gemini API to make realistic decisions based on their personality and current situation
-
-![1](./images/1.GIF)
-
-- **Unique Personalities**: Agents have distinct traits including sociability, energy levels, routine preferences, curiosity, and empathy
-
-![1](./images/2.GIF)
-
-- **Memory System**: Short-term and long-term memory systems that influence future decisions
-
-![1](./images/3.GIF)
-
-- **Relationship Dynamics**: Agents build relationships with each other through interactions
-
-![1](./images/4.GIF)
-
-- **Daily Routines**: Each agent follows personalized daily schedules with different activities for morning, afternoon, evening, and night
-
-![1](./images/5.GIF)
-
-- **Communication System**: Agents can make phone calls and send emails to each other, enhancing social interactions
-
-![1](./images/6.GIF)
-
-### 🏙️ Virtual City Environment
-- **🆕 Segmentation-Based Maps**: Generate realistic 3D cities from aerial photographs using deep learning segmentation
-  - Load city layouts from aerial photo segmentation data
-  - Automatic building, road, and facility detection
-  - See [SEGMENTATION_QUICKSTART.md](SEGMENTATION_QUICKSTART.md) for setup guide
-- **Pathfinding System**: Agents navigate using A* pathfinding algorithm through the road network
-- **Multiple Facilities**: Cafes, parks, libraries, gyms, schools, hospitals, supermarkets, and more
-- **3D Visualization**: Realistic 3D environment with buildings, roads, and character models using Three.js
-
-### 🎮 Interactive Controls
-- **Camera Modes**: 
-  - Free camera for overview
-  - Agent-following camera to observe individual residents
-  - Facility-focus camera to watch specific locations
-- **Time Control**: Adjustable simulation speed (1x, 2x, 4x, 8x)
-  - Real-time day/night cycle
-  - Time affects agent behavior and environment
-- **Agent Generation**: Create new agents with AI-generated personalities
-- **Road Visualization**: Toggle road network display and path visualization
-
-### 📊 Real-time Monitoring
-- **Activity Log**: Detailed log of all agent activities and interactions
-- **Agent Information Panel**: View current status, thoughts, and relationships of each agent
-- **Live Updates**: Real-time display of agent locations, moods, and activities
-- **Communication Log**: Track phone calls and email exchanges between agents
-
-### 🎬 Video Generation System
-- **AI-Powered Video Creation**: Generate videos of simulation events using Google Veo MCP Server
-- **Detailed Data Recording**: Capture agent actions, interactions, and location activities
-- **Customizable Video Instructions**: Set video style, focus, mood, and custom prompts
-- **Comprehensive Metadata**: Include agent relationships, personality distributions, and event summaries
-- **Multiple Video Styles**: Documentary, cinematic, news, and vlog styles
-- **Real-time Recording**: Capture simulation frames with configurable duration and frame rate
-
-## Getting Started
-
-### Prerequisites
-- A modern web browser with WebGL support
-- OpenAI API key or Google Gemini API access
-
-### Installation
-
-#### Web Browser Version
-1. Clone or download this repository
-2. Open a terminal in the project directory
-3. Start a local HTTP server:
+1. Download the file
+2. Install npm
+   ```bash
+   npm install
+   ```
+3. Start a local HTTP server
    ```bash
    python3 -m http.server
    ```
 4. Open your browser and navigate to `http://localhost:8000`
 
-#### Electron App Version
-1. Clone or download this repository
-2. Open a terminal in the project directory
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-4. Launch the Electron app:
-   ```bash
-   npx electron .
-   ```
+### Quick Start (Launch via External URL in Browser)
 
-### Setup
-1. Enter your OpenAI API key in the control panel
-2. Choose your preferred AI provider (OpenAI or Gemini)
-3. Click "Start Simulation" to begin
+Access the URL below. (※ Cannot run Agents via Ollama.)
 
-## How It Works
+https://oggata.github.io/MultiEntitySimulationArchitecture/
 
-### Agent Decision Making
-Each agent continuously:
-1. **Observes** their environment and nearby agents
-2. **Thinks** about their current situation using AI language models
-3. **Decides** on actions based on personality, memory, and relationships
-4. **Executes** decisions (moving, interacting, performing activities, communicating)
-5. **Updates** their memory and relationships
 
-### Communication System
-Agents can communicate through:
-- **Phone Calls**: Direct voice communication between agents
-- **Email**: Written communication for longer messages and formal interactions
-- **Social Media**: Digital interactions through simulated social platforms
+## Preparing Related Tools
 
-### City Layout
+### Installing Ollama
 
-#### 🆕 Segmentation-Based Maps (NEW!)
-Generate realistic 3D cities from aerial photographs:
-1. **Upload** an aerial photo to Google Colab
-2. **Segment** using Segformer deep learning model (ADE20K)
-3. **Generate** 3D meshes with walls and proper heights
-4. **Import** JSON to MESA for instant simulation
+MESA supports Ollama and can run locally.
 
-Features:
-- Real-world building shapes and layouts
-- Automatic facility assignment based on building size
-- Road network extraction from images
-- Multiple building categories (small, medium, large)
+1. Download Ollama
+```bash
+https://ollama.com
+```
+2. Install and run
+```bash
+$ ollama pull llama3.2
+$ ollama run llama3.2
+```
 
-See: `SEGMENTATION_QUICKSTART.md` for 5-minute setup guide
+### Creating a Segmentation Map
 
-#### Procedural Generation
-The city can also be procedurally generated with:
-- **Main Streets**: Primary roads connecting major areas
-- **Sub Streets**: Secondary roads within city blocks
-- **Buildings**: Various types (residential, commercial, public facilities)
-- **Intersections**: Traffic nodes for pathfinding
+You can create a simple segmentation map from aerial photos.
 
-#### Map Editor
-Create custom layouts with:
-- Drag-and-drop building placement
-- Road drawing tools
-- Facility type assignment
-- Export/import functionality
+1. Load the following Python script into Google Colab.
+https://github.com/oggata/MultiEntitySimulationArchitecture/blob/main/example/colab_3d_city_map.py
 
-### Time System
-The simulation features a realistic time system:
-- **Day/Night Cycle**: Affects lighting and agent behavior
-- **Time-based Activities**: Agents follow different routines based on time of day
-- **Environmental Changes**: City atmosphere changes throughout the day
+2. Import the map data and run the script
+![Screen](./images/Segment-2.png)
 
-## Technical Details
+3. The segmentation data (.json) will be generated. Place it under src/json/ to load it into MESA.
+![Screen](./images/Segment-3.png)
 
-### Architecture
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **3D Graphics**: Three.js for 3D rendering
-- **AI Integration**: OpenAI GPT and Google Gemini APIs
-- **Pathfinding**: A* algorithm for navigation
-- **Memory Management**: Custom memory system for agent persistence
-- **Communication**: Simulated phone and email systems
 
-### Key Components
-- `agent.js`: Core agent logic and AI decision making
-- `citylayout.js`: City generation and pathfinding
-- `main.js`: Main simulation loop and controls
-- `config.js`: Agent personalities and city configuration
-- `character.js`: 3D character models and animations
-- `communication.js`: Phone and email communication systems
-- `video-generation-system.js`: Video recording and generation system
+### Output to Video File
 
-## Customization
+Agent actions are output to a video file.
 
-### Adding New Agents
-You can create new agents with custom personalities by modifying the `agentPersonalities` array in `config.js` or using the "Generate New Agent" button in the interface.
+![Screen](./images/Walk-gif.gif)
 
-### Modifying City Layout
-Adjust city generation parameters in `citylayout.js`:
-- Grid size and road density
-- Building types and placement rules
-- Facility locations and activities
-
-### Extending Agent Behaviors
-Enhance agent capabilities by modifying:
-- Personality traits and their effects
-- Interaction types and outcomes
-- Memory system and relationship dynamics
-- Communication patterns and preferences
-
-### Video Generation Customization
-Customize video generation by:
-- Adjusting recording duration and frame rate
-- Setting video style and focus preferences
-- Configuring Veo Server connection settings
-- Creating custom video generation prompts
-- Modifying data capture parameters
-
-## API Usage
-
-The application uses AI APIs for realistic agent decision-making. API keys are not stored and are only used for real-time requests.
-
-### Supported Providers
-- **OpenAI GPT**: Default provider with comprehensive reasoning capabilities
-- **Google Gemini**: Alternative provider for agent decision making
-- **Ollama (Local)**: Local AI models for privacy-focused usage
-- **Google Veo MCP Server**: AI-powered video generation from simulation data
-
-### Local AI Setup with Ollama
-
-#### Installation
-1. **Install Ollama**:
-   ```bash
-   # macOS
-   curl -fsSL https://ollama.ai/install.sh | sh
-   
-   # Linux
-   curl -fsSL https://ollama.ai/install.sh | sh
-   
-   # Windows
-   # Download from https://ollama.ai/download
-   ```
-
-2. **Start Ollama Service**:
-   ```bash
-   ollama serve
-   ```
-
-3. **Download and Run a Model**:
-   ```bash
-   # Download llama3.2 (recommended)
-   ollama pull llama3.2
-   
-   # Or try other models
-   ollama pull llama3.1
-   ollama pull mistral
-   ollama pull codellama
-   ```
-
-#### Connecting from MESA
-1. **Select Local Provider**: In the API settings tab, choose "Ollama (Local)"
-2. **Configure Connection**:
-   - **URL**: `http://localhost:11434` (default)
-   - **Model**: `llama3.2` (or your preferred model)
-3. **Start Simulation**: The application will now use your local AI model
-
-#### Benefits of Local AI
-- **Privacy**: No data sent to external servers
-- **Cost**: No API usage fees
-- **Customization**: Use any model available in Ollama
-- **Offline**: Works without internet connection
-
-## Contributing
-
-Feel free to contribute to this project by:
-- Adding new agent personality types
-- Implementing additional facilities and activities
-- Improving the pathfinding algorithm
-- Enhancing the 3D visualization
-- Adding new interaction types between agents
-- Expanding communication features
-
-## TODO
-
-### Planned Features
-- **MCP (Model Context Protocol) Integration**: Connect to multiple applications and services through MCP
-  - Calendar integration for scheduling
-  - Weather API integration for realistic environmental effects
-  - News API for current events affecting agent behavior
-  - Social media API integration for digital interactions
-  - Email service integration for external communication
-- **Enhanced Communication**: 
-  - Video calling capabilities
-  - Group chat functionality
-  - Voice message system
-- **Advanced AI Features**:
-  - Multi-modal AI (text, voice, image understanding)
-  - Emotion recognition and response
-  - Learning and adaptation over time
-- **Video Generation Enhancements**:
-  - Multiple video format support
-  - Advanced video editing capabilities
-  - Real-time video streaming
-  - Collaborative video creation
 
 ## Community
 
-Join our community to stay updated with the latest developments, share ideas, and connect with other users:
+Join our community to stay updated on the latest developments, share ideas, and connect with other users:
 
 [![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/TdENtAnuuX)
 
-## Acknowledgments
 
-- Three.js community for 3D graphics capabilities
-- OpenAI and Google for AI language model APIs
-- The open-source community for various algorithms and techniques used in this simulation

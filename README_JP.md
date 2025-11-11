@@ -9,9 +9,13 @@ AI搭載の住民が現実的な行動、相互作用、意思決定プロセス
 ###  Macの場合
 
 1.mesa-1.0.0-arm64.dmgをダウンロード
+
 https://github.com/oggata/MultiEntitySimulationArchitecture/blob/main/install/mesa-1.0.0-arm64.dmg
+
 2.dmgファイルからインストール
+
 ![画面](./images/install.png)
+
 3.起動
 
 ### Windowsやその他（ブラウザで実行します）
@@ -41,10 +45,12 @@ https://oggata.github.io/MultiEntitySimulationArchitecture/
 MESAはOllamaに対応しており、ローカル環境で実行が可能です。
 
 1.ollamaをダウンロード
+
 ```bash
 https://ollama.com
 ```
 2.インストールと実行
+
 ```bash
 $ ollama pull llama3.2
 $ ollama run llama3.2
@@ -55,12 +61,15 @@ $ ollama run llama3.2
 航空写真から簡易的なセグメンテーションマップを作成できます。
 
 1.GoogleColabに下記のPythonを読み込みます。
+
 https://github.com/oggata/MultiEntitySimulationArchitecture/blob/main/example/colab_3d_city_map.py
 
 2.地図データをインポートして実行を行います
+
 ![画面](./images/Segment-2.png)
 
 3.セグメンテーションデータ(.json)が作成されるため、src/json/配下に配置することで、MESAから読み込むことが可能です。
+
 ![画面](./images/Segment-3.png)
 
 

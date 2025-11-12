@@ -122,8 +122,10 @@ body {
 #control-panel {
     top: 10px;
     right: 10px;
-    max-width: 300px;
-    min-width: 280px;
+    max-width: 350px;
+    min-width: 320px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 /* APIアクセス回数表示 */
@@ -141,31 +143,39 @@ body {
 .tab-navigation {
     display: flex;
     flex-wrap: wrap;
-    gap: 2px;
-    margin-bottom: 10px;
+    gap: 4px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 .tab-button {
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #fff;
-    padding: 6px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 8px 12px;
     font-size: 11px;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: 6px;
     transition: all 0.2s ease;
     flex: 1;
     min-width: 0;
+    font-weight: 500;
 }
 
 .tab-button:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+    transform: translateY(-1px);
 }
 
 .tab-button.active {
-    background: rgba(76, 175, 80, 0.3);
+    background: rgba(76, 175, 80, 0.25);
     border-color: #4CAF50;
     color: #4CAF50;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
 }
 
 /* タブコンテンツ */
@@ -181,14 +191,14 @@ body {
     display: block;
 }
 
-/* タブ内のセクション */
-.api-key-section,
-.simulation-controls,
-.agent-creation,
-.agent-storage-controls,
-.camera-controls,
-.road-visualization,
-.other-controls {
+/* タブ内のセクション（既存スタイル - 新しい.sectionクラスに置き換え） */
+.api-key-section:not(.section),
+.simulation-controls:not(.section),
+.agent-creation:not(.section),
+.agent-storage-controls:not(.section),
+.camera-controls:not(.section),
+.road-visualization:not(.section),
+.other-controls:not(.section) {
     margin-bottom: 15px;
 }
 
@@ -1146,4 +1156,529 @@ button:disabled {
 #thinkingFrequency,
 #goOutProbability {
     color: #fff !important;
+}
+
+/* ========================================
+   制御パネル リファクタリングスタイル
+   ======================================== */
+
+/* セクション */
+.section {
+    margin-bottom: 15px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section:last-child {
+    margin-bottom: 0;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #4CAF50;
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(76, 175, 80, 0.3);
+}
+
+.section-description {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0 0 12px 0;
+    line-height: 1.4;
+}
+
+/* フォームグループ */
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-label {
+    display: block;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+}
+
+.form-select {
+    cursor: pointer;
+}
+
+.form-select option {
+    background: #333;
+    color: #fff;
+}
+
+/* ボタングループ */
+.button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.button-group .btn {
+    width: 100%;
+}
+
+/* ボタンスタイル */
+.btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    display: inline-block;
+    box-sizing: border-box;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: #4CAF50;
+    color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #45a049;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-success {
+    background: #4CAF50;
+    color: #fff;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: #45a049;
+}
+
+.btn-danger {
+    background: #f44336;
+    color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #da190b;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
+}
+
+.btn-warning {
+    background: #FF9800;
+    color: #fff;
+}
+
+.btn-warning:hover:not(:disabled) {
+    background: #e68900;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+}
+
+/* ラジオボタン・チェックボックス */
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+
+.radio-label input[type="radio"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.radio-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.radio-option:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(76, 175, 80, 0.3);
+}
+
+.radio-option input[type="radio"] {
+    margin-top: 2px;
+    cursor: pointer;
+}
+
+.radio-label-text {
+    font-weight: bold;
+    color: #fff;
+    display: block;
+}
+
+.radio-description {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    display: block;
+    margin-top: 2px;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.checkbox-label:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+/* エージェント活性度セクション */
+.activity-level-section {
+    background: #555 !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.activity-level-details {
+    background: #444 !important;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 12px;
+}
+
+.detail-item {
+    font-size: 12px;
+    color: #ddd;
+    margin-bottom: 6px;
+}
+
+.detail-item:last-child {
+    margin-bottom: 0;
+}
+
+.detail-item strong {
+    color: #fff;
+    font-weight: 600;
+}
+
+/* カメラステータス */
+.camera-status-box {
+    background: rgba(76, 175, 80, 0.2);
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+    margin-bottom: 12px;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.camera-status-box span {
+    color: #4CAF50;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+/* カメラデバッグ表示 */
+.camera-debug-display {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 11px;
+}
+
+.debug-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.debug-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.debug-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+.debug-value {
+    color: #fff;
+    font-family: monospace;
+}
+
+/* カテゴリハイライトボタン */
+.category-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.category-highlight-btn {
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.category-highlight-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(76, 175, 80, 0.5);
+}
+
+.category-highlight-btn.active {
+    background: rgba(76, 175, 80, 0.3);
+    border-color: #4CAF50;
+    color: #4CAF50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
+}
+
+/* 警告ボックス */
+.warning-box {
+    background: rgba(255, 193, 7, 0.2);
+    border: 1px solid rgba(255, 193, 7, 0.5);
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 12px;
+    font-size: 11px;
+    color: #ffc107;
+    text-align: center;
+}
+
+/* ステータスボックス */
+.status-box {
+    display: none;
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(0, 123, 255, 0.2);
+    border: 1px solid rgba(0, 123, 255, 0.5);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.status-box.show {
+    display: block;
+}
+
+.status-message {
+    font-size: 12px;
+    color: #fff;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.status-progress {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Ollama設定 */
+.ollama-settings {
+    display: none;
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ollama-settings.show {
+    display: block;
+}
+
+/* ファイル入力 */
+.file-input {
+    display: none;
+}
+
+/* プログレスバー */
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #4CAF50;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.recording-info {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+}
+
+/* 動画プレビュー */
+.video-preview-container {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    border-radius: 6px;
+    text-align: center;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-preview-container p {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+}
+
+/* ステータスインジケーター */
+.status-indicator {
+    margin-top: 8px;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    text-align: center;
+}
+
+.status-indicator.success {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.status-indicator.error {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+/* タブコンテンツの調整 */
+.tab-pane {
+    padding: 10px 0;
+}
+
+.tab-content {
+    padding: 0;
+}
+
+/* スクロールバーのスタイル */
+#control-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+#control-panel::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+#control-panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+#control-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 320px) {
+    .section {
+        padding: 10px;
+    }
+    
+    .section-title {
+        font-size: 13px;
+    }
+    
+    .btn {
+        padding: 8px 12px;
+        font-size: 11px;
+    }
 }

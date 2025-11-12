@@ -59,22 +59,35 @@
         <div class="tab-content">
             <!-- APIキー設定タブ -->
             <div id="api-settings" class="tab-pane active">
-                <div class="api-key-section">
-                    <input type="password" id="apiKey" placeholder="APIキーまたはURLを入力">
-                    <div class="input-group">
-                        <label><input type="radio" name="apiProvider" value="openai" checked> OpenAI</label>
-                        <label><input type="radio" name="apiProvider" value="gemini"> Gemini</label>
-                        <label><input type="radio" name="apiProvider" value="ollama"> Ollama (ローカル)</label>
+                <div class="section">
+                    <h3 class="section-title">🔑 APIキー設定</h3>
+                    <div class="form-group">
+                        <input type="password" id="apiKey" class="form-input" placeholder="APIキーまたはURLを入力">
+                    </div>
+                    <div class="form-group">
+                        <label class="radio-label">
+                            <input type="radio" name="apiProvider" value="openai" checked> OpenAI
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="apiProvider" value="gemini"> Gemini
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="apiProvider" value="ollama"> Ollama (ローカル)
+                        </label>
                     </div>
                     
-                    <div id="ollamaSettings" style="display: none; margin-top: 10px;">
-                        <label for="ollamaUrl">Ollama URL:</label>
-                        <input type="text" id="ollamaUrl" placeholder="http://localhost:11434" value="http://localhost:11434">
-                        <label for="ollamaModel">モデル名:</label>
-                        <input type="text" id="ollamaModel" placeholder="llama3.2" value="llama3.2">
+                    <div id="ollamaSettings" class="ollama-settings">
+                        <div class="form-group">
+                            <label for="ollamaUrl" class="form-label">Ollama URL:</label>
+                            <input type="text" id="ollamaUrl" class="form-input" placeholder="http://localhost:11434" value="http://localhost:11434">
+                        </div>
+                        <div class="form-group">
+                            <label for="ollamaModel" class="form-label">モデル名:</label>
+                            <input type="text" id="ollamaModel" class="form-input" placeholder="llama3.2" value="llama3.2">
+                        </div>
                     </div>
 
-                    <div class="warning">
+                    <div class="warning-box">
                         ⚠️ APIキーはlocalStorageに保存されます。
                     </div>
                 </div>
@@ -82,109 +95,138 @@
             
             <!-- シミュレーション設定タブ -->
             <div id="simulation-settings" class="tab-pane">
-                <div class="simulation-controls">
-                    <button id="startSimulationBtn">シミュレーション開始</button>
-                    <button id="pauseBtn" disabled>一時停止</button>
-                    <button id="timeSpeedBtn">時間速度: <span id="speed">1x</span></button>
+                <div class="section">
+                    <h3 class="section-title">🎮 シミュレーション制御</h3>
+                    <div class="button-group">
+                        <button id="startSimulationBtn" class="btn btn-primary">シミュレーション開始</button>
+                        <button id="pauseBtn" class="btn btn-secondary" disabled>一時停止</button>
+                        <button id="timeSpeedBtn" class="btn btn-secondary">時間速度: <span id="speed">1x</span></button>
+                    </div>
                 </div>
                 
-                <div class="activity-level-section" style="margin-top: 20px; padding: 15px; background-color: #555; border-radius: 8px; color: #fff;">
-                    <h4 style="margin: 0 0 10px 0; color: #fff;">🚶 エージェント活性度</h4>
-                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #ddd;">
+                <div class="section activity-level-section">
+                    <h3 class="section-title">🚶 エージェント活性度</h3>
+                    <p class="section-description">
                         エージェントがどれくらい積極的に外出するかを設定します
                     </p>
-                    <div class="activity-level-controls" style="color: #fff;">
-                        <label style="display: block; margin-bottom: 10px; color: #fff;">
+                    <div class="activity-level-controls">
+                        <label class="radio-option">
                             <input type="radio" name="activityLevel" value="1" checked>
-                            <span style="font-weight: bold; color: #fff;">低活性 (1)</span> - ほとんど家にいます
+                            <span class="radio-label-text">低活性 (1)</span>
+                            <span class="radio-description">ほとんど家にいます</span>
                         </label>
-                        <label style="display: block; margin-bottom: 10px; color: #fff;">
+                        <label class="radio-option">
                             <input type="radio" name="activityLevel" value="10">
-                            <span style="font-weight: bold; color: #fff;">中活性 (10)</span> - 時々外出します
+                            <span class="radio-label-text">中活性 (10)</span>
+                            <span class="radio-description">時々外出します</span>
                         </label>
-                        <label style="display: block; margin-bottom: 10px; color: #fff;">
+                        <label class="radio-option">
                             <input type="radio" name="activityLevel" value="50">
-                            <span style="font-weight: bold; color: #fff;">高活性 (50)</span> - 積極的に外出します
+                            <span class="radio-label-text">高活性 (50)</span>
+                            <span class="radio-description">積極的に外出します</span>
                         </label>
                     </div>
-                    <div class="activity-level-details" style="margin-top: 10px; padding: 10px; background-color: #444; border-radius: 5px; font-size: 12px; color: #fff;">
-                        <strong style="color: #fff;">現在の設定:</strong> <span id="currentActivityLevel" style="color: #fff;">低活性 (1)</span><br>
-                        <span style="color: #ddd;">思考頻度: <span id="thinkingFrequency">30秒ごと</span></span><br>
-                        <span style="color: #ddd;">外出確率: <span id="goOutProbability">10%</span></span>
+                    <div class="activity-level-details">
+                        <div class="detail-item">
+                            <strong>現在の設定:</strong> <span id="currentActivityLevel">低活性 (1)</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>思考頻度:</span> <span id="thinkingFrequency">30秒ごと</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>外出確率:</span> <span id="goOutProbability">10%</span>
+                        </div>
                     </div>
                 </div>
             </div>
             
             <!-- エージェント管理タブ -->
             <div id="agent-management" class="tab-pane">
-                <div class="agent-creation">
-                    <div class="agent-input-section">
-                        <label for="agentCustomPrompt">エージェントの希望条件（任意）:</label>
-                        <textarea id="agentCustomPrompt" placeholder="例: 30代の女性、看護師、明るい性格&#10;例: 20代の男性、学生、内向的だが親切&#10;例: 40代の男性、会社員、責任感が強い&#10;例: 50代の女性、主婦、地域活動に熱心" rows="3" style="width: 100%; margin-bottom: 10px;"></textarea>
+                <div class="section">
+                    <h3 class="section-title">👤 エージェント生成</h3>
+                    <div class="form-group">
+                        <label for="agentCustomPrompt" class="form-label">エージェントの希望条件（任意）:</label>
+                        <textarea id="agentCustomPrompt" class="form-textarea" placeholder="例: 30代の女性、看護師、明るい性格&#10;例: 20代の男性、学生、内向的だが親切&#10;例: 40代の男性、会社員、責任感が強い&#10;例: 50代の女性、主婦、地域活動に熱心" rows="3"></textarea>
                     </div>
-                    <button onclick="generateNewAgent()" id="generateAgentBtn">新しいエージェントを生成</button>
+                    <button onclick="generateNewAgent()" id="generateAgentBtn" class="btn btn-primary btn-block">新しいエージェントを生成</button>
                 </div>
-                <div class="agent-storage-controls">
-                    <button onclick="loadSavedAgents()" id="loadAgentsBtn">保存されたエージェントを読み込み</button>
-                    <button onclick="loadDebugAgents()" id="loadDebugAgentsBtn" style="background-color: #FF9800; color: white;">🐛 デバッグ用エージェント30人を作成</button>
-                    <button onclick="clearAllAgents()" id="clearAgentsBtn">全エージェントを削除</button>
-                    <button id="exportAgentsBtn">エージェント書き出し</button>
-                    <button id="importAgentsBtn">エージェント読み込み</button>
-                    <input type="file" id="importAgentsFile" accept="application/json" style="display:none">
+                
+                <div class="section">
+                    <h3 class="section-title">💾 エージェント管理</h3>
+                    <div class="button-group">
+                        <button onclick="loadSavedAgents()" id="loadAgentsBtn" class="btn btn-secondary">保存されたエージェントを読み込み</button>
+                        <button onclick="loadDebugAgents()" id="loadDebugAgentsBtn" class="btn btn-warning">🐛 デバッグ用エージェント30人を作成</button>
+                        <button onclick="clearAllAgents()" id="clearAgentsBtn" class="btn btn-danger">全エージェントを削除</button>
+                        <button id="exportAgentsBtn" class="btn btn-secondary">エージェント書き出し</button>
+                        <button id="importAgentsBtn" class="btn btn-secondary">エージェント読み込み</button>
+                        <input type="file" id="importAgentsFile" accept="application/json" class="file-input">
+                    </div>
                 </div>
-                <div id="generationStatus" style="display: none; margin-top: 10px; padding: 10px; background-color: #f0f8ff; border: 1px solid #007acc; border-radius: 5px; text-align: center;">
-                    <div id="generationMessage">エージェントを生成中...</div>
-                    <div id="generationProgress" style="margin-top: 5px; font-size: 12px; color: #666;"></div>
+                
+                <div id="generationStatus" class="status-box">
+                    <div id="generationMessage" class="status-message">エージェントを生成中...</div>
+                    <div id="generationProgress" class="status-progress"></div>
                 </div>
             </div>
             
             <!-- 視点設定タブ -->
             <div id="camera-settings" class="tab-pane">
-                <div class="camera-controls">
-                    <div class="camera-status">
+                <div class="section">
+                    <h3 class="section-title">📷 カメラ制御</h3>
+                    <div class="camera-status-box">
                         <span id="cameraModeDisplay">全体表示</span>
                     </div>
-                    <button id="personViewBtn">人物視点切り替え</button>
-                    <button id="facilityViewBtn">施設視点切り替え</button>
-                    <button id="autoViewBtn" style="background-color: #4CAF50; color: white;">🎬 自動視点 (5秒)</button>
-                    <button id="resetCamera">全体表示</button>
-                </div>
-                
-                <div class="camera-debug-display" id="cameraDebugDisplay">
-                    <div class="debug-title">📷 Camera Debug Info</div>
-                    <div class="debug-item">
-                        <span class="debug-label">Position:</span>
-                        <span class="debug-value" id="debugCameraPosition">-</span>
-                    </div>
-                    <div class="debug-item">
-                        <span class="debug-label">Rotation:</span>
-                        <span class="debug-value" id="debugCameraRotation">-</span>
-                    </div>
-                    <div class="debug-item">
-                        <span class="debug-label">LookAt:</span>
-                        <span class="debug-value" id="debugCameraLookAt">-</span>
-                    </div>
-                    <div class="debug-item">
-                        <span class="debug-label">Distance:</span>
-                        <span class="debug-value" id="debugCameraDistance">-</span>
+                    <div class="button-group">
+                        <button id="personViewBtn" class="btn btn-secondary">人物視点切り替え</button>
+                        <button id="facilityViewBtn" class="btn btn-secondary">施設視点切り替え</button>
+                        <button id="autoViewBtn" class="btn btn-success">🎬 自動視点 (5秒)</button>
+                        <button id="resetCamera" class="btn btn-secondary">全体表示</button>
                     </div>
                 </div>
                 
-                <div class="communication-controls">
-                    <button id="callAgentBtn" disabled>📞 電話をかける</button>
-                    <button id="messageAgentBtn" disabled>💬 メッセージを送る</button>
+                <div class="section">
+                    <h3 class="section-title">📷 カメラ情報</h3>
+                    <div class="camera-debug-display" id="cameraDebugDisplay">
+                        <div class="debug-item">
+                            <span class="debug-label">Position:</span>
+                            <span class="debug-value" id="debugCameraPosition">-</span>
+                        </div>
+                        <div class="debug-item">
+                            <span class="debug-label">Rotation:</span>
+                            <span class="debug-value" id="debugCameraRotation">-</span>
+                        </div>
+                        <div class="debug-item">
+                            <span class="debug-label">LookAt:</span>
+                            <span class="debug-value" id="debugCameraLookAt">-</span>
+                        </div>
+                        <div class="debug-item">
+                            <span class="debug-label">Distance:</span>
+                            <span class="debug-value" id="debugCameraDistance">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3 class="section-title">💬 コミュニケーション</h3>
+                    <div class="button-group">
+                        <button id="callAgentBtn" class="btn btn-secondary" disabled>📞 電話をかける</button>
+                        <button id="messageAgentBtn" class="btn btn-secondary" disabled>💬 メッセージを送る</button>
+                    </div>
                 </div>
             </div>
             
             <!-- 道路設定タブ -->
             <div id="road-settings" class="tab-pane">
-                <div class="road-visualization">
-                    <button id="toggleRoadNetwork">道路ネットワーク表示</button>
-                    <button id="clearRoadVisualization">道路表示クリア</button>
+                <div class="section">
+                    <h3 class="section-title">🛣️ 道路表示</h3>
+                    <div class="button-group">
+                        <button id="toggleRoadNetwork" class="btn btn-primary">道路ネットワーク表示</button>
+                        <button id="clearRoadVisualization" class="btn btn-secondary">道路表示クリア</button>
+                    </div>
                 </div>
                 
-                <div class="category-highlight-controls" style="margin-top: 20px;">
-                    <h4 style="margin: 10px 0 5px 0; font-size: 14px; color: #4CAF50;">🎨 セグメント別ハイライト</h4>
+                <div class="section">
+                    <h3 class="section-title">🎨 セグメント別ハイライト</h3>
                     <div class="category-buttons">
                         <button class="category-highlight-btn" data-category="road">🛣️ 道路</button>
                         <button class="category-highlight-btn" data-category="forest">🌲 森</button>
@@ -199,140 +241,137 @@
                         <button class="category-highlight-btn" data-category="infrastructure">🏗️ インフラ</button>
                         <button class="category-highlight-btn" data-category="other">📦 その他</button>
                     </div>
-                    <button id="clearAllHighlightsBtn" style="margin-top: 10px; width: 100%; background: #f44336;">🔅 全ハイライト解除</button>
+                    <button id="clearAllHighlightsBtn" class="btn btn-danger btn-block">🔅 全ハイライト解除</button>
                 </div>
             </div>
             
             <!-- 動画生成タブ -->
             <div id="video-generation" class="tab-pane">
-                <div class="video-generation-panel">
-                    <h3>動画生成設定</h3>
-                    
-                    <div class="setting-group">
-                        <h4>Veo Server設定</h4>
-                        <div class="input-group">
-                            <label for="veoServerUrl">Veo Server URL:</label>
-                            <input type="text" id="veoServerUrl" placeholder="http://localhost:3000" />
-                        </div>
-                        <div class="input-group">
-                            <label for="veoApiKey">API Key (オプション):</label>
-                            <input type="password" id="veoApiKey" placeholder="APIキーを入力" />
-                        </div>
-                        <button id="testVeoConnection" class="btn btn-secondary">接続テスト</button>
-                        <div id="connectionStatus" class="status-indicator"></div>
+                <div class="section">
+                    <h3 class="section-title">🎬 Veo Server設定</h3>
+                    <div class="form-group">
+                        <label for="veoServerUrl" class="form-label">Veo Server URL:</label>
+                        <input type="text" id="veoServerUrl" class="form-input" placeholder="http://localhost:3000" />
                     </div>
-
-                    <div class="setting-group">
-                        <h4>録画設定</h4>
-                        <div class="input-group">
-                            <label for="recordingDuration">録画時間 (秒):</label>
-                            <input type="number" id="recordingDuration" value="10" min="5" max="60" />
-                        </div>
-                        <div class="input-group">
-                            <label for="frameRate">フレームレート (fps):</label>
-                            <input type="number" id="frameRate" value="30" min="15" max="60" />
-                        </div>
-                        <div class="input-group">
-                            <label for="videoQuality">画質:</label>
-                            <select id="videoQuality">
-                                <option value="low">低画質 (推奨)</option>
-                                <option value="medium">中画質</option>
-                                <option value="high">高画質</option>
-                            </select>
-                        </div>
+                    <div class="form-group">
+                        <label for="veoApiKey" class="form-label">API Key (オプション):</label>
+                        <input type="password" id="veoApiKey" class="form-input" placeholder="APIキーを入力" />
                     </div>
+                    <button id="testVeoConnection" class="btn btn-secondary">接続テスト</button>
+                    <div id="connectionStatus" class="status-indicator"></div>
+                </div>
 
-                    <div class="setting-group">
-                        <h4>録画対象</h4>
-                        <div class="checkbox-group">
-                            <label>
-                                <input type="checkbox" id="recordAgents" checked />
-                                エージェントの動き
-                            </label>
-                            <label>
-                                <input type="checkbox" id="recordVehicles" checked />
-                                車両の動き
-                            </label>
-                            <label>
-                                <input type="checkbox" id="recordWeather" checked />
-                                天候エフェクト
-                            </label>
-                            <label>
-                                <input type="checkbox" id="recordUI" />
-                                UI要素
-                            </label>
-                        </div>
+                <div class="section">
+                    <h3 class="section-title">📹 録画設定</h3>
+                    <div class="form-group">
+                        <label for="recordingDuration" class="form-label">録画時間 (秒):</label>
+                        <input type="number" id="recordingDuration" class="form-input" value="10" min="5" max="60" />
                     </div>
-
-                    <div class="setting-group">
-                        <h4>動画生成指示</h4>
-                        <div class="input-group">
-                            <label for="videoStyle">動画スタイル:</label>
-                            <select id="videoStyle">
-                                <option value="auto">自動選択</option>
-                                <option value="documentary">ドキュメンタリー風</option>
-                                <option value="cinematic">映画風</option>
-                                <option value="news">ニュース風</option>
-                                <option value="vlog">Vlog風</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="videoFocus">焦点:</label>
-                            <select id="videoFocus">
-                                <option value="auto">自動選択</option>
-                                <option value="agents">エージェントの行動</option>
-                                <option value="interactions">エージェント間の交流</option>
-                                <option value="locations">場所の活動</option>
-                                <option value="daily">日常の風景</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="videoMood">雰囲気:</label>
-                            <select id="videoMood">
-                                <option value="auto">自動選択</option>
-                                <option value="warm">温かみのある</option>
-                                <option value="lively">活気に満ちた</option>
-                                <option value="peaceful">静かな</option>
-                                <option value="dynamic">動的な</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="customVideoPrompt">カスタム指示 (任意):</label>
-                            <textarea id="customVideoPrompt" placeholder="例: この街の朝の風景を、温かみのある雰囲気で撮影してください&#10;例: エージェントの交流を中心に、活気に満ちた街の様子を表現してください" rows="3"></textarea>
-                        </div>
+                    <div class="form-group">
+                        <label for="frameRate" class="form-label">フレームレート (fps):</label>
+                        <input type="number" id="frameRate" class="form-input" value="30" min="15" max="60" />
                     </div>
+                    <div class="form-group">
+                        <label for="videoQuality" class="form-label">画質:</label>
+                        <select id="videoQuality" class="form-select">
+                            <option value="low">低画質 (推奨)</option>
+                            <option value="medium">中画質</option>
+                            <option value="high">高画質</option>
+                        </select>
+                    </div>
+                </div>
 
-                    <div class="recording-controls">
+                <div class="section">
+                    <h3 class="section-title">📋 録画対象</h3>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="recordAgents" checked />
+                            <span>エージェントの動き</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="recordVehicles" checked />
+                            <span>車両の動き</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="recordWeather" checked />
+                            <span>天候エフェクト</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="recordUI" />
+                            <span>UI要素</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3 class="section-title">🎨 動画生成指示</h3>
+                    <div class="form-group">
+                        <label for="videoStyle" class="form-label">動画スタイル:</label>
+                        <select id="videoStyle" class="form-select">
+                            <option value="auto">自動選択</option>
+                            <option value="documentary">ドキュメンタリー風</option>
+                            <option value="cinematic">映画風</option>
+                            <option value="news">ニュース風</option>
+                            <option value="vlog">Vlog風</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="videoFocus" class="form-label">焦点:</label>
+                        <select id="videoFocus" class="form-select">
+                            <option value="auto">自動選択</option>
+                            <option value="agents">エージェントの行動</option>
+                            <option value="interactions">エージェント間の交流</option>
+                            <option value="locations">場所の活動</option>
+                            <option value="daily">日常の風景</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="videoMood" class="form-label">雰囲気:</label>
+                        <select id="videoMood" class="form-select">
+                            <option value="auto">自動選択</option>
+                            <option value="warm">温かみのある</option>
+                            <option value="lively">活気に満ちた</option>
+                            <option value="peaceful">静かな</option>
+                            <option value="dynamic">動的な</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="customVideoPrompt" class="form-label">カスタム指示 (任意):</label>
+                        <textarea id="customVideoPrompt" class="form-textarea" placeholder="例: この街の朝の風景を、温かみのある雰囲気で撮影してください&#10;例: エージェントの交流を中心に、活気に満ちた街の様子を表現してください" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3 class="section-title">🎥 動画生成操作</h3>
+                    <div class="button-group">
                         <button id="startRecording" class="btn btn-primary">録画開始</button>
                         <button id="stopRecording" class="btn btn-danger" disabled>録画停止</button>
                         <button id="generateVideo" class="btn btn-success" disabled>動画生成</button>
                     </div>
-
                     <div class="recording-status">
                         <div id="recordingProgress" class="progress-bar">
                             <div id="recordingProgressFill" class="progress-fill"></div>
                         </div>
                         <div id="recordingInfo" class="recording-info"></div>
                     </div>
+                </div>
 
-                    <div class="video-preview">
-                        <h4>生成された動画</h4>
-                        <div id="videoPreview" class="video-preview-container">
-                            <p>録画が完了すると、ここに動画が表示されます。</p>
-                        </div>
+                <div class="section">
+                    <h3 class="section-title">🎬 動画プレビュー</h3>
+                    <div id="videoPreview" class="video-preview-container">
+                        <p>録画が完了すると、ここに動画が表示されます。</p>
                     </div>
                 </div>
             </div>
             
             <!-- その他タブ -->
             <div id="other-settings" class="tab-pane">
-                <div class="other-controls">
-                    <div class="prompt-section">
-                        <label for="topicPrompt">話題のテーマ:</label>
-                        <textarea id="topicPrompt" placeholder="例: テーマ、社会課題について&#10;例: 環境問題、地域コミュニティについて&#10;例: 健康、ライフスタイルについて" rows="3"></textarea>
+                <div class="section">
+                    <h3 class="section-title">💬 話題のテーマ</h3>
+                    <div class="form-group">
+                        <label for="topicPrompt" class="form-label">話題のテーマ:</label>
+                        <textarea id="topicPrompt" class="form-textarea" placeholder="例: テーマ、社会課題について&#10;例: 環境問題、地域コミュニティについて&#10;例: 健康、ライフスタイルについて" rows="3"></textarea>
                     </div>
-                    
-                    <p>その他の設定や機能をここに配置</p>
                 </div>
             </div>
         </div>

@@ -675,11 +675,11 @@ async function init() {
             const apiKeyInput = document.getElementById('apiKey');
             
             if (e.target.value === 'ollama') {
-                ollamaSettings.style.display = 'block';
+                ollamaSettings.classList.add('show');
                 apiKeyInput.placeholder = 'APIキーは不要です（ローカル接続）';
                 apiKeyInput.disabled = true;
             } else {
-                ollamaSettings.style.display = 'none';
+                ollamaSettings.classList.remove('show');
                 apiKeyInput.placeholder = 'APIキーを入力';
                 apiKeyInput.disabled = false;
             }
@@ -726,7 +726,7 @@ async function init() {
     const apiKeyInputElement = document.getElementById('apiKey');
     
     if (currentProvider === 'ollama') {
-        if (ollamaSettings) ollamaSettings.style.display = 'block';
+        if (ollamaSettings) ollamaSettings.classList.add('show');
         if (apiKeyInputElement) {
             apiKeyInputElement.placeholder = 'APIキーは不要です（ローカル接続）';
             apiKeyInputElement.disabled = true;

@@ -1198,6 +1198,12 @@ function startSimulation() {
     simulationRunning = true;
     simulationPaused = false;
     
+    // 開始ボタンを無効化
+    const startBtn = document.getElementById('startSimulationBtn');
+    if (startBtn) {
+        startBtn.disabled = true;
+    }
+    
     // 一時停止ボタンを有効化
     const pauseBtn = document.getElementById('pauseBtn');
     if (pauseBtn) {
@@ -1496,9 +1502,13 @@ function getMessageHistory(agentName) {
 
 // シミュレーション開始ボタンの状態を更新
 function updateSimulationButton() {
-    const startSimulationBtn = document.querySelector('button[onclick="startSimulation()"]');
+    const startSimulationBtn = document.getElementById('startSimulationBtn');
     if (startSimulationBtn) {
-        if (agents.length === 0) {
+        // シミュレーションが実行中の場合、ボタンを無効化
+        if (simulationRunning) {
+            startSimulationBtn.disabled = true;
+            startSimulationBtn.textContent = 'シミュレーション開始';
+        } else if (agents.length === 0) {
             startSimulationBtn.disabled = true;
             startSimulationBtn.textContent = 'シミュレーション開始 (エージェントが必要)';
         } else {

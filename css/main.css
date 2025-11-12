@@ -1106,3 +1106,44 @@ button:disabled {
 .agent-detail-btn:hover {
     background: rgba(76, 175, 80, 0.5);
 }
+
+/* エージェント活性度セクション */
+.activity-level-section {
+    background-color: #555 !important;
+    color: #fff !important;
+}
+
+.activity-level-section h4 {
+    color: #fff !important;
+}
+
+.activity-level-section p {
+    color: #ddd !important;
+}
+
+.activity-level-controls label {
+    color: #fff !important;
+}
+
+.activity-level-controls label span {
+    color: #fff !important;
+}
+
+.activity-level-details {
+    background-color: #444 !important;
+    color: #fff !important;
+}
+
+.activity-level-details strong {
+    color: #fff !important;
+}
+
+.activity-level-details span {
+    color: #ddd !important;
+}
+
+#currentActivityLevel,
+#thinkingFrequency,
+#goOutProbability {
+    color: #fff !important;
+}

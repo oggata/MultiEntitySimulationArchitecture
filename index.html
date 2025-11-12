@@ -88,29 +88,29 @@
                     <button id="timeSpeedBtn">時間速度: <span id="speed">1x</span></button>
                 </div>
                 
-                <div class="activity-level-section" style="margin-top: 20px; padding: 15px; background-color: #f5f5f5; border-radius: 8px;">
-                    <h4 style="margin: 0 0 10px 0; color: #333;">🚶 エージェント活性度</h4>
-                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">
+                <div class="activity-level-section" style="margin-top: 20px; padding: 15px; background-color: #555; border-radius: 8px; color: #fff;">
+                    <h4 style="margin: 0 0 10px 0; color: #fff;">🚶 エージェント活性度</h4>
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #ddd;">
                         エージェントがどれくらい積極的に外出するかを設定します
                     </p>
-                    <div class="activity-level-controls">
-                        <label style="display: block; margin-bottom: 10px;">
+                    <div class="activity-level-controls" style="color: #fff;">
+                        <label style="display: block; margin-bottom: 10px; color: #fff;">
                             <input type="radio" name="activityLevel" value="1" checked>
-                            <span style="font-weight: bold;">低活性 (1)</span> - ほとんど家にいます
+                            <span style="font-weight: bold; color: #fff;">低活性 (1)</span> - ほとんど家にいます
                         </label>
-                        <label style="display: block; margin-bottom: 10px;">
+                        <label style="display: block; margin-bottom: 10px; color: #fff;">
                             <input type="radio" name="activityLevel" value="10">
-                            <span style="font-weight: bold;">中活性 (10)</span> - 時々外出します
+                            <span style="font-weight: bold; color: #fff;">中活性 (10)</span> - 時々外出します
                         </label>
-                        <label style="display: block; margin-bottom: 10px;">
+                        <label style="display: block; margin-bottom: 10px; color: #fff;">
                             <input type="radio" name="activityLevel" value="50">
-                            <span style="font-weight: bold;">高活性 (50)</span> - 積極的に外出します
+                            <span style="font-weight: bold; color: #fff;">高活性 (50)</span> - 積極的に外出します
                         </label>
                     </div>
-                    <div class="activity-level-details" style="margin-top: 10px; padding: 10px; background-color: #e8f5e9; border-radius: 5px; font-size: 12px;">
-                        <strong>現在の設定:</strong> <span id="currentActivityLevel">低活性 (1)</span><br>
-                        <span style="color: #666;">思考頻度: <span id="thinkingFrequency">30秒ごと</span></span><br>
-                        <span style="color: #666;">外出確率: <span id="goOutProbability">10%</span></span>
+                    <div class="activity-level-details" style="margin-top: 10px; padding: 10px; background-color: #444; border-radius: 5px; font-size: 12px; color: #fff;">
+                        <strong style="color: #fff;">現在の設定:</strong> <span id="currentActivityLevel" style="color: #fff;">低活性 (1)</span><br>
+                        <span style="color: #ddd;">思考頻度: <span id="thinkingFrequency">30秒ごと</span></span><br>
+                        <span style="color: #ddd;">外出確率: <span id="goOutProbability">10%</span></span>
                     </div>
                 </div>
             </div>
@@ -202,6 +202,21 @@
                     <button id="clearRoadVisualization">道路表示クリア</button>
                     <button id="toggleEntranceConnections">入り口接続情報</button>
                 </div>
+                <div class="vehicle-controls">
+                    <h4>🚗 車両システム</h4>
+                    <div class="vehicle-settings">
+                        <label for="vehicleCount">最大車両数: <span id="currentVehicleCount">15</span></label>
+                        <input type="range" id="vehicleCount" min="0" max="30" value="15" style="width: 100%;">
+                    </div>
+                    <div class="vehicle-stats">
+                        <div>現在の車両数: <span id="vehicleStatsCurrent">0</span></div>
+                        <div>生成間隔: <span id="vehicleStatsInterval">2.0</span>秒</div>
+                    </div>
+                    <div class="vehicle-buttons">
+                        <button id="clearAllVehiclesBtn">全車両削除</button>
+                        <button id="toggleVehicleSystemBtn">車両システムON/OFF</button>
+                    </div>
+                </div>
             </div>
             
             <!-- 動画生成タブ -->
@@ -249,6 +264,10 @@
                             <label>
                                 <input type="checkbox" id="recordAgents" checked />
                                 エージェントの動き
+                            </label>
+                            <label>
+                                <input type="checkbox" id="recordVehicles" checked />
+                                車両の動き
                             </label>
                             <label>
                                 <input type="checkbox" id="recordWeather" checked />
@@ -480,6 +499,7 @@
     <script src="./src/systems/pathfinding-system.js"></script>
     <script src="./src/systems/visualization-system.js"></script>
     <script src="./src/systems/weather.js"></script>
+    <script src="./src/systems/vehicles.js"></script>
     <script src="./src/systems/video-generation-system.js"></script>
     
     <!-- メインスクリプト（最後に読み込む） -->

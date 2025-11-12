@@ -2,7 +2,7 @@
 
 A 3D autonomous agent simulation that creates virtual cities where AI-powered residents go about their daily lives with realistic behaviors, interactions, and decision-making processes.
 
-![Screen](./images/Walk-sim.gif)
+![Screen](./images/demo/walk.gif)
 
 ## Preparing the Main Software
 

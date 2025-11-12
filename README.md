@@ -2,11 +2,7 @@
 
 A 3D autonomous agent simulation that creates virtual cities where AI-powered residents go about their daily lives with realistic behaviors, interactions, and decision-making processes.
 
-![Screen](./images/demo/walk.gif)
-
 [!['MESA'](./images/demo/walk.gif)](https://youtu.be/DKw4uCtytVc?si=9KSZw0GVPqQ83YWE)
-
-
 
 ## Preparing the Main Software
 

@@ -2,8 +2,6 @@
 
 AI搭載の住民が現実的な行動、相互作用、意思決定プロセスで日常生活を送る仮想都市を作成する3D自律エージェントシミュレーションです。
 
-![Screen](./images/demo/walk.gif)
-
 [!['MESA'](./images/demo/walk.gif)](https://youtu.be/DKw4uCtytVc?si=9KSZw0GVPqQ83YWE)
 
 ## 本体の準備

@@ -906,15 +906,6 @@ async function init() {
         });
     }
 
-    // 入り口接続表示ボタンのイベント登録
-    const toggleEntranceBtn = document.getElementById('toggleEntranceConnections');
-    if (toggleEntranceBtn) {
-        toggleEntranceBtn.addEventListener('click', () => {
-            // 入り口接続は通常の道路として常に表示されています
-            addLog('🚪 入り口接続は通常の道路として常に表示されています', 'system');
-        });
-    }
-
 }
 
 // パネルドラッグ状態を監視する関数をグローバルに公開

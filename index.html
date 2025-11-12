@@ -170,7 +170,20 @@
                     </div>
                 </div>
                 
-                <div class="category-highlight-controls">
+                <div class="communication-controls">
+                    <button id="callAgentBtn" disabled>📞 電話をかける</button>
+                    <button id="messageAgentBtn" disabled>💬 メッセージを送る</button>
+                </div>
+            </div>
+            
+            <!-- 道路設定タブ -->
+            <div id="road-settings" class="tab-pane">
+                <div class="road-visualization">
+                    <button id="toggleRoadNetwork">道路ネットワーク表示</button>
+                    <button id="clearRoadVisualization">道路表示クリア</button>
+                </div>
+                
+                <div class="category-highlight-controls" style="margin-top: 20px;">
                     <h4 style="margin: 10px 0 5px 0; font-size: 14px; color: #4CAF50;">🎨 セグメント別ハイライト</h4>
                     <div class="category-buttons">
                         <button class="category-highlight-btn" data-category="road">🛣️ 道路</button>
@@ -187,35 +200,6 @@
                         <button class="category-highlight-btn" data-category="other">📦 その他</button>
                     </div>
                     <button id="clearAllHighlightsBtn" style="margin-top: 10px; width: 100%; background: #f44336;">🔅 全ハイライト解除</button>
-                </div>
-                
-                <div class="communication-controls">
-                    <button id="callAgentBtn" disabled>📞 電話をかける</button>
-                    <button id="messageAgentBtn" disabled>💬 メッセージを送る</button>
-                </div>
-            </div>
-            
-            <!-- 道路設定タブ -->
-            <div id="road-settings" class="tab-pane">
-                <div class="road-visualization">
-                    <button id="toggleRoadNetwork">道路ネットワーク表示</button>
-                    <button id="clearRoadVisualization">道路表示クリア</button>
-                    <button id="toggleEntranceConnections">入り口接続情報</button>
-                </div>
-                <div class="vehicle-controls">
-                    <h4>🚗 車両システム</h4>
-                    <div class="vehicle-settings">
-                        <label for="vehicleCount">最大車両数: <span id="currentVehicleCount">15</span></label>
-                        <input type="range" id="vehicleCount" min="0" max="30" value="15" style="width: 100%;">
-                    </div>
-                    <div class="vehicle-stats">
-                        <div>現在の車両数: <span id="vehicleStatsCurrent">0</span></div>
-                        <div>生成間隔: <span id="vehicleStatsInterval">2.0</span>秒</div>
-                    </div>
-                    <div class="vehicle-buttons">
-                        <button id="clearAllVehiclesBtn">全車両削除</button>
-                        <button id="toggleVehicleSystemBtn">車両システムON/OFF</button>
-                    </div>
                 </div>
             </div>
             

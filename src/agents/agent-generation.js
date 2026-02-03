@@ -1,12 +1,33 @@
 // エージェント生成関数
 async function generateNewAgent() {
     // シミュレーション開始前でもエージェント生成を許可（初期エージェント作成のため）
-    // ただし、APIキーは必要
-    
-    const apiKey = document.getElementById('apiKey').value.trim();
-    if (!apiKey) {
-        alert('APIキーを入力してください');
-        return;
+    // Ollamaの場合はAPIキー不要、それ以外はAPIキー必要
+
+    const provider = window.getSelectedApiProvider ? window.getSelectedApiProvider() : 'openai';
+    if (provider === 'ollama') {
+        const ollamaUrl = document.getElementById('ollamaUrl') ? document.getElementById('ollamaUrl').value.trim() : '';
+        const ollamaModel = document.getElementById('ollamaModel') ? document.getElementById('ollamaModel').value.trim() : '';
+        if (!ollamaUrl || !ollamaModel) {
+            alert('Ollama URLとモデル名を入力してください。');
+            return;
+        }
+    } else {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('APIキーを入力してください');
+            return;
+        }
+        if (provider === 'openai') {
+            if (!(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
+                alert('無効なOpenAI APIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
+                return;
+            }
+        } else if (provider === 'gemini') {
+            if (!apiKey || apiKey.trim() === '') {
+                alert('Gemini APIキーを入力してください。');
+                return;
+            }
+        }
     }
 
     // 生成中のメッセージを表示
@@ -16,34 +37,11 @@ async function generateNewAgent() {
     const generateAgentBtn = document.getElementById('generateAgentBtn');
     const generateMultipleAgentsBtn = document.getElementById('generateMultipleAgentsBtn');
     
-    generationStatus.style.display = 'block';
-    generationMessage.textContent = 'エージェントを生成中...';
-    generationProgress.textContent = 'LLMにリクエスト中...';
-    generateAgentBtn.disabled = true;
-    generateMultipleAgentsBtn.disabled = true;
-    // APIプロバイダーによってバリデーションを分岐
-    const provider = window.getSelectedApiProvider ? window.getSelectedApiProvider() : 'openai';
-    if (provider === 'openai') {
-        if (!(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
-            alert('無効なOpenAI APIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
-            return;
-        }
-    } else if (provider === 'gemini') {
-        // GeminiのAPIキーは任意の形式を許可
-        if (!apiKey || apiKey.trim() === '') {
-            alert('Gemini APIキーを入力してください。');
-            return;
-        }
-    } else if (provider === 'ollama') {
-        // Ollamaの場合はURLとモデル名をチェック
-        const ollamaUrl = document.getElementById('ollamaUrl') ? document.getElementById('ollamaUrl').value.trim() : '';
-        const ollamaModel = document.getElementById('ollamaModel') ? document.getElementById('ollamaModel').value.trim() : '';
-        
-        if (!ollamaUrl || !ollamaModel) {
-            alert('Ollama URLとモデル名を入力してください。');
-            return;
-        }
-    }
+    if (generationStatus) generationStatus.style.display = 'block';
+    if (generationMessage) generationMessage.textContent = 'エージェントを生成中...';
+    if (generationProgress) generationProgress.textContent = 'LLMにリクエスト中...';
+    if (generateAgentBtn) generateAgentBtn.disabled = true;
+    if (generateMultipleAgentsBtn) generateMultipleAgentsBtn.disabled = true;
     try {
         // ユーザーの希望条件を取得
         const customPrompt = document.getElementById('agentCustomPrompt').value.trim();
@@ -127,7 +125,7 @@ ${customPrompt}
         "night": ["自宅"]
     }
 }`;
-        generationProgress.textContent = 'LLMにリクエスト中...';
+        if (generationProgress) generationProgress.textContent = 'LLMにリクエスト中...';
         const content = await callLLM({
             prompt,
             systemPrompt: "あなたは自律的なエージェントの性格生成システムです。必ず有効なJSON形式のみを出力し、余分な説明やテキストは含めないでください。JSONの構文エラーを避けるため、以下の点に注意してください：1) すべての文字列はダブルクォートで囲む、2) 数値はクォートで囲まない、3) 配列の最後の要素の後にカンマを付けない、4) オブジェクトの最後のプロパティの後にカンマを付けない、5) 色コードは必ず'0x'で始まる6桁の16進数にする。",
@@ -136,7 +134,7 @@ ${customPrompt}
             responseFormat: provider === 'openai' ? { type: "json_object" } : null,
             force: true
         });
-        generationProgress.textContent = 'JSONを解析中...';
+        if (generationProgress) generationProgress.textContent = 'JSONを解析中...';
         // レスポンスからJSONを抽出（より確実な方法）
         let jsonStr = content;
         
@@ -305,7 +303,7 @@ ${customPrompt}
             throw new Error('JSONの修正に失敗しました。LLMの応答形式に問題があります。詳細はコンソールを確認してください。');
         }
         
-        generationProgress.textContent = 'エージェントを作成中...';
+        if (generationProgress) generationProgress.textContent = 'エージェントを作成中...';
         
         let agentData;
         try {
@@ -349,6 +347,15 @@ ${customPrompt}
         // エージェントを作成（自宅が確実に存在する状態で）
         const agent = new Agent(agentData, agents.length);
         agents.push(agent);
+        if (typeof scene !== 'undefined' && agent.mesh && !scene.children.includes(agent.mesh)) {
+            scene.add(agent.mesh);
+        }
+        if (agent.mesh && agent.home) {
+            agent.mesh.visible = true;
+            agent.mesh.position.set(agent.home.x, 0, agent.home.z);
+        } else if (agent.characterInstance && agent.home && typeof agent.characterInstance.setPosition === 'function') {
+            agent.characterInstance.setPosition(agent.home.x, 0, agent.home.z);
+        }
         agent.initializeRelationships();
         updateAgentInfo();
         addLog(`👤 新しいエージェント「${agentData.name}」が生成されました`, 'info', `\n            <div class="log-detail-section">\n                <h4>エージェントの詳細</h4>\n                <p>名前: ${agentData.name}</p>\n                <p>年齢: ${agentData.age}歳</p>\n                <p>性格: ${agentData.personality.description}</p>\n                <p>性格特性:</p>\n                <ul>\n                    <li>社交性: ${(agentData.personality.traits.sociability * 100).toFixed(0)}%</li>\n                    <li>活動的さ: ${(agentData.personality.traits.energy * 100).toFixed(0)}%</li>\n                    <li>ルーチン重視: ${(agentData.personality.traits.routine * 100).toFixed(0)}%</li>\n                    <li>好奇心: ${(agentData.personality.traits.curiosity * 100).toFixed(0)}%</li>\n                    <li>共感性: ${(agentData.personality.traits.empathy * 100).toFixed(0)}%</li>\n                </ul>\n            </div>\n        `);
@@ -360,8 +367,8 @@ ${customPrompt}
         updateStorageButtonText();
         
         // 生成完了メッセージを表示
-        generationMessage.textContent = `✅ エージェント「${agentData.name}」の生成が完了しました！`;
-        generationProgress.textContent = '';
+        if (generationMessage) generationMessage.textContent = `✅ エージェント「${agentData.name}」の生成が完了しました！`;
+        if (generationProgress) generationProgress.textContent = '';
         
         // テキストエリアをクリア
         const agentCustomPrompt = document.getElementById('agentCustomPrompt');
@@ -371,9 +378,9 @@ ${customPrompt}
         
         // 3秒後にメッセージを非表示
         setTimeout(() => {
-            generationStatus.style.display = 'none';
-            generateAgentBtn.disabled = false;
-            generateMultipleAgentsBtn.disabled = false;
+            if (generationStatus) generationStatus.style.display = 'none';
+            if (generateAgentBtn) generateAgentBtn.disabled = false;
+            if (generateMultipleAgentsBtn) generateMultipleAgentsBtn.disabled = false;
         }, 3000);
         
         // ボタンテキストを更新
@@ -387,8 +394,8 @@ ${customPrompt}
         console.error('エージェント生成エラー:', error);
         
         // エラーメッセージを表示
-        generationMessage.textContent = '❌ エージェントの生成に失敗しました';
-        generationProgress.textContent = error.message;
+        if (generationMessage) generationMessage.textContent = '❌ エージェントの生成に失敗しました';
+        if (generationProgress) generationProgress.textContent = error.message;
         
         // テキストエリアをクリア
         const agentCustomPrompt = document.getElementById('agentCustomPrompt');
@@ -401,9 +408,9 @@ ${customPrompt}
         
         // 5秒後にメッセージを非表示
         setTimeout(() => {
-            generationStatus.style.display = 'none';
-            generateAgentBtn.disabled = false;
-            generateMultipleAgentsBtn.disabled = false;
+            if (generationStatus) generationStatus.style.display = 'none';
+            if (generateAgentBtn) generateAgentBtn.disabled = false;
+            if (generateMultipleAgentsBtn) generateMultipleAgentsBtn.disabled = false;
         }, 5000);
     }
 }
@@ -411,12 +418,21 @@ ${customPrompt}
 // 複数のエージェントを生成する関数
 async function generateMultipleAgents(count) {
     // シミュレーション開始前でもエージェント生成を許可（初期エージェント作成のため）
-    // ただし、APIキーは必要
-    
-    const apiKey = document.getElementById('apiKey').value.trim();
-    if (!apiKey) {
-        alert('APIキーを入力してください');
-        return;
+    // Ollamaの場合はAPIキー不要。バリデーションは generateNewAgent 内で行うため、先に1回だけチェック
+    const provider = window.getSelectedApiProvider ? window.getSelectedApiProvider() : 'openai';
+    if (provider === 'ollama') {
+        const ollamaUrl = document.getElementById('ollamaUrl') ? document.getElementById('ollamaUrl').value.trim() : '';
+        const ollamaModel = document.getElementById('ollamaModel') ? document.getElementById('ollamaModel').value.trim() : '';
+        if (!ollamaUrl || !ollamaModel) {
+            alert('Ollama URLとモデル名を入力してください。');
+            return;
+        }
+    } else {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('APIキーを入力してください');
+            return;
+        }
     }
 
     // 生成中のメッセージを表示
@@ -426,17 +442,17 @@ async function generateMultipleAgents(count) {
     const generateAgentBtn = document.getElementById('generateAgentBtn');
     const generateMultipleAgentsBtn = document.getElementById('generateMultipleAgentsBtn');
     
-    generationStatus.style.display = 'block';
-    generationMessage.textContent = `${count}人のエージェントを生成中...`;
-    generationProgress.textContent = `進捗: 0/${count}`;
-    generateAgentBtn.disabled = true;
-    generateMultipleAgentsBtn.disabled = true;
+    if (generationStatus) generationStatus.style.display = 'block';
+    if (generationMessage) generationMessage.textContent = `${count}人のエージェントを生成中...`;
+    if (generationProgress) generationProgress.textContent = `進捗: 0/${count}`;
+    if (generateAgentBtn) generateAgentBtn.disabled = true;
+    if (generateMultipleAgentsBtn) generateMultipleAgentsBtn.disabled = true;
 
     try {
         for (let i = 0; i < count; i++) {
             try {
                 // 進捗を更新
-                generationProgress.textContent = `進捗: ${i + 1}/${count}`;
+                if (generationProgress) generationProgress.textContent = `進捗: ${i + 1}/${count}`;
                 
                 await generateNewAgent();
                 
@@ -463,8 +479,8 @@ async function generateMultipleAgents(count) {
         updateStorageButtonText();
         
         // 生成完了メッセージを表示
-        generationMessage.textContent = `✅ ${count}人のエージェントの生成が完了しました！`;
-        generationProgress.textContent = `現在のエージェント総数: ${agents.length}人`;
+        if (generationMessage) generationMessage.textContent = `✅ ${count}人のエージェントの生成が完了しました！`;
+        if (generationProgress) generationProgress.textContent = `現在のエージェント総数: ${agents.length}人`;
         
         // テキストエリアをクリア
         const agentCustomPrompt = document.getElementById('agentCustomPrompt');
@@ -474,17 +490,17 @@ async function generateMultipleAgents(count) {
         
         // 3秒後にメッセージを非表示
         setTimeout(() => {
-            generationStatus.style.display = 'none';
-            generateAgentBtn.disabled = false;
-            generateMultipleAgentsBtn.disabled = false;
+            if (generationStatus) generationStatus.style.display = 'none';
+            if (generateAgentBtn) generateAgentBtn.disabled = false;
+            if (generateMultipleAgentsBtn) generateMultipleAgentsBtn.disabled = false;
         }, 3000);
         
     } catch (error) {
         console.error('一括エージェント生成エラー:', error);
         
         // エラーメッセージを表示
-        generationMessage.textContent = '❌ エージェントの一括生成に失敗しました';
-        generationProgress.textContent = error.message;
+        if (generationMessage) generationMessage.textContent = '❌ エージェントの一括生成に失敗しました';
+        if (generationProgress) generationProgress.textContent = error.message;
         
         // テキストエリアをクリア
         const agentCustomPrompt = document.getElementById('agentCustomPrompt');
@@ -494,9 +510,9 @@ async function generateMultipleAgents(count) {
         
         // 5秒後にメッセージを非表示
         setTimeout(() => {
-            generationStatus.style.display = 'none';
-            generateAgentBtn.disabled = false;
-            generateMultipleAgentsBtn.disabled = false;
+            if (generationStatus) generationStatus.style.display = 'none';
+            if (generateAgentBtn) generateAgentBtn.disabled = false;
+            if (generateMultipleAgentsBtn) generateMultipleAgentsBtn.disabled = false;
         }, 5000);
         
         alert('エージェントの一括生成に失敗しました: ' + error.message);
@@ -665,10 +681,10 @@ async function loadDebugAgents() {
     const generationProgress = document.getElementById('generationProgress');
     const loadDebugAgentsBtn = document.getElementById('loadDebugAgentsBtn');
     
-    generationStatus.style.display = 'block';
-    generationMessage.textContent = 'デバッグ用エージェントを読み込み中...';
-    generationProgress.textContent = '';
-    loadDebugAgentsBtn.disabled = true;
+    if (generationStatus) generationStatus.style.display = 'block';
+    if (generationMessage) generationMessage.textContent = 'デバッグ用エージェントを読み込み中...';
+    if (generationProgress) generationProgress.textContent = '';
+    if (loadDebugAgentsBtn) loadDebugAgentsBtn.disabled = true;
 
     try {
         // JSONファイルを読み込み
@@ -681,7 +697,7 @@ async function loadDebugAgents() {
         // 各エージェントを生成
         for (let i = 0; i < debugAgents.length; i++) {
             const agentData = debugAgents[i];
-            generationProgress.textContent = `${i + 1} / ${debugAgents.length} 人目を作成中...`;
+            if (generationProgress) generationProgress.textContent = `${i + 1} / ${debugAgents.length} 人目を作成中...`;
 
             // 自宅を割り当て
             const assignedHome = homeManager.getRandomAvailableHome();
@@ -718,6 +734,15 @@ async function loadDebugAgents() {
             // エージェントを作成
             const agent = new Agent(fullAgentData, agents.length);
             agents.push(agent);
+            if (typeof scene !== 'undefined' && agent.mesh && !scene.children.includes(agent.mesh)) {
+                scene.add(agent.mesh);
+            }
+            if (agent.mesh && agent.home) {
+                agent.mesh.visible = true;
+                agent.mesh.position.set(agent.home.x, 0, agent.home.z);
+            } else if (agent.characterInstance && agent.home && typeof agent.characterInstance.setPosition === 'function') {
+                agent.characterInstance.setPosition(agent.home.x, 0, agent.home.z);
+            }
 
             // 少し待機（アニメーション効果）
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -726,26 +751,26 @@ async function loadDebugAgents() {
         // エージェント情報を更新
         updateAgentInfo();
 
-        generationMessage.textContent = `✅ ${debugAgents.length}人のデバッグ用エージェントを作成しました！`;
-        generationProgress.textContent = 'シミュレーションを開始してください';
+        if (generationMessage) generationMessage.textContent = `✅ ${debugAgents.length}人のデバッグ用エージェントを作成しました！`;
+        if (generationProgress) generationProgress.textContent = 'シミュレーションを開始してください';
         
         // 3秒後にメッセージを消す
         setTimeout(() => {
-            generationStatus.style.display = 'none';
+            if (generationStatus) generationStatus.style.display = 'none';
         }, 3000);
 
         addLog(`🐛 デバッグ用エージェント${debugAgents.length}人を作成しました`, 'system');
 
     } catch (error) {
         console.error('デバッグエージェントの読み込みエラー:', error);
-        generationMessage.textContent = '❌ エラーが発生しました';
-        generationProgress.textContent = error.message;
+        if (generationMessage) generationMessage.textContent = '❌ エラーが発生しました';
+        if (generationProgress) generationProgress.textContent = error.message;
         
         setTimeout(() => {
-            generationStatus.style.display = 'none';
+            if (generationStatus) generationStatus.style.display = 'none';
         }, 5000);
     } finally {
-        loadDebugAgentsBtn.disabled = false;
+        if (loadDebugAgentsBtn) loadDebugAgentsBtn.disabled = false;
     }
 }
 

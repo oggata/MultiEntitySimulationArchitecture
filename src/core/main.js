@@ -1164,33 +1164,32 @@ function startSimulation() {
         }
     }
     
-    apiKey = document.getElementById('apiKey').value.trim();
-    if (!apiKey) {
-        alert('OpenAI APIキーを入力してください');
-        return;
-    }
-
-    // APIキーの形式を検証（プロバイダーによって分岐）
+    // APIプロバイダーに応じたバリデーション（Ollamaの場合はAPIキー不要）
     const provider = getSelectedApiProvider();
-    if (provider === 'openai') {
-        if (!(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
-            alert('無効なOpenAI APIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
-            return;
-        }
-    } else if (provider === 'gemini') {
-        // GeminiのAPIキーは任意の形式を許可
-        if (!apiKey || apiKey.trim() === '') {
-            alert('Gemini APIキーを入力してください。');
-            return;
-        }
-    } else if (provider === 'ollama') {
-        // Ollamaの場合はURLとモデル名をチェック
+    if (provider === 'ollama') {
+        // Ollamaの場合はURLとモデル名のみチェック
         const ollamaUrl = document.getElementById('ollamaUrl') ? document.getElementById('ollamaUrl').value.trim() : '';
         const ollamaModel = document.getElementById('ollamaModel') ? document.getElementById('ollamaModel').value.trim() : '';
-        
         if (!ollamaUrl || !ollamaModel) {
             alert('Ollama URLとモデル名を入力してください。');
             return;
+        }
+    } else {
+        apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('APIキーを入力してください');
+            return;
+        }
+        if (provider === 'openai') {
+            if (!(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
+                alert('無効なOpenAI APIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
+                return;
+            }
+        } else if (provider === 'gemini') {
+            if (!apiKey || apiKey.trim() === '') {
+                alert('Gemini APIキーを入力してください。');
+                return;
+            }
         }
     }
     

@@ -139,6 +139,71 @@ class Agent {
         }
         // 参照用
         this.mesh = this.characterInstance.character;
+        
+        // 顔カメラを作成
+        this.createFaceCamera();
+    }
+    
+    // 顔カメラを作成
+    createFaceCamera() {
+        if (!this.mesh) return;
+        
+        // 顔カメラを作成（頭の位置に配置）
+        this.faceCamera = new THREE.PerspectiveCamera(
+            75, // FOV
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        
+        // 顔カメラを頭の位置に配置（初期位置は後で更新される）
+        this.faceCamera.position.set(0, 0, 0);
+        
+        // 顔カメラの参照を保存
+        this.faceCamera.userData.agent = this;
+        this.faceCamera.userData.isFaceCamera = true;
+    }
+    
+    // 顔カメラの位置と向きを更新
+    updateFaceCamera() {
+        if (!this.faceCamera || !this.mesh || !this.characterInstance) return;
+        
+        // 頭のボーンのワールド位置を取得
+        const headBone = this.characterInstance.headBone;
+        if (!headBone) return;
+        
+        // エージェントのmesh（character）のワールドマトリックスを更新
+        this.mesh.updateMatrixWorld(true);
+        
+        // 頭のボーンのワールド位置を取得
+        const worldPosition = new THREE.Vector3();
+        headBone.getWorldPosition(worldPosition);
+        
+        // エージェントの向き（Y軸回転）を考慮
+        const agentRotationY = this.mesh.rotation.y;
+        
+        // 顔の位置を計算（頭の中心から少し前、エージェントの向きに合わせて）
+        // エージェントの向きに基づいて前方ベクトルを計算
+        const forward = new THREE.Vector3(
+            Math.sin(agentRotationY),
+            0,
+            Math.cos(agentRotationY)
+        );
+        
+        // 頭の中心から少し前（顔の位置）に配置
+        const faceOffset = forward.clone().multiplyScalar(0.15); // 頭の中心から0.15単位前
+        worldPosition.add(faceOffset);
+        
+        // 顔カメラの位置を設定
+        this.faceCamera.position.copy(worldPosition);
+        
+        // カメラの向きをエージェントの向きに合わせる（前方5単位を見る）
+        const lookAtPosition = worldPosition.clone().add(forward.clone().multiplyScalar(5));
+        this.faceCamera.lookAt(lookAtPosition);
+        
+        // カメラのupベクトルを設定
+        this.faceCamera.up.set(0, 1, 0);
+        this.faceCamera.updateMatrixWorld(true);
     }
     
     initializeRelationships() {
@@ -476,6 +541,11 @@ class Agent {
                     addLog(`⏸️ ${this.name}の歩行アニメーション停止`, 'system');
                 }
             }
+        }
+        
+        // 顔カメラの位置と向きを更新
+        if (this.faceCamera) {
+            this.updateFaceCamera();
         }
         
         // 待機列の更新（1秒ごと）

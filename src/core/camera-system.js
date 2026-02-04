@@ -22,7 +22,7 @@ class CameraSystem {
         this.targetAgent = null;
         this.targetFacility = null;
         this.cameraFollowEnabled = false;
-        this.cameraMode = 'free'; // 'free', 'agent', 'facility', 'auto'
+        this.cameraMode = 'free'; // 'free', 'agent', 'facility', 'auto', 'face'
         
         // カメラの回転角度を管理
         this.cameraRotationX = 0; // 上下の回転
@@ -87,11 +87,24 @@ class CameraSystem {
     
     // カメラ追従更新関数
     updateCameraFollow() {
+        if (!this.cameraFollowEnabled || !this.targetAgent || !this.targetAgent.mesh) {
+            return;
+        }
+        
+        // 顔カメラモードの場合
+        if (this.cameraMode === 'face' && this.targetAgent.faceCamera) {
+            // 顔カメラの位置と向きを更新
+            this.targetAgent.updateFaceCamera();
+            
+            // メインカメラを顔カメラの位置と向きにコピー
+            this.camera.position.copy(this.targetAgent.faceCamera.position);
+            this.camera.rotation.copy(this.targetAgent.faceCamera.rotation);
+            this.camera.updateMatrixWorld(true);
+            return;
+        }
+        
         // 自動視点モードまたは通常のエージェント追従モード
-        if (!this.cameraFollowEnabled || 
-            (this.cameraMode !== 'agent' && this.cameraMode !== 'auto') || 
-            !this.targetAgent || 
-            !this.targetAgent.mesh) {
+        if (this.cameraMode !== 'agent' && this.cameraMode !== 'auto') {
             return;
         }
         
@@ -120,6 +133,11 @@ class CameraSystem {
     
     // カメラ移動更新関数
     updateCameraMovement(deltaTime) {
+        // 顔カメラモードの場合は手動移動を無効化（顔カメラの位置は自動更新される）
+        if (this.cameraMode === 'face') {
+            return;
+        }
+        
         if (this.cameraMode === 'free' || this.cameraMode === 'agent' || this.cameraMode === 'facility') {
             // カメラの前方・右方向ベクトルを計算
             const forward = new THREE.Vector3();
@@ -247,6 +265,55 @@ class CameraSystem {
         this.scrollToAgentCard(agent.name);
         
         addLog(`👁️ ${agent.name}の視点に切り替えました（追従モード有効）`, 'system');
+    }
+    
+    // エージェントの顔カメラ視点に切り替え
+    focusCameraOnAgentFaceByIndex(index, agents) {
+        if (agents.length === 0) return;
+        
+        const agent = agents[index % agents.length];
+        if (!agent || !agent.mesh) {
+            addLog(`❌ ${agent ? agent.name : 'エージェント'}の顔カメラが見つかりません`, 'system');
+            return;
+        }
+        // 顔カメラが未作成の場合はその場で作成（既存エージェントの互換のため）
+        if (!agent.faceCamera && typeof agent.createFaceCamera === 'function') {
+            agent.createFaceCamera();
+        }
+        if (!agent.faceCamera) {
+            addLog(`❌ ${agent.name}の顔カメラが見つかりません`, 'system');
+            return;
+        }
+        
+        // ターゲットマーカーを削除
+        this.removeTargetMarker();
+        
+        // ハイライトを解除
+        if (this.highlightedFacilityMesh) {
+            this.unhighlightFacilityMesh(this.highlightedFacilityMesh);
+            this.highlightedFacilityMesh = null;
+        }
+        
+        // カメラモードを設定
+        this.cameraMode = 'face';
+        this.targetAgent = agent;
+        this.cameraFollowEnabled = true;
+        
+        // 顔カメラの位置と向きを更新（初回）
+        agent.updateFaceCamera();
+        
+        // メインカメラを顔カメラの位置と向きにコピー
+        this.camera.position.copy(agent.faceCamera.position);
+        this.camera.rotation.copy(agent.faceCamera.rotation);
+        this.camera.updateMatrixWorld(true);
+        
+        // カメラモード表示を更新
+        this.updateCameraModeDisplay();
+        
+        // エージェント情報パネルを該当のエージェントまでスクロール
+        this.scrollToAgentCard(agent.name);
+        
+        addLog(`👤 ${agent.name}の顔カメラ視点に切り替えました`, 'system');
     }
     
     // 施設視点に切り替え
@@ -564,6 +631,12 @@ class CameraSystem {
                     display.style.color = '#4CAF50';
                 }
                 break;
+            case 'face':
+                if (this.targetAgent) {
+                    display.textContent = `👤 ${this.targetAgent.name}の顔カメラ視点`;
+                    display.style.color = '#9C27B0';
+                }
+                break;
             case 'facility':
                 if (this.targetFacility) {
                     display.textContent = `${this.targetFacility.name}の視点`;
@@ -597,6 +670,15 @@ class CameraSystem {
             
             targetName.textContent = `👤 ${this.targetAgent.name} を追従中${movementStatus}`;
             targetName.style.color = isMoving ? '#4CAF50' : '#888';
+        } else if (this.cameraMode === 'face' && this.targetAgent) {
+            targetDisplay.style.display = 'block';
+            
+            // 人物の移動状態を確認
+            const isMoving = this.targetAgent.movementTarget !== null;
+            const movementStatus = isMoving ? ' (移動中)' : ' (停止中)';
+            
+            targetName.textContent = `👤 ${this.targetAgent.name} の顔カメラ視点${movementStatus}`;
+            targetName.style.color = isMoving ? '#9C27B0' : '#888';
         } else if (this.cameraMode === 'facility' && this.targetFacility) {
             targetDisplay.style.display = 'block';
             targetName.textContent = `🏢 ${this.targetFacility.name} を表示中`;
@@ -609,8 +691,8 @@ class CameraSystem {
     // マウスコントロールの設定
     setupMouseControls() {
         document.addEventListener('mousemove', (event) => {
-            // 人物視点モード中はマウス操作を無効
-            if (this.cameraMode === 'agent' && this.cameraFollowEnabled) {
+            // 人物視点モードまたは顔カメラモード中はマウス操作を無効
+            if ((this.cameraMode === 'agent' && this.cameraFollowEnabled) || this.cameraMode === 'face') {
                 return;
             }
             
@@ -649,8 +731,8 @@ class CameraSystem {
         });
         
         document.addEventListener('wheel', (event) => {
-            // 人物視点モード中はズーム操作を無効
-            if (this.cameraMode === 'agent' && this.cameraFollowEnabled) {
+            // 人物視点モードまたは顔カメラモード中はズーム操作を無効
+            if ((this.cameraMode === 'agent' && this.cameraFollowEnabled) || this.cameraMode === 'face') {
                 return;
             }
             

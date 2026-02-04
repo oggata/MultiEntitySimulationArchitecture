@@ -717,6 +717,11 @@ async function init() {
     // タブ機能の初期化
     setupTabNavigation();
     
+    // エージェント書き出し・読み込みボタンのイベントを設定（DOM準備後に確実にバインド）
+    if (typeof window.setupAgentExportImportButtons === 'function') {
+        window.setupAgentExportImportButtons();
+    }
+    
     // APIアクセス回数の表示を初期化
     updateLlmCallCountDisplay();
 
@@ -793,6 +798,7 @@ async function init() {
     
     // カメラ制御ボタンのイベント登録
     const personBtn = document.getElementById('personViewBtn');
+    const faceBtn = document.getElementById('faceViewBtn');
     const facilityBtn = document.getElementById('facilityViewBtn');
     const autoViewBtn = document.getElementById('autoViewBtn');
     const resetBtn = document.getElementById('resetCamera');
@@ -802,6 +808,29 @@ async function init() {
             if (agents.length === 0) return;
             cameraSystem.currentAgentIndex = (cameraSystem.currentAgentIndex + 1) % agents.length;
             cameraSystem.focusCameraOnAgentByIndex(cameraSystem.currentAgentIndex, agents);
+        });
+    }
+    if (faceBtn) {
+        faceBtn.addEventListener('click', () => {
+            if (agents.length === 0) {
+                alert('エージェントが存在しません。先にエージェントを作成してください。');
+                return;
+            }
+            // 顔カメラが存在するエージェントを探す
+            let found = false;
+            let attempts = 0;
+            while (!found && attempts < agents.length) {
+                cameraSystem.currentAgentIndex = (cameraSystem.currentAgentIndex + 1) % agents.length;
+                const agent = agents[cameraSystem.currentAgentIndex];
+                if (agent && agent.faceCamera) {
+                    cameraSystem.focusCameraOnAgentFaceByIndex(cameraSystem.currentAgentIndex, agents);
+                    found = true;
+                }
+                attempts++;
+            }
+            if (!found) {
+                alert('顔カメラが設定されているエージェントが見つかりません。');
+            }
         });
     }
     if (facilityBtn) {
@@ -1164,32 +1193,34 @@ function startSimulation() {
         }
     }
     
-    // APIプロバイダーに応じたバリデーション（Ollamaの場合はAPIキー不要）
+    // APIプロバイダーを先に取得（Ollamaの場合はAPIキー不要）
     const provider = getSelectedApiProvider();
-    if (provider === 'ollama') {
-        // Ollamaの場合はURLとモデル名のみチェック
+    apiKey = document.getElementById('apiKey').value.trim();
+    if (provider !== 'ollama' && !apiKey) {
+        alert('APIキーを入力してください');
+        return;
+    }
+
+    // APIキーの形式を検証（プロバイダーによって分岐）
+    if (provider === 'openai') {
+        if (!(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
+            alert('無効なOpenAI APIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
+            return;
+        }
+    } else if (provider === 'gemini') {
+        // GeminiのAPIキーは任意の形式を許可
+        if (!apiKey || apiKey.trim() === '') {
+            alert('Gemini APIキーを入力してください。');
+            return;
+        }
+    } else if (provider === 'ollama') {
+        // Ollamaの場合はURLとモデル名をチェック
         const ollamaUrl = document.getElementById('ollamaUrl') ? document.getElementById('ollamaUrl').value.trim() : '';
         const ollamaModel = document.getElementById('ollamaModel') ? document.getElementById('ollamaModel').value.trim() : '';
+        
         if (!ollamaUrl || !ollamaModel) {
             alert('Ollama URLとモデル名を入力してください。');
             return;
-        }
-    } else {
-        apiKey = document.getElementById('apiKey').value.trim();
-        if (!apiKey) {
-            alert('APIキーを入力してください');
-            return;
-        }
-        if (provider === 'openai') {
-            if (!(apiKey.startsWith('sk-') || apiKey.startsWith('sk-proj-'))) {
-                alert('無効なOpenAI APIキー形式です。sk-またはsk-proj-で始まる有効なAPIキーを入力してください。');
-                return;
-            }
-        } else if (provider === 'gemini') {
-            if (!apiKey || apiKey.trim() === '') {
-                alert('Gemini APIキーを入力してください。');
-                return;
-            }
         }
     }
     
